@@ -12,12 +12,6 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%230c0c0c'/%3E%3Ctext x='256' y='340' font-family='Arial Black' font-size='260' font-weight='900' text-anchor='middle' fill='%23e8ff47'%3EL%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-
-<!-- Firebase compat SDKs — work on any host, no module errors -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -33,37 +27,12 @@ body{background:var(--bg);color:var(--tx);font-family:'IBM Plex Mono',monospace;
 input,select,button{font-family:inherit}
 button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 
-/* ── AUTH ── */
-#auth-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;padding:24px 20px}
-.auth-logo{font-family:'Bebas Neue',sans-serif;font-size:5rem;letter-spacing:.1em;color:var(--ac);line-height:1;margin-bottom:6px}
-.auth-tagline{font-size:.6rem;color:var(--m1);letter-spacing:.3em;text-transform:uppercase;margin-bottom:40px}
-.auth-card{width:100%;max-width:380px;background:var(--sf);border:1px solid var(--b2);border-radius:4px;padding:24px}
-.auth-tabs{display:flex;margin-bottom:22px;border-bottom:1px solid var(--b2)}
-.auth-tab{flex:1;background:none;border:none;color:var(--m2);font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;padding:10px;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
-.auth-tab.on{color:var(--ac);border-bottom-color:var(--ac)}
-.auth-field{width:100%;background:var(--s2);border:1px solid var(--b2);color:var(--tx);font-size:.82rem;padding:11px 12px;border-radius:2px;outline:none;margin-bottom:10px;-webkit-appearance:none}
-.auth-field:focus{border-color:var(--ac)}
-.auth-field::placeholder{color:var(--m1)}
-.auth-btn{width:100%;background:var(--ac);color:#000;border:none;font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;padding:13px;border-radius:2px;margin-top:4px;font-weight:600}
-.auth-btn:active{background:#b8cc30}
-.auth-divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--m1);font-size:.6rem;letter-spacing:.1em}
-.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--b2)}
-.google-btn{width:100%;background:var(--s2);border:1px solid var(--b2);color:var(--tx);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;padding:12px;border-radius:2px;display:flex;align-items:center;justify-content:center;gap:10px}
-.google-btn:active{background:var(--b1)}
-.auth-err{font-size:.62rem;color:var(--rd);margin-top:10px;min-height:18px;text-align:center}
-.auth-loading{font-size:.62rem;color:var(--m1);text-align:center;margin-top:8px;letter-spacing:.1em}
-
-/* ── APP ── */
-#app{display:none}
-
 /* NAV */
 .nav{position:sticky;top:0;z-index:100;background:rgba(12,12,12,.97);backdrop-filter:blur(12px);border-bottom:1px solid var(--b1);display:flex;align-items:center;padding:0 12px;padding-top:var(--sft);height:calc(54px + var(--sft))}
 .logo{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:.1em;color:var(--ac);flex:1}
 .ntabs{display:flex}
-.ntab{font-size:.52rem;letter-spacing:.08em;text-transform:uppercase;background:none;border:none;color:var(--m1);padding:8px 7px;border-bottom:2px solid transparent;white-space:nowrap}
+.ntab{font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;background:none;border:none;color:var(--m1);padding:8px;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
 .ntab.on{border-bottom-color:var(--ac);color:var(--ac)}
-.user-btn{background:none;border:1px solid var(--b2);color:var(--m2);font-size:.5rem;padding:5px 8px;border-radius:2px;margin-left:5px;white-space:nowrap}
-.user-btn:active{border-color:var(--rd);color:var(--rd)}
 
 /* SCREENS */
 .scr{display:none;padding:20px 16px 100px;max-width:640px;margin:0 auto}
@@ -73,7 +42,7 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 
 /* PILLS */
 .pills{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px}
-.pill{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;padding:5px 10px;border:1px solid var(--b2);background:none;color:var(--m2);border-radius:1px}
+.pill{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;padding:5px 10px;border:1px solid var(--b2);background:none;color:var(--m2);border-radius:1px;transition:all .12s}
 .pill.on{color:#000;background:var(--ac);border-color:var(--ac)}
 
 /* INPUTS */
@@ -83,7 +52,7 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .field.mb{margin-bottom:10px}
 
 /* BUTTONS */
-.btn{font-size:.62rem;letter-spacing:.13em;text-transform:uppercase;padding:9px 15px;border-radius:2px;border:1px solid transparent}
+.btn{font-size:.62rem;letter-spacing:.13em;text-transform:uppercase;padding:9px 15px;border-radius:2px;border:1px solid transparent;transition:all .12s}
 .bacc{background:var(--ac);color:#000;border-color:var(--ac)}
 .bgh{background:none;border-color:var(--b2);color:var(--m2)}
 .brd{background:none;border-color:var(--b2);color:var(--rd)}
@@ -93,7 +62,7 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .drow{display:flex;gap:8px;align-items:center;margin-bottom:13px}
 .dlbl{font-size:.58rem;color:var(--m1);letter-spacing:.15em;text-transform:uppercase;white-space:nowrap}
 
-/* PICKER */
+/* EXERCISE PICKER */
 .picker{display:flex;flex-direction:column;gap:2px;margin-bottom:16px}
 .pitem{display:flex;align-items:center;gap:10px;padding:12px;background:var(--sf);border:1px solid var(--b1);font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;color:var(--tx);text-align:left;border-radius:2px;width:100%}
 .pitem:active{background:var(--s2)}
@@ -166,10 +135,6 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .catpill{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border:1px solid var(--b2);background:none;color:var(--m2);border-radius:2px}
 .catpill.on{color:#000}
 
-/* SYNC */
-.sync-bar{font-size:.52rem;color:var(--m1);letter-spacing:.12em;text-align:center;padding:4px;background:var(--s2);display:none}
-.sync-bar.show{display:block}
-
 /* MISC */
 .empty{text-align:center;padding:40px 18px;color:var(--m1);font-size:.7rem}
 .divider{height:1px;background:var(--b1);margin:20px 0}
@@ -179,116 +144,81 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 </head>
 <body>
 
-<!-- AUTH -->
-<div id="auth-screen">
-  <div class="auth-logo">LIFTS</div>
-  <div class="auth-tagline">Track your progress</div>
-  <div class="auth-card">
-    <div class="auth-tabs">
-      <button class="auth-tab on" onclick="switchTab('login')">Sign In</button>
-      <button class="auth-tab" onclick="switchTab('signup')">Sign Up</button>
-    </div>
-    <input class="auth-field" id="auth-email" type="email" placeholder="Email" autocomplete="email">
-    <input class="auth-field" id="auth-pass" type="password" placeholder="Password" autocomplete="current-password"
-      onkeydown="if(event.key==='Enter')doAuth()">
-    <input class="auth-field" id="auth-pass2" type="password" placeholder="Confirm password" style="display:none"
-      onkeydown="if(event.key==='Enter')doAuth()">
-    <button class="auth-btn" onclick="doAuth()" id="auth-btn-label">Sign In</button>
-    <div class="auth-err" id="auth-err"></div>
-    <div class="auth-divider">or</div>
-    <button class="google-btn" onclick="doGoogle()">
-      <svg width="18" height="18" viewBox="0 0 24 24">
-        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-      </svg>
-      Continue with Google
-    </button>
-    <div class="auth-loading" id="auth-loading"></div>
+<nav class="nav">
+  <div class="logo">LIFTS</div>
+  <div class="ntabs">
+    <button class="ntab on" onclick="go('log')">Log</button>
+    <button class="ntab" onclick="go('history')">History</button>
+    <button class="ntab" onclick="go('progress')">Progress</button>
+    <button class="ntab" onclick="go('manage')">Manage</button>
   </div>
-</div>
+</nav>
 
-<!-- APP -->
-<div id="app">
-  <nav class="nav">
-    <div class="logo">LIFTS</div>
-    <div class="ntabs">
-      <button class="ntab on" onclick="go('log')">Log</button>
-      <button class="ntab" onclick="go('history')">History</button>
-      <button class="ntab" onclick="go('progress')">Progress</button>
-      <button class="ntab" onclick="go('manage')">Manage</button>
-    </div>
-    <button class="user-btn" id="user-btn" onclick="doSignOut()">Out</button>
-  </nav>
-  <div class="sync-bar" id="sync-bar">Syncing...</div>
-
-  <!-- LOG -->
-  <div class="scr on" id="s-log">
-    <div class="ptitle">Log Set</div>
-    <div class="psub">Pick · sets · save</div>
-    <div class="drow">
-      <div class="dlbl">Date</div>
-      <input class="field" type="date" id="logdate" style="margin-bottom:0;flex:1">
-    </div>
-    <div class="pills" id="catpills"></div>
-    <input class="field mb" id="exsearch" placeholder="Search exercise..." oninput="renderPicker()">
-    <div class="picker" id="picker"></div>
-    <div id="logwrap" style="display:none">
-      <div class="lform">
-        <div class="lftitle" id="lftitle">—</div>
-        <div class="utog">
-          <button class="ubtn on" id="ukg" onclick="setUnit('kg')">kg</button>
-          <button class="ubtn" id="ulb" onclick="setUnit('lb')">lb</button>
-        </div>
-        <div class="slist" id="slist"></div>
-        <div class="brow">
-          <button class="btn bgh" onclick="addSet()">+ Set</button>
-          <button class="btn bacc" onclick="saveLog()">Save</button>
-          <button class="btn bgh" onclick="cancelLog()">Cancel</button>
-        </div>
+<!-- LOG -->
+<div class="scr on" id="s-log">
+  <div class="ptitle">Log Set</div>
+  <div class="psub">Pick · sets · save</div>
+  <div class="drow">
+    <div class="dlbl">Date</div>
+    <input class="field" type="date" id="logdate" style="margin-bottom:0;flex:1">
+  </div>
+  <div class="pills" id="catpills"></div>
+  <input class="field mb" id="exsearch" placeholder="Search exercise..." oninput="renderPicker()">
+  <div class="picker" id="picker"></div>
+  <div id="logwrap" style="display:none">
+    <div class="lform">
+      <div class="lftitle" id="lftitle">—</div>
+      <div class="utog">
+        <button class="ubtn on" id="ukg" onclick="setUnit('kg')">kg</button>
+        <button class="ubtn" id="ulb" onclick="setUnit('lb')">lb</button>
+      </div>
+      <div class="slist" id="slist"></div>
+      <div class="brow">
+        <button class="btn bgh" onclick="addSet()">+ Set</button>
+        <button class="btn bacc" onclick="saveLog()">Save</button>
+        <button class="btn bgh" onclick="cancelLog()">Cancel</button>
       </div>
     </div>
   </div>
-
-  <!-- HISTORY -->
-  <div class="scr" id="s-history">
-    <div class="ptitle">History</div>
-    <div class="psub">All sessions</div>
-    <input class="field mb" id="hsearch" placeholder="Search..." oninput="renderHistory()">
-    <div id="hlist"></div>
-  </div>
-
-  <!-- PROGRESS -->
-  <div class="scr" id="s-progress">
-    <div class="ptitle">Progress</div>
-    <div class="psub">Best set over time</div>
-    <select class="field" id="progex" onchange="renderProgress()" style="margin-bottom:16px;cursor:pointer">
-      <option value="">— Pick an exercise —</option>
-    </select>
-    <div id="pstats"></div>
-    <div id="pchart"></div>
-    <div id="psess"></div>
-  </div>
-
-  <!-- MANAGE -->
-  <div class="scr" id="s-manage">
-    <div class="ptitle">Manage</div>
-    <div class="psub">Add · delete · reorder</div>
-    <div id="mlist"></div>
-    <div class="divider"></div>
-    <button class="btn bgh" style="width:100%" onclick="openModal('newcat')">+ New Category</button>
-  </div>
 </div>
 
-<!-- MODAL: Exercise -->
+<!-- HISTORY -->
+<div class="scr" id="s-history">
+  <div class="ptitle">History</div>
+  <div class="psub">All sessions</div>
+  <input class="field mb" id="hsearch" placeholder="Search..." oninput="renderHistory()">
+  <div id="hlist"></div>
+</div>
+
+<!-- PROGRESS -->
+<div class="scr" id="s-progress">
+  <div class="ptitle">Progress</div>
+  <div class="psub">Best set over time</div>
+  <select class="field" id="progex" onchange="renderProgress()" style="margin-bottom:16px;cursor:pointer">
+    <option value="">— Pick an exercise —</option>
+  </select>
+  <div id="pstats"></div>
+  <div id="pchart"></div>
+  <div id="psess"></div>
+</div>
+
+<!-- MANAGE -->
+<div class="scr" id="s-manage">
+  <div class="ptitle">Manage</div>
+  <div class="psub">Add · delete · reorder</div>
+  <div id="mlist"></div>
+  <div class="divider"></div>
+  <button class="btn bgh" style="width:100%" onclick="openModal('newcat')">+ New Category</button>
+</div>
+
+<!-- MODAL: Add Exercise -->
 <div class="moverlay" id="modal-ex" onclick="if(event.target===this)closeModal('ex')">
   <div class="mpanel">
     <div class="mtitle" id="ex-mtitle">Add Exercise</div>
     <label class="mflbl" style="margin-top:0">Name</label>
     <input class="field" id="ex-name" placeholder="e.g. Cable Fly" autocomplete="off"
       onkeydown="if(event.key==='Enter')saveEx()">
-    <label class="mflbl">Categories</label>
+    <label class="mflbl">Add to categories</label>
     <div class="catpills" id="ex-catpills"></div>
     <div class="brow">
       <button class="btn bacc" onclick="saveEx()">Save</button>
@@ -297,7 +227,7 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
   </div>
 </div>
 
-<!-- MODAL: Category -->
+<!-- MODAL: New Category -->
 <div class="moverlay" id="modal-cat" onclick="if(event.target===this)closeModal('cat')">
   <div class="mpanel">
     <div class="mtitle">New Category</div>
@@ -317,20 +247,12 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 <div class="toast" id="toast"></div>
 
 <script>
-// ── Firebase init ─────────────────────────────────────
-const firebaseConfig = {
-  apiKey: "AIzaSyBYhRhYbbbNSXf0zH86wWbE_YaRiccXLaU",
-  authDomain: "lifts-ec71b.firebaseapp.com",
-  projectId: "lifts-ec71b",
-  storageBucket: "lifts-ec71b.firebasestorage.app",
-  messagingSenderId: "981398459733",
-  appId: "1:981398459733:web:fe7c9a7bb38b3fa1140bdc"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db   = firebase.firestore();
+// ── STORAGE ──────────────────────────────────────────────
+const K={cats:'lx_c5',ex:'lx_e5',data:'lx_d5',seed:'lx_s5'};
+const ld=(k,fb)=>{try{const s=localStorage.getItem(k);if(s)return JSON.parse(s);}catch{}return fb;};
+const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
 
-// ── Defaults ──────────────────────────────────────────
+// ── DEFAULTS ─────────────────────────────────────────────
 const DC=[
   {id:'push', label:'Push', color:'#ff5c35'},
   {id:'pull', label:'Pull', color:'#35b8ff'},
@@ -345,7 +267,7 @@ const DE={
   upper:['Incline BP Machine','T-Bar Row','Seated Lateral Raises','Pec Deck','Lat Pulldown','Preacher Curl','Triceps Pushdown','Reverse Curl'],
   other:['Abs','Push Ups','Pull Ups']
 };
-const SEED={
+const SEED_DATA={
   'Incline BP Machine':        [{date:'2026-04-30',sets:[{weight:35,reps:8,unit:'kg'},{weight:35,reps:8,unit:'kg'}]}],
   'Flat DB Bench Press':       [{date:'2026-04-30',sets:[{weight:25,reps:9,unit:'kg'}]}],
   'Pec Deck':                  [{date:'2026-04-30',sets:[{weight:190,reps:8,unit:'lb'},{weight:190,reps:8,unit:'lb'},{weight:190,reps:8,unit:'lb'}]}],
@@ -366,147 +288,32 @@ const SEED={
   'Pull Ups':                  [{date:'2026-04-30',sets:[{weight:0,reps:5,unit:'kg'}]}],
 };
 
-// ── App state ─────────────────────────────────────────
-let CATS=[...DC], EX=JSON.parse(JSON.stringify(DE)), DATA={};
-let currentUser=null;
-let selDay='all', selEx=null, sets=[], unit='kg';
+// ── STATE ────────────────────────────────────────────────
+let CATS=ld(K.cats,DC);
+let EX=ld(K.ex,DE);
+let DATA=(()=>{
+  const d=ld(K.data,null);
+  if(d) return d;
+  if(!localStorage.getItem(K.seed)){
+    localStorage.setItem(K.seed,'1');
+    sv(K.data,SEED_DATA);
+    return SEED_DATA;
+  }
+  return {};
+})();
+
+let selDay='all',selEx=null,sets=[],unit='kg';
 let modalCats=new Set();
-let saveTimer=null;
-let authMode='login';
 
-// ── Firestore ─────────────────────────────────────────
-function userRef(uid){ return db.collection('users').doc(uid); }
-
-async function loadUserData(uid){
-  showSync(true);
-  try{
-    const snap = await userRef(uid).get();
-    if(snap.exists){
-      const d=snap.data();
-      CATS = d.cats || JSON.parse(JSON.stringify(DC));
-      EX   = d.ex   || JSON.parse(JSON.stringify(DE));
-      DATA = d.data  || {};
-    } else {
-      CATS=JSON.parse(JSON.stringify(DC));
-      EX=JSON.parse(JSON.stringify(DE));
-      DATA=JSON.parse(JSON.stringify(SEED));
-      await userRef(uid).set({cats:CATS,ex:EX,data:DATA});
-    }
-  }catch(e){ console.error('Load error',e); }
-  showSync(false);
-  bootApp();
-}
-
-function scheduleSave(){
-  clearTimeout(saveTimer);
-  saveTimer=setTimeout(async()=>{
-    if(!currentUser)return;
-    showSync(true);
-    try{ await userRef(currentUser.uid).set({cats:CATS,ex:EX,data:DATA}); }
-    catch(e){ console.error('Save error',e); }
-    showSync(false);
-  },900);
-}
-
-function showSync(on){
-  document.getElementById('sync-bar').classList.toggle('show',on);
-}
-
-// ── Auth state ────────────────────────────────────────
-auth.onAuthStateChanged(user=>{
-  if(user){
-    currentUser=user;
-    document.getElementById('auth-screen').style.display='none';
-    document.getElementById('app').style.display='block';
-    const name=(user.displayName||user.email||'').split('@')[0].slice(0,8);
-    document.getElementById('user-btn').textContent=name||'Out';
-    loadUserData(user.uid);
-  } else {
-    currentUser=null;
-    document.getElementById('auth-screen').style.display='flex';
-    document.getElementById('app').style.display='none';
-  }
-});
-
-// ── Auth actions ─────────────────────────────────────
-function switchTab(mode){
-  authMode=mode;
-  document.querySelectorAll('.auth-tab').forEach((t,i)=>{
-    t.classList.toggle('on',(mode==='login'&&i===0)||(mode==='signup'&&i===1));
-  });
-  document.getElementById('auth-pass2').style.display=mode==='signup'?'block':'none';
-  document.getElementById('auth-btn-label').textContent=mode==='login'?'Sign In':'Create Account';
-  document.getElementById('auth-err').textContent='';
-}
-
-async function doAuth(){
-  const email=document.getElementById('auth-email').value.trim();
-  const pass=document.getElementById('auth-pass').value;
-  const pass2=document.getElementById('auth-pass2').value;
-  const err=document.getElementById('auth-err');
-  err.textContent='';
-  if(!email||!pass){err.textContent='Please fill in all fields';return;}
-  if(authMode==='signup'&&pass!==pass2){err.textContent='Passwords do not match';return;}
-  if(pass.length<6){err.textContent='Password must be at least 6 characters';return;}
-  document.getElementById('auth-loading').textContent='Please wait...';
-  try{
-    if(authMode==='login') await auth.signInWithEmailAndPassword(email,pass);
-    else await auth.createUserWithEmailAndPassword(email,pass);
-  }catch(e){ err.textContent=friendlyErr(e.code); }
-  document.getElementById('auth-loading').textContent='';
-}
-
-async function doGoogle(){
-  document.getElementById('auth-err').textContent='';
-  document.getElementById('auth-loading').textContent='Opening Google...';
-  try{
-    const provider=new firebase.auth.GoogleAuthProvider();
-    await auth.signInWithPopup(provider);
-  }catch(e){
-    document.getElementById('auth-err').textContent=friendlyErr(e.code);
-  }
-  document.getElementById('auth-loading').textContent='';
-}
-
-async function doSignOut(){
-  if(!confirm('Sign out?'))return;
-  await auth.signOut();
-  CATS=JSON.parse(JSON.stringify(DC));
-  EX=JSON.parse(JSON.stringify(DE));
-  DATA={};
-}
-
-function friendlyErr(code){
-  return({
-    'auth/invalid-email':'Invalid email address',
-    'auth/user-not-found':'No account with that email',
-    'auth/wrong-password':'Incorrect password',
-    'auth/invalid-credential':'Wrong email or password',
-    'auth/email-already-in-use':'Email already registered — sign in instead',
-    'auth/weak-password':'Password too weak (min 6 chars)',
-    'auth/popup-closed-by-user':'Google sign-in cancelled',
-    'auth/network-request-failed':'Network error — check connection',
-    'auth/too-many-requests':'Too many attempts — try again later',
-  })[code]||'Error: '+code;
-}
-
-// ── Boot app ─────────────────────────────────────────
-function bootApp(){
-  document.getElementById('logdate').value=new Date().toISOString().slice(0,10);
-  buildCatPills();
-  renderPicker();
-  buildProgSel();
-}
-
-// ── Helpers ──────────────────────────────────────────
-const catById  = id=>CATS.find(c=>c.id===id);
-const catColor = id=>catById(id)?.color||'#888';
-const catLabel = id=>catById(id)?.label||id;
-const primCat  = name=>{for(const c of CATS)if((EX[c.id]||[]).includes(name))return c.id;return CATS[0]?.id||'other';};
-const allNames = ()=>[...new Set(CATS.flatMap(c=>EX[c.id]||[]))].sort();
-const fmtDate  = d=>{if(!d)return'';const[,m,dy]=d.split('-');return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+ +dy;};
-const getPR    = sessions=>{let pr=null;sessions.forEach(s=>s.sets.forEach(set=>{if(!pr||set.weight>pr.weight||(set.weight===pr.weight&&set.reps>pr.reps))pr={...set,date:s.date};}));return pr;};
-const bestSet  = sess=>sess.sets.reduce((b,s)=>s.weight>b.weight?s:b,sess.sets[0]);
+// ── HELPERS ──────────────────────────────────────────────
+const catById=id=>CATS.find(c=>c.id===id);
+const catColor=id=>catById(id)?.color||'#888';
+const catLabel=id=>catById(id)?.label||id;
+const primCat=name=>{for(const c of CATS)if((EX[c.id]||[]).includes(name))return c.id;return CATS[0]?.id||'other';};
+const allNames=()=>[...new Set(CATS.flatMap(c=>EX[c.id]||[]))].sort();
+const fmtDate=d=>{if(!d)return'';const[,m,dy]=d.split('-');return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+ +dy;};
+const getPR=sessions=>{let pr=null;sessions.forEach(s=>s.sets.forEach(set=>{if(!pr||set.weight>pr.weight||(set.weight===pr.weight&&set.reps>pr.reps))pr={...set,date:s.date};}));return pr;};
+const bestSet=sess=>sess.sets.reduce((b,s)=>s.weight>b.weight?s:b,sess.sets[0]);
 
 let toastTimer=null;
 function toast(msg){
@@ -515,7 +322,11 @@ function toast(msg){
   clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('on'),2200);
 }
 
-// ── Cat pills ────────────────────────────────────────
+// ── INIT ─────────────────────────────────────────────────
+document.getElementById('logdate').value=new Date().toISOString().slice(0,10);
+buildCatPills();
+renderPicker();
+
 function buildCatPills(){
   const w=document.getElementById('catpills');w.innerHTML='';
   const mk=(id,label)=>{
@@ -529,7 +340,7 @@ function buildCatPills(){
   CATS.forEach(c=>mk(c.id,c.label));
 }
 
-// ── LOG ──────────────────────────────────────────────
+// ── LOG ──────────────────────────────────────────────────
 function renderPicker(){
   const q=document.getElementById('exsearch').value.toLowerCase();
   const w=document.getElementById('picker');
@@ -616,10 +427,11 @@ function saveLog(){
   const entry={date,sets:valid.map(s=>({weight:parseFloat(s.w),reps:parseInt(s.r),unit:s.u||unit}))};
   if(idx>=0)DATA[selEx][idx]=entry;else DATA[selEx].push(entry);
   DATA[selEx].sort((a,b)=>a.date.localeCompare(b.date));
-  scheduleSave();toast('Saved ✓');cancelLog();buildProgSel();
+  sv(K.data,DATA);toast('Saved ✓');cancelLog();
+  const ps=document.getElementById('progex');if(ps){const pv=ps.value;buildProgSel();if(pv)ps.value=pv;}
 }
 
-// ── HISTORY ──────────────────────────────────────────
+// ── HISTORY ──────────────────────────────────────────────
 function renderHistory(){
   const q=document.getElementById('hsearch').value.toLowerCase();
   const w=document.getElementById('hlist');w.innerHTML='';
@@ -649,13 +461,15 @@ function renderHistory(){
     const db=document.createElement('button');db.className='btn brd';db.style.cssText='font-size:.55rem;padding:6px 11px;margin-top:6px';db.textContent='Delete all logs';
     db.addEventListener('click',()=>{
       if(!confirm('Delete all logs for "'+name+'"?'))return;
-      delete DATA[name];scheduleSave();renderHistory();buildProgSel();toast('Deleted');
+      delete DATA[name];sv(K.data,DATA);renderHistory();buildProgSel();toast('Deleted');
     });
-    body.appendChild(db);el.appendChild(hdr);el.appendChild(body);w.appendChild(el);
+    body.appendChild(db);
+    el.appendChild(hdr);el.appendChild(body);
+    w.appendChild(el);
   });
 }
 
-// ── PROGRESS ─────────────────────────────────────────
+// ── PROGRESS ─────────────────────────────────────────────
 function buildProgSel(){
   const sel=document.getElementById('progex');if(!sel)return;
   const prev=sel.value;
@@ -679,14 +493,14 @@ function renderProgress(){
   ps.innerHTML='<div class="sgrid">'
     +'<div class="sbox"><div class="slbl">PR Weight</div><div class="sval">'+(pr?pr.weight:'—')+'</div><div class="sunit">'+(pr?pr.unit:'')+'</div></div>'
     +'<div class="sbox"><div class="slbl">Sessions</div><div class="sval">'+sessions.length+'</div><div class="sunit">logged</div></div>'
-    +'<div class="sbox"><div class="slbl">'+(imp!==null?(+imp>=0?'↑ Gained':'↓ Change'):'Progress')+'</div>'
-    +'<div class="sval" style="font-size:'+(imp!==null?'1.3rem':'1.5rem')+';color:'+(imp===null?'inherit':+imp>=0?'var(--ac)':'var(--rd)')+'">'+
+    +'<div class="sbox"><div class="slbl">'+(imp!==null?(imp>=0?'↑ Gained':'↓ Change'):'Progress')+'</div>'
+    +'<div class="sval" style="font-size:'+(imp!==null?'1.3rem':'1.5rem')+';color:'+(imp===null?'inherit':imp>=0?'var(--ac)':'var(--rd)')+'">'+
     (imp!==null?Math.abs(imp)+'%':'—')+'</div><div class="sunit">best set wt</div></div></div>';
   if(sessions.length>=2){
     const pts=sessions.map(s=>({date:s.date,w:bestSet(s).weight}));
     pc.innerHTML='<div class="cbox"><div class="ctitle">Best Set Weight Per Session</div><div id="cwrap" style="position:relative;height:140px"></div></div>';
     drawChart(pts);
-  }else pc.innerHTML='<div class="empty" style="padding:14px">Log 2+ sessions to see chart</div>';
+  }else{pc.innerHTML='<div class="empty" style="padding:14px">Log 2+ sessions to see chart</div>';}
   const sd=document.createElement('div');sd.className='cbox';
   const st=document.createElement('div');st.className='ctitle';st.textContent='All Sessions';sd.appendChild(st);
   sessions.slice().reverse().forEach(s=>{
@@ -698,12 +512,13 @@ function renderProgress(){
     db.addEventListener('click',()=>{
       DATA[name]=(DATA[name]||[]).filter(x=>x.date!==s.date);
       if(!DATA[name].length)delete DATA[name];
-      scheduleSave();renderProgress();renderHistory();buildProgSel();toast('Removed');
+      sv(K.data,DATA);renderProgress();renderHistory();buildProgSel();toast('Removed');
     });
     const isPR=pr&&bestSet(s).weight===pr.weight&&s.date===pr.date;
     row.appendChild(dt);row.appendChild(chips);
     if(isPR){const pb=document.createElement('span');pb.className='prbadge';pb.style.flexShrink='0';pb.textContent='PR';row.appendChild(pb);}
-    row.appendChild(db);sd.appendChild(row);
+    row.appendChild(db);
+    sd.appendChild(row);
   });
   pp.appendChild(sd);
 }
@@ -741,12 +556,13 @@ function drawChart(pts){
   });
 }
 
-// ── MANAGE ───────────────────────────────────────────
+// ── MANAGE ───────────────────────────────────────────────
 function moveEx(catId,idx,dir){
-  const list=EX[catId];const ni=idx+dir;
+  const list=EX[catId];
+  const ni=idx+dir;
   if(ni<0||ni>=list.length)return;
   [list[idx],list[ni]]=[list[ni],list[idx]];
-  scheduleSave();renderManage();renderPicker();
+  sv(K.ex,EX);renderManage();renderPicker();
 }
 
 function renderManage(){
@@ -754,6 +570,7 @@ function renderManage(){
   CATS.forEach(cat=>{
     const list=EX[cat.id]||[];
     const sec=document.createElement('div');sec.className='mcat';
+    // Header
     const hdr=document.createElement('div');hdr.className='mcathdr';
     const dot=document.createElement('span');dot.className='dot';dot.style.background=cat.color;
     const lbl=document.createElement('span');lbl.className='mcatlbl';lbl.style.color=cat.color;lbl.textContent=cat.label;
@@ -762,29 +579,35 @@ function renderManage(){
     dcb.addEventListener('click',()=>{
       if(!confirm('Delete category "'+cat.label+'"?'))return;
       CATS=CATS.filter(c=>c.id!==cat.id);delete EX[cat.id];
-      scheduleSave();renderManage();buildCatPills();renderPicker();toast('Category deleted');
+      sv(K.cats,CATS);sv(K.ex,EX);renderManage();buildCatPills();renderPicker();toast('Category deleted');
     });
     hdr.appendChild(dot);hdr.appendChild(lbl);hdr.appendChild(cnt);hdr.appendChild(dcb);
     sec.appendChild(hdr);
+    // Exercise rows
     const rows=document.createElement('div');
     list.forEach((name,idx)=>{
       const r=document.createElement('div');r.className='mrow';
+      // Up/down buttons
       const ud=document.createElement('div');ud.className='mupdown';
       const ub=document.createElement('button');ub.className='mud';ub.textContent='▲';ub.disabled=(idx===0);
       ub.addEventListener('click',e=>{e.stopPropagation();moveEx(cat.id,idx,-1);});
       const db2=document.createElement('button');db2.className='mud';db2.textContent='▼';db2.disabled=(idx===list.length-1);
       db2.addEventListener('click',e=>{e.stopPropagation();moveEx(cat.id,idx,1);});
       ud.appendChild(ub);ud.appendChild(db2);
+      // Name
       const nm=document.createElement('span');nm.className='mname';nm.textContent=name;
+      // Delete button — direct event listener, no inline onclick
       const db=document.createElement('button');db.className='mdel';db.textContent='✕';
       db.addEventListener('click',e=>{
         e.stopPropagation();e.preventDefault();
         if(!confirm('Remove "'+name+'" from '+cat.label+'?'))return;
         EX[cat.id]=(EX[cat.id]||[]).filter(n=>n!==name);
-        scheduleSave();renderManage();renderPicker();toast('Removed');
+        sv(K.ex,EX);renderManage();renderPicker();toast('Removed');
       });
-      r.appendChild(ud);r.appendChild(nm);r.appendChild(db);rows.appendChild(r);
+      r.appendChild(ud);r.appendChild(nm);r.appendChild(db);
+      rows.appendChild(r);
     });
+    // Add button
     const ab=document.createElement('button');ab.className='addbtn';
     ab.innerHTML='<span style="font-size:.9rem;line-height:1">+</span> Add exercise';
     ab.addEventListener('click',()=>{
@@ -795,11 +618,13 @@ function renderManage(){
       document.getElementById('modal-ex').classList.add('on');
       setTimeout(()=>document.getElementById('ex-name').focus(),220);
     });
-    rows.appendChild(ab);sec.appendChild(rows);w.appendChild(sec);
+    rows.appendChild(ab);
+    sec.appendChild(rows);
+    w.appendChild(sec);
   });
 }
 
-// ── MODALS ───────────────────────────────────────────
+// ── MODALS ───────────────────────────────────────────────
 function openModal(type){
   if(type==='newcat'){
     document.getElementById('cat-name').value='';
@@ -808,7 +633,7 @@ function openModal(type){
     setTimeout(()=>document.getElementById('cat-name').focus(),220);
   }
 }
-function closeModal(type){ document.getElementById('modal-'+type).classList.remove('on'); }
+function closeModal(type){document.getElementById('modal-'+type).classList.remove('on');}
 
 function renderExCatPills(){
   const g=document.getElementById('ex-catpills');g.innerHTML='';
@@ -834,7 +659,7 @@ function saveEx(){
     if(!(EX[catId]||[]).includes(name)){if(!EX[catId])EX[catId]=[];EX[catId].push(name);added++;}
   });
   if(!added){toast('Already in those categories');return;}
-  scheduleSave();closeModal('ex');renderManage();buildCatPills();renderPicker();toast('Added ✓');
+  sv(K.ex,EX);closeModal('ex');renderManage();buildCatPills();renderPicker();toast('Added ✓');
 }
 
 function saveCat(){
@@ -843,11 +668,12 @@ function saveCat(){
   const color=document.getElementById('cat-color').value;
   const id='cat_'+Date.now();
   CATS.push({id,label,color});EX[id]=[];
-  scheduleSave();closeModal('cat');renderManage();buildCatPills();renderPicker();
+  sv(K.cats,CATS);sv(K.ex,EX);
+  closeModal('cat');renderManage();buildCatPills();renderPicker();
   toast('"'+label+'" created ✓');
 }
 
-// ── NAV ──────────────────────────────────────────────
+// ── NAV ──────────────────────────────────────────────────
 function go(id){
   document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
