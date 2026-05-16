@@ -472,15 +472,27 @@ async function doAuth(){
 
 async function doGoogle(){
   document.getElementById('auth-err').textContent='';
-  document.getElementById('auth-loading').textContent='Opening Google...';
+  document.getElementById('auth-loading').textContent='Redirecting to Google...';
   try{
     const provider=new firebase.auth.GoogleAuthProvider();
-    await auth.signInWithPopup(provider);
+    await auth.signInWithRedirect(provider);
   }catch(e){
-    document.getElementById('auth-err').textContent=friendlyErr(e.code);
+    document.getElementById('auth-err').textContent=friendlyErr(e.code||'unknown');
+    document.getElementById('auth-loading').textContent='';
   }
-  document.getElementById('auth-loading').textContent='';
 }
+
+// Handle redirect result when page loads
+auth.getRedirectResult().then(result=>{
+  if(result && result.user){
+    // already handled by onAuthStateChanged
+  }
+}).catch(e=>{
+  if(e.code && e.code !== 'auth/no-current-user'){
+    const err=document.getElementById('auth-err');
+    if(err) err.textContent=friendlyErr(e.code);
+  }
+});
 
 async function doSignOut(){
   if(!confirm('Sign out?'))return;
