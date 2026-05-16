@@ -387,11 +387,12 @@ async function loadUserData(uid){
       EX   = d.ex   ? JSON.parse(JSON.stringify(d.ex))   : JSON.parse(JSON.stringify(DE));
       DATA = d.data  ? JSON.parse(JSON.stringify(d.data)) : {};
     } else {
-      CATS=JSON.parse(JSON.stringify(DC));
-      EX=JSON.parse(JSON.stringify(DE));
-      DATA=JSON.parse(JSON.stringify(SEED));
+      // Brand new user — completely blank, no categories, no exercises
+      CATS=[];
+      EX={};
+      DATA={};
       try{ await userRef(uid).set({cats:CATS,ex:EX,data:DATA}); }
-      catch(e2){ console.warn('Could not seed data:',e2.message); }
+      catch(e2){ console.warn('Could not save new user:',e2.message); }
     }
   }catch(e){
     console.error('Load error',e.message);
