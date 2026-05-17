@@ -170,6 +170,45 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .sync-bar{font-size:.52rem;color:var(--m1);letter-spacing:.12em;text-align:center;padding:4px;background:var(--s2);display:none}
 .sync-bar.show{display:block}
 
+/* STREAK BANNER */
+.streak-banner{background:var(--sf);border:1px solid var(--b1);border-radius:2px;padding:14px 16px;margin:16px 16px 0;max-width:640px;margin-left:auto;margin-right:auto;display:none}
+.streak-banner.show{display:flex;align-items:center;gap:12px}
+.streak-fire{font-size:2rem;line-height:1;flex-shrink:0}
+.streak-info{flex:1}
+.streak-num{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.06em;color:var(--ac);line-height:1}
+.streak-lbl{font-size:.55rem;color:var(--m1);letter-spacing:.2em;text-transform:uppercase;margin-top:2px}
+.streak-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin:0 16px 0;max-width:640px;margin-left:auto;margin-right:auto;display:none}
+.streak-stats.show{display:grid}
+.sstat{background:var(--sf);border:1px solid var(--b1);padding:11px 10px;text-align:center}
+.sstat-val{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:.04em;line-height:1}
+.sstat-lbl{font-size:.5rem;color:var(--m1);letter-spacing:.15em;text-transform:uppercase;margin-top:3px}
+
+/* STREAK */
+.streak-bar{display:flex;align-items:stretch;gap:2px;margin:0 0 16px;background:var(--sf);border:1px solid var(--b1);border-radius:2px;padding:14px 16px;gap:0}
+.streak-box{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0 8px}
+.streak-box+.streak-box{border-left:1px solid var(--b1)}
+.streak-num{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;letter-spacing:.04em;line-height:1;color:var(--ac)}
+.streak-num.fire::before{content:'🔥 '}
+.streak-lbl{font-size:.52rem;color:var(--m1);letter-spacing:.18em;text-transform:uppercase;text-align:center}
+.rest-setting{display:flex;align-items:center;gap:10px;background:var(--sf);border:1px solid var(--b1);border-radius:2px;padding:12px 14px;margin-bottom:16px}
+.rest-lbl{font-size:.62rem;color:var(--m2);letter-spacing:.08em;flex:1}
+.rest-controls{display:flex;align-items:center;gap:8px}
+.rest-btn{background:none;border:1px solid var(--b2);color:var(--tx);width:28px;height:28px;border-radius:2px;font-size:1rem;display:flex;align-items:center;justify-content:center}
+.rest-btn:active{border-color:var(--ac);color:var(--ac)}
+.rest-val{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--ac);min-width:20px;text-align:center}
+.cal-wrap{background:var(--sf);border:1px solid var(--b1);border-radius:2px;padding:13px;margin-bottom:12px}
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cal-title{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.08em;color:var(--tx)}
+.cal-nav{background:none;border:1px solid var(--b2);color:var(--m2);width:28px;height:28px;border-radius:2px;font-size:.8rem;display:flex;align-items:center;justify-content:center}
+.cal-nav:active{border-color:var(--ac);color:var(--ac)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-day-name{font-size:.5rem;color:var(--m1);text-align:center;letter-spacing:.1em;padding-bottom:4px}
+.cal-day{aspect-ratio:1;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:var(--m2);position:relative}
+.cal-day.worked{background:var(--ac);color:#000;font-weight:600}
+.cal-day.today{border:1px solid var(--ac)}
+.cal-day.rest-ok{background:var(--s2);color:var(--m1)}
+.cal-day.empty{opacity:0}
+
 /* MISC */
 .empty{text-align:center;padding:40px 18px;color:var(--m1);font-size:.7rem}
 .divider{height:1px;background:var(--b1);margin:20px 0}
@@ -217,11 +256,28 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
       <button class="ntab on" onclick="go('log')">Log</button>
       <button class="ntab" onclick="go('history')">History</button>
       <button class="ntab" onclick="go('progress')">Progress</button>
+      <button class="ntab" onclick="go('streak')">Streak</button>
       <button class="ntab" onclick="go('manage')">Manage</button>
     </div>
     <button class="user-btn" id="user-btn" onclick="doSignOut()">Out</button>
   </nav>
   <div class="sync-bar" id="sync-bar">Syncing...</div>
+  <div class="streak-banner" id="streak-banner">
+    <div class="streak-fire" id="streak-fire">🔥</div>
+    <div class="streak-info">
+      <div class="streak-num" id="streak-num">0</div>
+      <div class="streak-lbl">Day streak</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:.55rem;color:var(--m1);letter-spacing:.1em;text-transform:uppercase">Best</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--m2)" id="streak-best">0</div>
+    </div>
+  </div>
+  <div class="streak-stats" id="streak-stats">
+    <div class="sstat"><div class="sstat-val" id="stat-total">0</div><div class="sstat-lbl">Total Days</div></div>
+    <div class="sstat"><div class="sstat-val" id="stat-week">0</div><div class="sstat-lbl">This Week</div></div>
+    <div class="sstat"><div class="sstat-val" id="stat-rest">0</div><div class="sstat-lbl">Rest Days</div></div>
+  </div>
 
   <!-- LOG -->
   <div class="scr on" id="s-log">
@@ -269,6 +325,42 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
     <div id="pstats"></div>
     <div id="pchart"></div>
     <div id="psess"></div>
+  </div>
+
+  <!-- STREAK -->
+  <div class="scr" id="s-streak">
+    <div class="ptitle">Streak 🔥</div>
+    <div class="psub">Stay consistent</div>
+    <div class="streak-bar" id="streak-bar">
+      <div class="streak-box">
+        <div class="streak-num fire" id="streak-current">0</div>
+        <div class="streak-lbl">Current Streak</div>
+      </div>
+      <div class="streak-box">
+        <div class="streak-num" id="streak-best">0</div>
+        <div class="streak-lbl">Best Streak</div>
+      </div>
+      <div class="streak-box">
+        <div class="streak-num" id="streak-total">0</div>
+        <div class="streak-lbl">Total Days</div>
+      </div>
+    </div>
+    <div class="rest-setting">
+      <div class="rest-lbl">Rest days allowed between sessions<br><span style="font-size:.55rem;color:var(--m1)">Streak stays alive through this many rest days</span></div>
+      <div class="rest-controls">
+        <button class="rest-btn" onclick="changeRestDays(-1)">−</button>
+        <div class="rest-val" id="rest-val">1</div>
+        <button class="rest-btn" onclick="changeRestDays(1)">+</button>
+      </div>
+    </div>
+    <div class="cal-wrap">
+      <div class="cal-header">
+        <button class="cal-nav" onclick="calPrev()">◀</button>
+        <div class="cal-title" id="cal-title"></div>
+        <button class="cal-nav" onclick="calNext()">▶</button>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
   </div>
 
   <!-- MANAGE -->
@@ -874,6 +966,144 @@ function saveCat(){
   toast('"'+label+'" created ✓');
 }
 
+// ── STREAK ───────────────────────────────────────────
+let restDays = 1;
+let calYear, calMonth;
+
+function initStreak(){
+  const now = new Date();
+  calYear = now.getFullYear();
+  calMonth = now.getMonth();
+  restDays = (typeof DATA._restDays === 'number') ? DATA._restDays : 1;
+  document.getElementById('rest-val').textContent = restDays;
+}
+
+function changeRestDays(dir){
+  restDays = Math.max(0, Math.min(7, restDays + dir));
+  document.getElementById('rest-val').textContent = restDays;
+  DATA._restDays = restDays;
+  scheduleSave();
+  renderStreak();
+}
+
+// Get all unique workout dates sorted ascending
+function getWorkoutDates(){
+  const dates = new Set();
+  Object.keys(DATA).forEach(name=>{
+    if(name.startsWith('_')) return;
+    (DATA[name]||[]).forEach(s=>{ if(s.date) dates.add(s.date); });
+  });
+  return [...dates].sort();
+}
+
+function calcStreak(){
+  const dates = getWorkoutDates();
+  if(!dates.length) return {current:0, best:0, total:dates.length};
+
+  const today = new Date().toISOString().slice(0,10);
+  const allowedGap = restDays + 1; // days between sessions allowed
+
+  // Build streak groups
+  let streaks = [];
+  let cur = [dates[0]];
+  for(let i=1;i<dates.length;i++){
+    const prev = new Date(dates[i-1]);
+    const curr = new Date(dates[i]);
+    const diff = Math.round((curr-prev)/(1000*60*60*24));
+    if(diff <= allowedGap){
+      cur.push(dates[i]);
+    } else {
+      streaks.push(cur);
+      cur = [dates[i]];
+    }
+  }
+  streaks.push(cur);
+
+  const best = Math.max(...streaks.map(s=>s.length));
+
+  // Current streak: check if last workout is recent enough
+  const lastGroup = streaks[streaks.length-1];
+  const lastDate = new Date(lastGroup[lastGroup.length-1]);
+  const todayDate = new Date(today);
+  const daysSinceLast = Math.round((todayDate-lastDate)/(1000*60*60*24));
+  const current = daysSinceLast <= allowedGap ? lastGroup.length : 0;
+
+  return {current, best, total: dates.length};
+}
+
+function renderStreak(){
+  initStreak();
+  const {current, best, total} = calcStreak();
+  document.getElementById('streak-current').textContent = current;
+  document.getElementById('streak-best').textContent = best;
+  document.getElementById('streak-total').textContent = total;
+  renderCal();
+}
+
+// Calendar
+function calPrev(){ calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCal(); }
+function calNext(){ calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCal(); }
+
+function renderCal(){
+  const today = new Date().toISOString().slice(0,10);
+  const workoutDates = new Set(getWorkoutDates());
+  const allowedGap = restDays + 1;
+
+  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-title').textContent = months[calMonth]+' '+calYear;
+
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+
+  // Day name headers
+  ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d=>{
+    const el=document.createElement('div');
+    el.className='cal-day-name';
+    el.textContent=d;
+    grid.appendChild(el);
+  });
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+
+  // Empty cells before first day
+  for(let i=0;i<firstDay;i++){
+    const el=document.createElement('div');el.className='cal-day empty';grid.appendChild(el);
+  }
+
+  for(let d=1;d<=daysInMonth;d++){
+    const dateStr = calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const el=document.createElement('div');
+    el.className='cal-day';
+    el.textContent=d;
+
+    if(workoutDates.has(dateStr)){
+      el.classList.add('worked');
+    } else if(dateStr <= today){
+      // Check if this is a valid rest day (within gap of surrounding workouts)
+      const dates=[...workoutDates].sort();
+      let isRestOk=false;
+      for(let i=0;i<dates.length-1;i++){
+        const a=new Date(dates[i]), b=new Date(dates[i+1]);
+        const cur=new Date(dateStr);
+        const gapAB=Math.round((b-a)/(1000*60*60*24));
+        if(cur>a && cur<b && gapAB<=allowedGap){ isRestOk=true; break; }
+      }
+      // Also check if it's a rest day after last workout within gap
+      if(!isRestOk && dates.length){
+        const last=new Date(dates[dates.length-1]);
+        const cur=new Date(dateStr);
+        const diff=Math.round((cur-last)/(1000*60*60*24));
+        if(diff>0 && diff<=allowedGap) isRestOk=true;
+      }
+      if(isRestOk) el.classList.add('rest-ok');
+    }
+
+    if(dateStr===today) el.classList.add('today');
+    grid.appendChild(el);
+  }
+}
+
 // ── NAV ──────────────────────────────────────────────
 function go(id){
   document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
@@ -882,6 +1112,7 @@ function go(id){
   document.querySelector('.ntab[onclick="go(\''+id+'\')"]').classList.add('on');
   if(id==='history')renderHistory();
   if(id==='progress'){buildProgSel();renderProgress();}
+  if(id==='streak')renderStreak();
   if(id==='manage')renderManage();
 }
 </script>
