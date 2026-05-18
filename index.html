@@ -166,12 +166,6 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .catpill{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border:1px solid var(--b2);background:none;color:var(--m2);border-radius:2px}
 .catpill.on{color:#000}
 
-/* CHART TABS */
-.chart-tabs{display:flex;gap:4px;margin-bottom:10px}
-.chart-tab{font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;padding:6px 14px;border:1px solid var(--b2);background:none;color:var(--m2);border-radius:2px;transition:all .12s}
-.chart-tab.on{background:var(--ac);color:#000;border-color:var(--ac)}
-.chart-meta{font-size:.65rem;margin-bottom:8px;min-height:18px}
-
 /* SYNC */
 .sync-bar{font-size:.52rem;color:var(--m1);letter-spacing:.12em;text-align:center;padding:4px;background:var(--s2);display:none}
 .sync-bar.show{display:block}
@@ -791,9 +785,6 @@ function buildProgSel(){
   if(prev)sel.value=prev;
 }
 
-// Active chart tab: 'weight' or 'reps'
-let chartTab = 'weight';
-
 function renderProgress(){
   const name=document.getElementById('progex').value;
   const ps=document.getElementById('pstats'),pc=document.getElementById('pchart'),pp=document.getElementById('psess');
@@ -803,33 +794,18 @@ function renderProgress(){
   const pr=getPR(sessions);
   const latest=bestSet(sessions[sessions.length-1]);
   const first=bestSet(sessions[0]);
-  const impW=sessions.length>1?((latest.weight-first.weight)/first.weight*100).toFixed(1):null;
-  const impR=sessions.length>1?((latest.reps-first.reps)/first.reps*100).toFixed(1):null;
-  const prReps=sessions.reduce((best,s)=>s.sets.reduce((b,set)=>set.reps>b?set.reps:b,b),0);
-
+  const imp=sessions.length>1?((latest.weight-first.weight)/first.weight*100).toFixed(1):null;
   ps.innerHTML='<div class="sgrid">'
     +'<div class="sbox"><div class="slbl">PR Weight</div><div class="sval">'+(pr?pr.weight:'—')+'</div><div class="sunit">'+(pr?pr.unit:'')+'</div></div>'
-    +'<div class="sbox"><div class="slbl">PR Reps</div><div class="sval">'+prReps+'</div><div class="sunit">best set</div></div>'
     +'<div class="sbox"><div class="slbl">Sessions</div><div class="sval">'+sessions.length+'</div><div class="sunit">logged</div></div>'
-    +'</div>';
-
+    +'<div class="sbox"><div class="slbl">'+(imp!==null?(+imp>=0?'↑ Gained':'↓ Change'):'Progress')+'</div>'
+    +'<div class="sval" style="font-size:'+(imp!==null?'1.3rem':'1.5rem')+';color:'+(imp===null?'inherit':+imp>=0?'var(--ac)':'var(--rd)')+'">'+
+    (imp!==null?Math.abs(imp)+'%':'—')+'</div><div class="sunit">best set wt</div></div></div>';
   if(sessions.length>=2){
-    const wPts=sessions.map(s=>({date:s.date,w:bestSet(s).weight}));
-    const rPts=sessions.map(s=>({date:s.date,w:bestSet(s).reps}));
-    pc.innerHTML=
-      '<div class="cbox">'
-      +'<div class="chart-tabs">'
-      +'<button class="chart-tab'+(chartTab==='weight'?' on':'')+'" onclick="switchChartTab('weight')">Weight</button>'
-      +'<button class="chart-tab'+(chartTab==='reps'?' on':'')+'" onclick="switchChartTab('reps')">Reps</button>'
-      +'</div>'
-      +'<div class="chart-meta" id="chart-meta"></div>'
-      +'<div id="cwrap" style="position:relative;height:150px"></div>'
-      +'</div>';
-    renderChartTab(chartTab, wPts, rPts, impW, impR);
-  } else {
-    pc.innerHTML='<div class="empty" style="padding:14px">Log 2+ sessions to see chart</div>';
-  }
-
+    const pts=sessions.map(s=>({date:s.date,w:bestSet(s).weight}));
+    pc.innerHTML='<div class="cbox"><div class="ctitle">Best Set Weight Per Session</div><div id="cwrap" style="position:relative;height:140px"></div></div>';
+    drawChart(pts);
+  }else pc.innerHTML='<div class="empty" style="padding:14px">Log 2+ sessions to see chart</div>';
   const sd=document.createElement('div');sd.className='cbox';
   const st=document.createElement('div');st.className='ctitle';st.textContent='All Sessions';sd.appendChild(st);
   sessions.slice().reverse().forEach(s=>{
@@ -851,91 +827,35 @@ function renderProgress(){
   pp.appendChild(sd);
 }
 
-function switchChartTab(tab){
-  chartTab=tab;
-  // re-render just the chart section
-  const name=document.getElementById('progex').value;
-  if(!name||!DATA[name]?.length)return;
-  const sessions=DATA[name];
-  const wPts=sessions.map(s=>({date:s.date,w:bestSet(s).weight}));
-  const rPts=sessions.map(s=>({date:s.date,w:bestSet(s).reps}));
-  const latest=bestSet(sessions[sessions.length-1]);
-  const first=bestSet(sessions[0]);
-  const impW=sessions.length>1?((latest.weight-first.weight)/first.weight*100).toFixed(1):null;
-  const impR=sessions.length>1?((latest.reps-first.reps)/first.reps*100).toFixed(1):null;
-  // update tab active state
-  document.querySelectorAll('.chart-tab').forEach(t=>t.classList.remove('on'));
-  document.querySelectorAll('.chart-tab').forEach(t=>{if(t.textContent.toLowerCase()===tab)t.classList.add('on');});
-  // clear and redraw
-  const wrap=document.getElementById('cwrap');
-  if(wrap)wrap.innerHTML='';
-  renderChartTab(tab, wPts, rPts, impW, impR);
-}
-
-function renderChartTab(tab, wPts, rPts, impW, impR){
-  const pts = tab==='weight' ? wPts : rPts;
-  const imp = tab==='weight' ? impW : impR;
-  const color = tab==='weight' ? '#e8ff47' : '#35b8ff';
-  const label = tab==='weight' ? 'Best Set Weight' : 'Best Set Reps';
-
-  // Meta line: change indicator
-  const meta=document.getElementById('chart-meta');
-  if(meta){
-    if(imp!==null){
-      const up=+imp>=0;
-      meta.innerHTML='<span style="color:'+(up?'var(--ac)':'var(--rd)')+';">'+(up?'↑':'↓')+' '+Math.abs(imp)+'%</span>'
-        +' <span style="font-size:.55rem;color:var(--m1)">vs first session</span>';
-    } else {
-      meta.innerHTML='';
-    }
-  }
-  drawChart(pts, color, label);
-}
-
-function drawChart(pts, lineColor, label){
-  lineColor = lineColor || '#e8ff47';
+function drawChart(pts){
   requestAnimationFrame(()=>{
     const wrap=document.getElementById('cwrap');if(!wrap)return;
-    wrap.innerHTML='';
     const cv=document.createElement('canvas');wrap.appendChild(cv);
-    const W=wrap.offsetWidth,H=150;
+    const W=wrap.offsetWidth,H=140;
     cv.width=W*devicePixelRatio;cv.height=H*devicePixelRatio;
     cv.style.width=W+'px';cv.style.height=H+'px';
     const ctx=cv.getContext('2d');ctx.scale(devicePixelRatio,devicePixelRatio);
     const pad={t:10,r:14,b:26,l:40};
     const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
     const vs=pts.map(p=>p.w);
-    const mn=Math.min(...vs)*.92,mx=Math.max(...vs)*1.08;
+    const mn=Math.min(...vs)*.95,mx=Math.max(...vs)*1.05;
     const px=i=>pad.l+i/(pts.length-1||1)*cw;
     const py=v=>pad.t+ch-((v-mn)/(mx-mn||1))*ch;
-    // Grid lines
     ctx.strokeStyle='#1e1e1e';ctx.lineWidth=1;
     for(let i=0;i<4;i++){
-      const y=pad.t+ch/3*i;
-      ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();
+      const y=pad.t+ch/3*i;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();
       ctx.fillStyle='#444';ctx.font='8px monospace';ctx.textAlign='right';
       ctx.fillText((mn+(mx-mn)*(1-i/3)).toFixed(1),pad.l-4,y+3);
     }
-    // Fill gradient
     const gr=ctx.createLinearGradient(0,pad.t,0,pad.t+ch);
-    const rgb=lineColor==='#35b8ff'?'53,184,255':'232,255,71';
-    gr.addColorStop(0,'rgba('+rgb+',.15)');gr.addColorStop(1,'rgba('+rgb+',0)');
-    ctx.beginPath();
-    pts.forEach((p,i)=>i===0?ctx.moveTo(px(i),py(p.w)):ctx.lineTo(px(i),py(p.w)));
-    ctx.lineTo(px(pts.length-1),pad.t+ch);ctx.lineTo(px(0),pad.t+ch);
-    ctx.closePath();ctx.fillStyle=gr;ctx.fill();
-    // Line
-    ctx.beginPath();ctx.strokeStyle=lineColor;ctx.lineWidth=2;ctx.lineJoin='round';
-    pts.forEach((p,i)=>i===0?ctx.moveTo(px(i),py(p.w)):ctx.lineTo(px(i),py(p.w)));
-    ctx.stroke();
-    // Dots + date labels
+    gr.addColorStop(0,'rgba(232,255,71,.15)');gr.addColorStop(1,'rgba(232,255,71,0)');
+    ctx.beginPath();pts.forEach((p,i)=>i===0?ctx.moveTo(px(i),py(p.w)):ctx.lineTo(px(i),py(p.w)));
+    ctx.lineTo(px(pts.length-1),pad.t+ch);ctx.lineTo(px(0),pad.t+ch);ctx.closePath();ctx.fillStyle=gr;ctx.fill();
+    ctx.beginPath();ctx.strokeStyle='#e8ff47';ctx.lineWidth=2;ctx.lineJoin='round';
+    pts.forEach((p,i)=>i===0?ctx.moveTo(px(i),py(p.w)):ctx.lineTo(px(i),py(p.w)));ctx.stroke();
     pts.forEach((p,i)=>{
-      ctx.beginPath();ctx.arc(px(i),py(p.w),3.5,0,Math.PI*2);
-      ctx.fillStyle=lineColor;ctx.fill();
-      if(i===0||i===pts.length-1||pts.length<=5){
-        ctx.fillStyle='#555';ctx.font='7px monospace';ctx.textAlign='center';
-        ctx.fillText(p.date.slice(5),px(i),H-pad.b+11);
-      }
+      ctx.beginPath();ctx.arc(px(i),py(p.w),3.5,0,Math.PI*2);ctx.fillStyle='#e8ff47';ctx.fill();
+      if(i===0||i===pts.length-1||pts.length<=5){ctx.fillStyle='#555';ctx.font='7px monospace';ctx.textAlign='center';ctx.fillText(p.date.slice(5),px(i),H-pad.b+11);}
     });
   });
 }
