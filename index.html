@@ -166,6 +166,10 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .catpill{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border:1px solid var(--b2);background:none;color:var(--m2);border-radius:2px}
 .catpill.on{color:#000}
 
+/* CHART TABS */
+.chart-tab{font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;padding:6px 14px;border:1px solid var(--b2);background:none;color:var(--m2);border-radius:2px}
+.chart-tab.on{background:var(--ac);color:#000;border-color:var(--ac)}
+
 /* SYNC */
 .sync-bar{font-size:.52rem;color:var(--m1);letter-spacing:.12em;text-align:center;padding:4px;background:var(--s2);display:none}
 .sync-bar.show{display:block}
@@ -228,10 +232,16 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
       <button class="auth-tab" onclick="switchTab('signup')">Sign Up</button>
     </div>
     <input class="auth-field" id="auth-email" type="email" placeholder="Email" autocomplete="email">
-    <input class="auth-field" id="auth-pass" type="password" placeholder="Password" autocomplete="current-password"
-      onkeydown="if(event.key==='Enter')doAuth()">
-    <input class="auth-field" id="auth-pass2" type="password" placeholder="Confirm password" style="display:none"
-      onkeydown="if(event.key==='Enter')doAuth()">
+    <div style="position:relative;margin-bottom:10px">
+      <input class="auth-field" id="auth-pass" type="password" placeholder="Password" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')doAuth()" style="margin-bottom:0;padding-right:52px">
+      <button onclick="togglePass('auth-pass',this)" type="button" style="position:absolute;right:11px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--m2);font-size:.62rem;letter-spacing:.05em;cursor:pointer;padding:4px">SHOW</button>
+    </div>
+    <div style="position:relative;margin-bottom:10px" id="pass2-wrap" style="display:none">
+      <input class="auth-field" id="auth-pass2" type="password" placeholder="Confirm password" style="display:none;margin-bottom:0;padding-right:52px"
+        onkeydown="if(event.key==='Enter')doAuth()">
+      <button id="pass2-toggle" onclick="togglePass('auth-pass2',this)" type="button" style="display:none;position:absolute;right:11px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--m2);font-size:.62rem;letter-spacing:.05em;cursor:pointer;padding:4px">SHOW</button>
+    </div>
     <button class="auth-btn" onclick="doAuth()" id="auth-btn-label">Sign In</button>
     <div class="auth-err" id="auth-err"></div>
     <div class="auth-divider">or</div>
@@ -534,9 +544,24 @@ function switchTab(mode){
   document.querySelectorAll('.auth-tab').forEach((t,i)=>{
     t.classList.toggle('on',(mode==='login'&&i===0)||(mode==='signup'&&i===1));
   });
-  document.getElementById('auth-pass2').style.display=mode==='signup'?'block':'none';
+  const p2=document.getElementById('auth-pass2');
+  const p2t=document.getElementById('pass2-toggle');
+  p2.style.display=mode==='signup'?'block':'none';
+  if(p2t) p2t.style.display=mode==='signup'?'block':'none';
   document.getElementById('auth-btn-label').textContent=mode==='login'?'Sign In':'Create Account';
   document.getElementById('auth-err').textContent='';
+}
+
+function togglePass(id, btn){
+  const inp=document.getElementById(id);
+  if(!inp) return;
+  if(inp.type==='password'){
+    inp.type='text';
+    btn.textContent='HIDE';
+  } else {
+    inp.type='password';
+    btn.textContent='SHOW';
+  }
 }
 
 async function doAuth(){
@@ -790,6 +815,9 @@ function buildProgSel(){
   if(prev)sel.value=prev;
 }
 
+// Active chart view: 'weight' or 'reps'
+let chartTab='weight';
+
 function renderProgress(){
   const name=document.getElementById('progex').value;
   const ps=document.getElementById('pstats'),pc=document.getElementById('pchart'),pp=document.getElementById('psess');
@@ -799,17 +827,26 @@ function renderProgress(){
   const pr=getPR(sessions);
   const latest=bestSet(sessions[sessions.length-1]);
   const first=bestSet(sessions[0]);
-  const imp=sessions.length>1?((latest.weight-first.weight)/first.weight*100).toFixed(1):null;
+  const impW=sessions.length>1?((latest.weight-first.weight)/(first.weight||1)*100).toFixed(1):null;
+  const impR=sessions.length>1?((latest.reps-first.reps)/(first.reps||1)*100).toFixed(1):null;
+  const prReps=sessions.reduce((best,s)=>s.sets.reduce((b,set)=>set.reps>b?set.reps:b,b),0);
   ps.innerHTML='<div class="sgrid">'
     +'<div class="sbox"><div class="slbl">PR Weight</div><div class="sval">'+(pr?pr.weight:'—')+'</div><div class="sunit">'+(pr?pr.unit:'')+'</div></div>'
+    +'<div class="sbox"><div class="slbl">PR Reps</div><div class="sval">'+prReps+'</div><div class="sunit">best set</div></div>'
     +'<div class="sbox"><div class="slbl">Sessions</div><div class="sval">'+sessions.length+'</div><div class="sunit">logged</div></div>'
-    +'<div class="sbox"><div class="slbl">'+(imp!==null?(+imp>=0?'↑ Gained':'↓ Change'):'Progress')+'</div>'
-    +'<div class="sval" style="font-size:'+(imp!==null?'1.3rem':'1.5rem')+';color:'+(imp===null?'inherit':+imp>=0?'var(--ac)':'var(--rd)')+'">'+
-    (imp!==null?Math.abs(imp)+'%':'—')+'</div><div class="sunit">best set wt</div></div></div>';
+    +'</div>';
   if(sessions.length>=2){
-    const pts=sessions.map(s=>({date:s.date,w:bestSet(s).weight}));
-    pc.innerHTML='<div class="cbox"><div class="ctitle">Best Set Weight Per Session</div><div id="cwrap" style="position:relative;height:140px"></div></div>';
-    drawChart(pts);
+    const wPts=sessions.map(s=>({date:s.date,w:bestSet(s).weight}));
+    const rPts=sessions.map(s=>({date:s.date,w:bestSet(s).reps}));
+    pc.innerHTML='<div class="cbox">'
+      +'<div style="display:flex;gap:4px;margin-bottom:10px">'
+      +'<button class="chart-tab'+(chartTab==='weight'?' on':'')+'" onclick="switchChartTab('weight')">Weight</button>'
+      +'<button class="chart-tab'+(chartTab==='reps'?' on':'')+'" onclick="switchChartTab('reps')">Reps</button>'
+      +'</div>'
+      +'<div id="chart-meta" style="font-size:.65rem;margin-bottom:8px;min-height:18px"></div>'
+      +'<div id="cwrap" style="position:relative;height:150px"></div>'
+      +'</div>';
+    drawChartForTab(chartTab,wPts,rPts,impW,impR);
   }else pc.innerHTML='<div class="empty" style="padding:14px">Log 2+ sessions to see chart</div>';
   const sd=document.createElement('div');sd.className='cbox';
   const st=document.createElement('div');st.className='ctitle';st.textContent='All Sessions';sd.appendChild(st);
@@ -817,7 +854,7 @@ function renderProgress(){
     const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;padding:7px 0;border-bottom:1px solid var(--b1);gap:7px';
     const dt=document.createElement('span');dt.style.cssText='font-size:.6rem;color:var(--m2);flex-shrink:0;min-width:55px';dt.textContent=fmtDate(s.date);
     const chips=document.createElement('div');chips.style.cssText='display:flex;gap:4px;flex-wrap:wrap;flex:1';
-    s.sets.forEach(set=>{const chip=document.createElement('span');chip.className='chip';chip.textContent=set.weight+(set.unit||'kg')+'×'+set.reps;chips.appendChild(chip);});
+    s.sets.forEach(set=>{const ch=document.createElement('span');ch.className='chip';ch.textContent=set.weight+(set.unit||'kg')+'×'+set.reps;chips.appendChild(ch);});
     const db=document.createElement('button');db.style.cssText='background:none;border:none;color:var(--m1);font-size:.72rem;flex-shrink:0;padding:2px 5px';db.textContent='✕';
     db.addEventListener('click',()=>{
       DATA[name]=(DATA[name]||[]).filter(x=>x.date!==s.date);
@@ -832,19 +869,51 @@ function renderProgress(){
   pp.appendChild(sd);
 }
 
-function drawChart(pts){
+function switchChartTab(tab){
+  chartTab=tab;
+  const name=document.getElementById('progex').value;
+  if(!name||!DATA[name]?.length)return;
+  const sessions=DATA[name];
+  const wPts=sessions.map(s=>({date:s.date,w:bestSet(s).weight}));
+  const rPts=sessions.map(s=>({date:s.date,w:bestSet(s).reps}));
+  const latest=bestSet(sessions[sessions.length-1]);
+  const first=bestSet(sessions[0]);
+  const impW=sessions.length>1?((latest.weight-first.weight)/(first.weight||1)*100).toFixed(1):null;
+  const impR=sessions.length>1?((latest.reps-first.reps)/(first.reps||1)*100).toFixed(1):null;
+  document.querySelectorAll('.chart-tab').forEach(t=>{
+    t.classList.toggle('on',t.textContent.toLowerCase()===tab);
+  });
+  drawChartForTab(tab,wPts,rPts,impW,impR);
+}
+
+function drawChartForTab(tab,wPts,rPts,impW,impR){
+  const pts=tab==='weight'?wPts:rPts;
+  const imp=tab==='weight'?impW:impR;
+  const color=tab==='weight'?'#e8ff47':'#35b8ff';
+  const meta=document.getElementById('chart-meta');
+  if(meta){
+    if(imp!==null){
+      const up=+imp>=0;
+      meta.innerHTML='<span style="color:'+(up?'var(--ac)':'var(--rd)')+';">'+(up?'↑':'↓')+' '+Math.abs(imp)+'%</span> <span style="font-size:.55rem;color:var(--m1)">vs first session</span>';
+    }else meta.innerHTML='';
+  }
+  drawChart(pts,color);
+}
+
+function drawChart(pts,lineColor){
+  lineColor=lineColor||'#e8ff47';
   requestAnimationFrame(()=>{
     const wrap=document.getElementById('cwrap');if(!wrap)return;
     wrap.innerHTML='';
     const cv=document.createElement('canvas');wrap.appendChild(cv);
-    const W=wrap.offsetWidth,H=140;
+    const W=wrap.offsetWidth,H=150;
     cv.width=W*devicePixelRatio;cv.height=H*devicePixelRatio;
     cv.style.width=W+'px';cv.style.height=H+'px';
     const ctx=cv.getContext('2d');ctx.scale(devicePixelRatio,devicePixelRatio);
     const pad={t:10,r:14,b:26,l:40};
     const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
     const vs=pts.map(p=>p.w);
-    const mn=Math.min(...vs)*.95,mx=Math.max(...vs)*1.05;
+    const mn=Math.min(...vs)*.92,mx=Math.max(...vs)*1.08;
     const px=i=>pad.l+i/(pts.length-1||1)*cw;
     const py=v=>pad.t+ch-((v-mn)/(mx-mn||1))*ch;
     ctx.strokeStyle='#1e1e1e';ctx.lineWidth=1;
@@ -853,14 +922,15 @@ function drawChart(pts){
       ctx.fillStyle='#444';ctx.font='8px monospace';ctx.textAlign='right';
       ctx.fillText((mn+(mx-mn)*(1-i/3)).toFixed(1),pad.l-4,y+3);
     }
+    const rgb=lineColor==='#35b8ff'?'53,184,255':'232,255,71';
     const gr=ctx.createLinearGradient(0,pad.t,0,pad.t+ch);
-    gr.addColorStop(0,'rgba(232,255,71,.15)');gr.addColorStop(1,'rgba(232,255,71,0)');
+    gr.addColorStop(0,'rgba('+rgb+',.15)');gr.addColorStop(1,'rgba('+rgb+',0)');
     ctx.beginPath();pts.forEach((p,i)=>i===0?ctx.moveTo(px(i),py(p.w)):ctx.lineTo(px(i),py(p.w)));
     ctx.lineTo(px(pts.length-1),pad.t+ch);ctx.lineTo(px(0),pad.t+ch);ctx.closePath();ctx.fillStyle=gr;ctx.fill();
-    ctx.beginPath();ctx.strokeStyle='#e8ff47';ctx.lineWidth=2;ctx.lineJoin='round';
+    ctx.beginPath();ctx.strokeStyle=lineColor;ctx.lineWidth=2;ctx.lineJoin='round';
     pts.forEach((p,i)=>i===0?ctx.moveTo(px(i),py(p.w)):ctx.lineTo(px(i),py(p.w)));ctx.stroke();
     pts.forEach((p,i)=>{
-      ctx.beginPath();ctx.arc(px(i),py(p.w),3.5,0,Math.PI*2);ctx.fillStyle='#e8ff47';ctx.fill();
+      ctx.beginPath();ctx.arc(px(i),py(p.w),3.5,0,Math.PI*2);ctx.fillStyle=lineColor;ctx.fill();
       if(i===0||i===pts.length-1||pts.length<=5){ctx.fillStyle='#555';ctx.font='7px monospace';ctx.textAlign='center';ctx.fillText(p.date.slice(5),px(i),H-pad.b+11);}
     });
   });
