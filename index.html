@@ -563,36 +563,72 @@ async function doAuth(){
   loading.textContent='';
 }
 
+// Detect Safari — it blocks popups so we use redirect
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
 async function doGoogle(){
-  document.getElementById('auth-err').textContent='';
-  document.getElementById('auth-loading').textContent='Redirecting to Google...';
-  try{
-    const provider=new firebase.auth.GoogleAuthProvider();
-    await auth.signInWithRedirect(provider);
-  }catch(e){
-    document.getElementById('auth-err').textContent=friendlyErr(e.code||'unknown');
-    document.getElementById('auth-loading').textContent='';
+  const errEl=document.getElementById('auth-err');
+  const loadEl=document.getElementById('auth-loading');
+  errEl.textContent='';
+  const provider=new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({prompt:'select_account'});
+
+  if(isSafari){
+    // Safari: use redirect (no popup support)
+    loadEl.textContent='Redirecting to Google...';
+    try{
+      await auth.signInWithRedirect(provider);
+    }catch(e){
+      errEl.textContent=friendlyErr(e.code||'unknown');
+      loadEl.textContent='';
+    }
+  } else {
+    // Chrome/Android/Desktop: use popup — works every time including after sign-out
+    loadEl.textContent='Opening Google...';
+    try{
+      await auth.signInWithPopup(provider);
+      loadEl.textContent='';
+    }catch(e){
+      if(e.code==='auth/popup-closed-by-user'||e.code==='auth/cancelled-popup-request'){
+        errEl.textContent='Google sign-in cancelled';
+      } else {
+        errEl.textContent=friendlyErr(e.code||'unknown');
+      }
+      loadEl.textContent='';
+    }
   }
 }
 
-// Handle redirect result when page loads
+// Handle redirect result when returning from Google (Safari flow)
 auth.getRedirectResult().then(result=>{
+  // onAuthStateChanged handles the login automatically
   if(result && result.user){
-    // already handled by onAuthStateChanged
+    document.getElementById('auth-loading').textContent='';
   }
 }).catch(e=>{
-  if(e.code && e.code !== 'auth/no-current-user'){
-    const err=document.getElementById('auth-err');
-    if(err) err.textContent=friendlyErr(e.code);
+  if(e.code && e.code!=='auth/no-current-user'){
+    const errEl=document.getElementById('auth-err');
+    if(errEl) errEl.textContent=friendlyErr(e.code);
+    const loadEl=document.getElementById('auth-loading');
+    if(loadEl) loadEl.textContent='';
   }
 });
 
 async function doSignOut(){
   if(!confirm('Sign out?'))return;
   await auth.signOut();
-  CATS=JSON.parse(JSON.stringify(DC));
-  EX=JSON.parse(JSON.stringify(DE));
-  DATA={};
+  // Reset app state
+  CATS=[];EX={};DATA={};
+  // Reset auth UI fully so Google button works again
+  document.getElementById('auth-email').value='';
+  document.getElementById('auth-pass').value='';
+  document.getElementById('auth-pass2').value='';
+  document.getElementById('auth-err').textContent='';
+  document.getElementById('auth-loading').textContent='';
+  document.getElementById('auth-btn-label').textContent='Sign In';
+  document.getElementById('auth-pass2').style.display='none';
+  authMode='login';
+  document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('on',i===0));
 }
 
 function friendlyErr(code){
@@ -812,7 +848,7 @@ function renderProgress(){
     const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;padding:7px 0;border-bottom:1px solid var(--b1);gap:7px';
     const dt=document.createElement('span');dt.style.cssText='font-size:.6rem;color:var(--m2);flex-shrink:0;min-width:55px';dt.textContent=fmtDate(s.date);
     const chips=document.createElement('div');chips.style.cssText='display:flex;gap:4px;flex-wrap:wrap;flex:1';
-    s.sets.forEach(set=>{const c=document.createElement('span');c.className='chip';c.textContent=set.weight+(set.unit||'kg')+'×'+set.reps;chips.appendChild(c);});
+    s.sets.forEach(set=>{const chip=document.createElement('span');chip.className='chip';chip.textContent=set.weight+(set.unit||'kg')+'×'+set.reps;chips.appendChild(chip);});
     const db=document.createElement('button');db.style.cssText='background:none;border:none;color:var(--m1);font-size:.72rem;flex-shrink:0;padding:2px 5px';db.textContent='✕';
     db.addEventListener('click',()=>{
       DATA[name]=(DATA[name]||[]).filter(x=>x.date!==s.date);
@@ -830,6 +866,7 @@ function renderProgress(){
 function drawChart(pts){
   requestAnimationFrame(()=>{
     const wrap=document.getElementById('cwrap');if(!wrap)return;
+    wrap.innerHTML='';
     const cv=document.createElement('canvas');wrap.appendChild(cv);
     const W=wrap.offsetWidth,H=140;
     cv.width=W*devicePixelRatio;cv.height=H*devicePixelRatio;
