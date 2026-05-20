@@ -563,56 +563,47 @@ async function doAuth(){
   loading.textContent='';
 }
 
-// Detect Safari — it blocks popups so we use redirect
-const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
+// Always use redirect for Google — most reliable on iPhone Safari
 async function doGoogle(){
   const errEl=document.getElementById('auth-err');
   const loadEl=document.getElementById('auth-loading');
   errEl.textContent='';
-  const provider=new firebase.auth.GoogleAuthProvider();
-  provider.setCustomParameters({prompt:'select_account'});
-
-  if(isSafari){
-    // Safari: use redirect (no popup support)
-    loadEl.textContent='Redirecting to Google...';
-    try{
-      await auth.signInWithRedirect(provider);
-    }catch(e){
-      errEl.textContent=friendlyErr(e.code||'unknown');
-      loadEl.textContent='';
-    }
-  } else {
-    // Chrome/Android/Desktop: use popup — works every time including after sign-out
-    loadEl.textContent='Opening Google...';
-    try{
-      await auth.signInWithPopup(provider);
-      loadEl.textContent='';
-    }catch(e){
-      if(e.code==='auth/popup-closed-by-user'||e.code==='auth/cancelled-popup-request'){
-        errEl.textContent='Google sign-in cancelled';
-      } else {
-        errEl.textContent=friendlyErr(e.code||'unknown');
-      }
-      loadEl.textContent='';
-    }
+  loadEl.textContent='Redirecting to Google...';
+  try{
+    const provider=new firebase.auth.GoogleAuthProvider();
+    // force account picker every time so re-login always works
+    provider.setCustomParameters({prompt:'select_account'});
+    await auth.signInWithRedirect(provider);
+  }catch(e){
+    errEl.textContent=friendlyErr(e.code||'unknown');
+    loadEl.textContent='';
   }
 }
 
-// Handle redirect result when returning from Google (Safari flow)
-auth.getRedirectResult().then(result=>{
-  // onAuthStateChanged handles the login automatically
-  if(result && result.user){
-    document.getElementById('auth-loading').textContent='';
-  }
-}).catch(e=>{
-  if(e.code && e.code!=='auth/no-current-user'){
-    const errEl=document.getElementById('auth-err');
-    if(errEl) errEl.textContent=friendlyErr(e.code);
-    const loadEl=document.getElementById('auth-loading');
+// This runs every time the page loads.
+// After Google redirect, Firebase calls this with the result.
+// We show a loading state immediately so the user knows something is happening.
+(function handleGoogleRedirect(){
+  // Show loading instantly if returning from Google redirect
+  const loadEl=document.getElementById('auth-loading');
+  if(loadEl) loadEl.textContent='Signing in...';
+
+  auth.getRedirectResult().then(result=>{
+    if(result && result.user){
+      // Success — onAuthStateChanged will handle showing the app
+      if(loadEl) loadEl.textContent='';
+    } else {
+      // No redirect in progress — normal page load
+      if(loadEl) loadEl.textContent='';
+    }
+  }).catch(e=>{
     if(loadEl) loadEl.textContent='';
-  }
-});
+    if(e.code && e.code!=='auth/no-current-user'){
+      const errEl=document.getElementById('auth-err');
+      if(errEl) errEl.textContent=friendlyErr(e.code||'unknown');
+    }
+  });
+})();
 
 async function doSignOut(){
   if(!confirm('Sign out?'))return;
