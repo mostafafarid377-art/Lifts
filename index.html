@@ -563,7 +563,7 @@ async function doAuth(){
   loading.textContent='';
 }
 
-// Always use redirect for Google — most reliable on iPhone Safari
+// Google sign-in — handles Safari ITP by setting session persistence
 async function doGoogle(){
   const errEl=document.getElementById('auth-err');
   const loadEl=document.getElementById('auth-loading');
@@ -571,8 +571,9 @@ async function doGoogle(){
   loadEl.textContent='Redirecting to Google...';
   try{
     const provider=new firebase.auth.GoogleAuthProvider();
-    // force account picker every time so re-login always works
     provider.setCustomParameters({prompt:'select_account'});
+    // Use SESSION persistence — works with Safari ITP unlike LOCAL
+    await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
     await auth.signInWithRedirect(provider);
   }catch(e){
     errEl.textContent=friendlyErr(e.code||'unknown');
@@ -580,26 +581,22 @@ async function doGoogle(){
   }
 }
 
-// This runs every time the page loads.
-// After Google redirect, Firebase calls this with the result.
-// We show a loading state immediately so the user knows something is happening.
+// Handle redirect result on page load
 (function handleGoogleRedirect(){
-  // Show loading instantly if returning from Google redirect
   const loadEl=document.getElementById('auth-loading');
-  if(loadEl) loadEl.textContent='Signing in...';
+  const errEl=document.getElementById('auth-err');
 
   auth.getRedirectResult().then(result=>{
     if(result && result.user){
-      // Success — onAuthStateChanged will handle showing the app
+      // Restore LOCAL persistence after successful login
+      auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
       if(loadEl) loadEl.textContent='';
     } else {
-      // No redirect in progress — normal page load
       if(loadEl) loadEl.textContent='';
     }
   }).catch(e=>{
     if(loadEl) loadEl.textContent='';
     if(e.code && e.code!=='auth/no-current-user'){
-      const errEl=document.getElementById('auth-err');
       if(errEl) errEl.textContent=friendlyErr(e.code||'unknown');
     }
   });
