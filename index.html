@@ -639,7 +639,12 @@ function renderProgress(){
   const name=document.getElementById('progex').value;
   const ps=document.getElementById('pstats'),pc=document.getElementById('pchart'),pp=document.getElementById('psess');
   ps.innerHTML='';pc.innerHTML='';pp.innerHTML='';
-  if(!name||!DATA[name]?.length)return;
+  console.log('renderProgress called, name=',name,'DATA keys=',Object.keys(DATA),'sessions=',DATA[name]);
+  if(!name){ps.innerHTML='<div class="empty">Select an exercise above</div>';return;}
+  if(!DATA[name]||!DATA[name].length){
+    ps.innerHTML='<div class="empty">No sessions found for "'+name+'"<br><span style="font-size:.6rem;color:var(--m1)">Keys in data: '+Object.keys(DATA).filter(k=>!k.startsWith('_')).join(', ')+'</span></div>';
+    return;
+  }
   const sessions=DATA[name];
   const pr=getPR(sessions);
   const latest=bestSet(sessions[sessions.length-1]);
