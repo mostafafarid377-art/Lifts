@@ -260,12 +260,7 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
   <div class="scr" id="s-progress">
     <div class="ptitle">Progress</div>
     <div class="psub">Best set over time</div>
-    <div style="display:flex;gap:8px;margin-bottom:16px">
-      <select class="field" id="progex" style="margin-bottom:0;flex:1;cursor:pointer">
-        <option value="">— Pick an exercise —</option>
-      </select>
-      <button class="btn bacc" onclick="renderProgress()" style="white-space:nowrap;flex-shrink:0;padding:9px 14px">View</button>
-    </div>
+    <div id="prog-ex-list" style="display:flex;flex-direction:column;gap:2px;margin-bottom:16px"></div>
     <div id="pstats"></div>
     <div id="pchart"></div>
     <div id="psess"></div>
@@ -628,20 +623,33 @@ function renderHistory(){
 }
 
 // ── PROGRESS ─────────────────────────────────────────
+let selectedProgEx='';
 function buildProgSel(){
-  const sel=document.getElementById('progex');if(!sel)return;
-  const prev=sel.value;
-  sel.innerHTML='<option value="">— Pick an exercise —</option>';
-  Object.keys(DATA).filter(n=>DATA[n]?.length&&!n.startsWith('_')).sort().forEach(n=>{
-    const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);
+  const wrap=document.getElementById('prog-ex-list');if(!wrap)return;
+  wrap.innerHTML='';
+  const names=Object.keys(DATA).filter(n=>DATA[n]&&DATA[n].length&&!n.startsWith('_')).sort();
+  if(!names.length){wrap.innerHTML='<div class="empty">No sessions logged yet</div>';return;}
+  names.forEach(name=>{
+    const b=document.createElement('button');
+    b.style.cssText='display:flex;align-items:center;gap:10px;padding:11px 12px;background:var(--sf);border:1px solid var(--b1);font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;color:var(--tx);text-align:left;border-radius:2px;width:100%;margin-bottom:2px';
+    const dot=document.createElement('span');dot.className='dot';dot.style.background=catColor(primCat(name));
+    const nm=document.createElement('span');nm.style.flex='1';nm.textContent=name;
+    const cnt=document.createElement('span');cnt.style.cssText='font-size:.58rem;color:var(--m1)';
+    const sc=(DATA[name]||[]).length;cnt.textContent=sc+' session'+(sc>1?'s':'');
+    b.appendChild(dot);b.appendChild(nm);b.appendChild(cnt);
+    b.addEventListener('click',function(){
+      selectedProgEx=name;
+      document.querySelectorAll('#prog-ex-list button').forEach(x=>x.style.background='var(--sf)');
+      b.style.background='var(--s2)';
+      renderProgress();
+    });
+    if(name===selectedProgEx)b.style.background='var(--s2)';
+    wrap.appendChild(b);
   });
-  if(prev)sel.value=prev;
-  sel.onchange=()=>renderProgress();
-  sel.oninput=()=>renderProgress();
 }
 
 function renderProgress(){
-  const name=document.getElementById('progex').value;
+  const name=selectedProgEx;
   const ps=document.getElementById('pstats'),pc=document.getElementById('pchart'),pp=document.getElementById('psess');
   ps.innerHTML='';pc.innerHTML='';pp.innerHTML='';
   console.log('renderProgress called, name=',name,'DATA keys=',Object.keys(DATA),'sessions=',DATA[name]);
