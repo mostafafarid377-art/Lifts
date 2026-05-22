@@ -260,9 +260,12 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
   <div class="scr" id="s-progress">
     <div class="ptitle">Progress</div>
     <div class="psub">Best set over time</div>
-    <select class="field" id="progex" onchange="renderProgress()" style="margin-bottom:16px;cursor:pointer">
-      <option value="">— Pick an exercise —</option>
-    </select>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <select class="field" id="progex" style="margin-bottom:0;flex:1;cursor:pointer">
+        <option value="">— Pick an exercise —</option>
+      </select>
+      <button class="btn bacc" onclick="renderProgress()" style="white-space:nowrap;flex-shrink:0;padding:9px 14px">View</button>
+    </div>
     <div id="pstats"></div>
     <div id="pchart"></div>
     <div id="psess"></div>
@@ -633,6 +636,8 @@ function buildProgSel(){
     const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);
   });
   if(prev)sel.value=prev;
+  sel.onchange=()=>renderProgress();
+  sel.oninput=()=>renderProgress();
 }
 
 function renderProgress(){
