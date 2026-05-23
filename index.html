@@ -112,9 +112,6 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .slbl{font-size:.5rem;color:var(--m1);letter-spacing:.2em;text-transform:uppercase;margin-bottom:3px}
 .sval{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.04em;line-height:1}
 .sunit{font-size:.54rem;color:var(--m2)}
-.chart-tabs{display:flex;gap:4px;margin-bottom:10px}
-.chart-tab{font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;padding:6px 14px;border:1px solid var(--b2);background:none;color:var(--m2);border-radius:2px}
-.chart-tab.on{background:var(--ac);color:#000;border-color:var(--ac)}
 .streak-bar{display:flex;margin-bottom:16px;background:var(--sf);border:1px solid var(--b1);border-radius:2px;padding:14px 16px}
 .streak-box{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:0 8px}
 .streak-box+.streak-box{border-left:1px solid var(--b1)}
@@ -126,13 +123,11 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .rest-hint{font-size:.55rem;color:var(--m1)}
 .rest-controls{display:flex;align-items:center;gap:8px}
 .rest-btn{background:none;border:1px solid var(--b2);color:var(--tx);width:28px;height:28px;border-radius:2px;font-size:1rem;display:flex;align-items:center;justify-content:center}
-.rest-btn:active{border-color:var(--ac);color:var(--ac)}
 .rest-val{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--ac);min-width:20px;text-align:center}
 .cal-wrap{background:var(--sf);border:1px solid var(--b1);border-radius:2px;padding:13px;margin-bottom:12px}
 .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .cal-title{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.08em}
 .cal-nav{background:none;border:1px solid var(--b2);color:var(--m2);width:28px;height:28px;border-radius:2px;font-size:.8rem;display:flex;align-items:center;justify-content:center}
-.cal-nav:active{border-color:var(--ac);color:var(--ac)}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
 .cal-day-name{font-size:.5rem;color:var(--m1);text-align:center;letter-spacing:.1em;padding-bottom:4px}
 .cal-day{aspect-ratio:1;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:var(--m2)}
@@ -168,6 +163,9 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .divider{height:1px;background:var(--b1);margin:20px 0}
 .toast{position:fixed;bottom:calc(22px + var(--sfb));left:50%;transform:translateX(-50%) translateY(80px);background:var(--ac);color:#000;font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;padding:9px 20px;border-radius:2px;z-index:999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;pointer-events:none;font-weight:600}
 .toast.on{transform:translateX(-50%) translateY(0)}
+/* progress ex picker */
+.prog-item{display:flex;align-items:center;gap:10px;padding:11px 12px;background:var(--sf);border:1px solid var(--b1);font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;color:var(--tx);text-align:left;border-radius:2px;width:100%;margin-bottom:2px}
+.prog-item:active,.prog-item.on{background:var(--s2);border-color:var(--b2)}
 </style>
 </head>
 <body>
@@ -183,13 +181,11 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
     </div>
     <input class="auth-field" id="auth-email" type="email" placeholder="Email" autocomplete="email">
     <div class="pass-wrap">
-      <input class="auth-field" id="auth-pass" type="password" placeholder="Password" autocomplete="current-password"
-        onkeydown="if(event.key==='Enter')doAuth()">
+      <input class="auth-field" id="auth-pass" type="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doAuth()">
       <button class="show-pass" type="button" onclick="togglePass('auth-pass',this)">SHOW</button>
     </div>
     <div class="pass-wrap" id="pass2-wrap" style="display:none">
-      <input class="auth-field" id="auth-pass2" type="password" placeholder="Confirm password"
-        onkeydown="if(event.key==='Enter')doAuth()">
+      <input class="auth-field" id="auth-pass2" type="password" placeholder="Confirm password" onkeydown="if(event.key==='Enter')doAuth()">
       <button class="show-pass" type="button" onclick="togglePass('auth-pass2',this)">SHOW</button>
     </div>
     <button class="auth-btn" id="auth-btn-label" onclick="doAuth()">Sign In</button>
@@ -223,6 +219,7 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
   </nav>
   <div class="sync-bar" id="sync-bar">Syncing...</div>
 
+  <!-- LOG -->
   <div class="scr on" id="s-log">
     <div class="ptitle">Log Set</div>
     <div class="psub">Pick · sets · save</div>
@@ -250,6 +247,7 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
     </div>
   </div>
 
+  <!-- HISTORY -->
   <div class="scr" id="s-history">
     <div class="ptitle">History</div>
     <div class="psub">All sessions</div>
@@ -257,15 +255,17 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
     <div id="hlist"></div>
   </div>
 
+  <!-- PROGRESS -->
   <div class="scr" id="s-progress">
     <div class="ptitle">Progress</div>
-    <div class="psub">Best set over time</div>
-    <div id="prog-ex-list" style="display:flex;flex-direction:column;gap:2px;margin-bottom:16px"></div>
+    <div class="psub">Tap an exercise to view</div>
+    <div id="prog-list" style="margin-bottom:16px"></div>
     <div id="pstats"></div>
     <div id="pchart"></div>
     <div id="psess"></div>
   </div>
 
+  <!-- STREAK -->
   <div class="scr" id="s-streak">
     <div class="ptitle">Streak 🔥</div>
     <div class="psub">Stay consistent</div>
@@ -292,6 +292,7 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
     </div>
   </div>
 
+  <!-- MANAGE -->
   <div class="scr" id="s-manage">
     <div class="ptitle">Manage</div>
     <div class="psub">Add · delete · reorder</div>
@@ -354,7 +355,7 @@ let modalCats=new Set();
 let authMode='login';
 let saveTimer=null, toastTimer=null;
 let restDays=1, calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
-let chartTab='weight';
+let selectedProgEx='';
 
 // ── Firestore ─────────────────────────────────────────
 function uRef(uid){ return db.collection('users').doc(uid); }
@@ -440,14 +441,12 @@ async function doAuth(){
   try{
     if(authMode==='login') await auth.signInWithEmailAndPassword(email,pass);
     else await auth.createUserWithEmailAndPassword(email,pass);
-  }catch(e){
-    errEl.textContent=friendlyErr(e.code||'unknown');
-  }
+  }catch(e){ errEl.textContent=friendlyErr(e.code||'unknown'); }
   loadEl.textContent='';
 }
 
 async function doGoogle(){
-  if(!auth){return;}
+  if(!auth)return;
   const errEl=document.getElementById('auth-err');
   const loadEl=document.getElementById('auth-loading');
   errEl.textContent='';loadEl.textContent='Opening Google...';
@@ -457,11 +456,7 @@ async function doGoogle(){
     await auth.signInWithPopup(provider);
     loadEl.textContent='';
   }catch(e){
-    if(e.code==='auth/popup-closed-by-user'||e.code==='auth/cancelled-popup-request'){
-      errEl.textContent='Cancelled — please try again';
-    }else{
-      errEl.textContent=friendlyErr(e.code||'unknown');
-    }
+    errEl.textContent=e.code==='auth/popup-closed-by-user'?'Cancelled':friendlyErr(e.code||'unknown');
     loadEl.textContent='';
   }
 }
@@ -469,28 +464,29 @@ async function doGoogle(){
 async function doSignOut(){
   if(!confirm('Sign out?'))return;
   if(auth) await auth.signOut();
-  CATS=[];EX={};DATA={};
+  CATS=[];EX={};DATA={};selectedProgEx='';
 }
 
 function friendlyErr(code){
-  return({'auth/invalid-email':'Invalid email address','auth/user-not-found':'No account with that email','auth/wrong-password':'Incorrect password','auth/invalid-credential':'Wrong email or password','auth/email-already-in-use':'Email already registered — sign in instead','auth/weak-password':'Password too weak (min 6 chars)','auth/popup-closed-by-user':'Google sign-in cancelled','auth/network-request-failed':'Network error — check connection','auth/too-many-requests':'Too many attempts — try later'})[code]||'Error: '+code;
+  return({'auth/invalid-email':'Invalid email','auth/user-not-found':'No account with that email','auth/wrong-password':'Incorrect password','auth/invalid-credential':'Wrong email or password','auth/email-already-in-use':'Email already registered','auth/weak-password':'Password too weak (min 6 chars)','auth/network-request-failed':'Network error','auth/too-many-requests':'Too many attempts — try later'})[code]||'Error: '+code;
 }
 
 // ── Boot ──────────────────────────────────────────────
 function bootApp(){
   document.getElementById('logdate').value=new Date().toISOString().slice(0,10);
-  buildCatPills();renderPicker();buildProgSel();
+  buildCatPills();renderPicker();
 }
 
 // ── Helpers ──────────────────────────────────────────
 const catById=id=>CATS.find(c=>c.id===id);
 const catColor=id=>catById(id)?.color||'#888';
 const catLabel=id=>catById(id)?.label||id;
-const primCat=name=>{for(const c of CATS)if((EX[c.id]||[]).includes(name))return c.id;return CATS[0]?.id||'';};
+const primCat=name=>{for(const c of CATS)if((EX[c.id]||[]).includes(name))return c.id;return '';};
 const allNames=()=>[...new Set(CATS.flatMap(c=>EX[c.id]||[]))].sort();
 const fmtDate=d=>{if(!d)return'';const[,m,dy]=d.split('-');return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+ +dy;};
 const getPR=sessions=>{let pr=null;sessions.forEach(s=>s.sets.forEach(set=>{if(!pr||set.weight>pr.weight||(set.weight===pr.weight&&set.reps>pr.reps))pr={...set,date:s.date};}));return pr;};
 const bestSet=sess=>sess.sets.reduce((b,s)=>s.weight>b.weight?s:b,sess.sets[0]);
+const loggedNames=()=>Object.keys(DATA).filter(n=>DATA[n]&&DATA[n].length&&!n.startsWith('_')).sort();
 
 function toast(msg){
   const t=document.getElementById('toast');
@@ -592,17 +588,17 @@ function saveLog(){
   const entry={date,sets:valid.map(s=>({weight:parseFloat(s.w),reps:parseInt(s.r),unit:s.u||unit}))};
   if(idx>=0)DATA[selEx][idx]=entry;else DATA[selEx].push(entry);
   DATA[selEx].sort((a,b)=>a.date.localeCompare(b.date));
-  scheduleSave();toast('Saved ✓');cancelLog();buildProgSel();
+  scheduleSave();toast('Saved ✓');cancelLog();
 }
 
 // ── HISTORY ──────────────────────────────────────────
 function renderHistory(){
   const q=document.getElementById('hsearch').value.toLowerCase();
   const w=document.getElementById('hlist');w.innerHTML='';
-  let names=Object.keys(DATA).filter(n=>DATA[n]?.length&&!n.startsWith('_'));
+  let names=loggedNames();
   if(q)names=names.filter(n=>n.toLowerCase().includes(q));
   if(!names.length){w.innerHTML='<div class="empty">Nothing logged yet</div>';return;}
-  names.sort().forEach(name=>{
+  names.forEach(name=>{
     const sessions=DATA[name]||[];if(!sessions.length)return;
     const pr=getPR(sessions);
     const el=document.createElement('div');el.className='hent';
@@ -617,33 +613,31 @@ function renderHistory(){
       body.appendChild(blk);
     });
     const db=document.createElement('button');db.className='btn brd';db.style.cssText='font-size:.55rem;padding:6px 11px;margin-top:6px';db.textContent='Delete all logs';
-    db.addEventListener('click',()=>{if(!confirm('Delete all logs for "'+name+'"?'))return;delete DATA[name];scheduleSave();renderHistory();buildProgSel();toast('Deleted');});
+    db.addEventListener('click',()=>{if(!confirm('Delete all logs for "'+name+'"?'))return;delete DATA[name];scheduleSave();renderHistory();renderProgList();toast('Deleted');});
     body.appendChild(db);el.appendChild(hdr);el.appendChild(body);w.appendChild(el);
   });
 }
 
 // ── PROGRESS ─────────────────────────────────────────
-let selectedProgEx='';
-function buildProgSel(){
-  const wrap=document.getElementById('prog-ex-list');if(!wrap)return;
+function renderProgList(){
+  const wrap=document.getElementById('prog-list');if(!wrap)return;
   wrap.innerHTML='';
-  const names=Object.keys(DATA).filter(n=>DATA[n]&&DATA[n].length&&!n.startsWith('_')).sort();
+  const names=loggedNames();
   if(!names.length){wrap.innerHTML='<div class="empty">No sessions logged yet</div>';return;}
   names.forEach(name=>{
     const b=document.createElement('button');
-    b.style.cssText='display:flex;align-items:center;gap:10px;padding:11px 12px;background:var(--sf);border:1px solid var(--b1);font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;color:var(--tx);text-align:left;border-radius:2px;width:100%;margin-bottom:2px';
+    b.className='prog-item'+(name===selectedProgEx?' on':'');
     const dot=document.createElement('span');dot.className='dot';dot.style.background=catColor(primCat(name));
     const nm=document.createElement('span');nm.style.flex='1';nm.textContent=name;
     const cnt=document.createElement('span');cnt.style.cssText='font-size:.58rem;color:var(--m1)';
-    const sc=(DATA[name]||[]).length;cnt.textContent=sc+' session'+(sc>1?'s':'');
+    cnt.textContent=(DATA[name]||[]).length+' session'+((DATA[name]||[]).length>1?'s':'');
     b.appendChild(dot);b.appendChild(nm);b.appendChild(cnt);
     b.addEventListener('click',function(){
       selectedProgEx=name;
-      document.querySelectorAll('#prog-ex-list button').forEach(x=>x.style.background='var(--sf)');
-      b.style.background='var(--s2)';
+      document.querySelectorAll('.prog-item').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');
       renderProgress();
     });
-    if(name===selectedProgEx)b.style.background='var(--s2)';
     wrap.appendChild(b);
   });
 }
@@ -652,26 +646,20 @@ function renderProgress(){
   const name=selectedProgEx;
   const ps=document.getElementById('pstats'),pc=document.getElementById('pchart'),pp=document.getElementById('psess');
   ps.innerHTML='';pc.innerHTML='';pp.innerHTML='';
-  console.log('renderProgress called, name=',name,'DATA keys=',Object.keys(DATA),'sessions=',DATA[name]);
-  if(!name){ps.innerHTML='<div class="empty">Select an exercise above</div>';return;}
-  if(!DATA[name]||!DATA[name].length){
-    ps.innerHTML='<div class="empty">No sessions found for "'+name+'"<br><span style="font-size:.6rem;color:var(--m1)">Keys in data: '+Object.keys(DATA).filter(k=>!k.startsWith('_')).join(', ')+'</span></div>';
-    return;
-  }
+  if(!name||!DATA[name]||!DATA[name].length)return;
   const sessions=DATA[name];
   const pr=getPR(sessions);
   const latest=bestSet(sessions[sessions.length-1]);
   const first=bestSet(sessions[0]);
-  const impW=sessions.length>1?((latest.weight-first.weight)/(first.weight||1)*100).toFixed(1):null;
-  const impR=sessions.length>1?((latest.reps-first.reps)/(first.reps||1)*100).toFixed(1):null;
-  const prReps=sessions.reduce((best,s)=>s.sets.reduce((b,set)=>set.reps>b?set.reps:b,b),0);
-  ps.innerHTML='<div class="sgrid"><div class="sbox"><div class="slbl">PR Weight</div><div class="sval">'+(pr?pr.weight:'—')+'</div><div class="sunit">'+(pr?pr.unit:'')+'</div></div><div class="sbox"><div class="slbl">PR Reps</div><div class="sval">'+prReps+'</div><div class="sunit">best set</div></div><div class="sbox"><div class="slbl">Sessions</div><div class="sval">'+sessions.length+'</div><div class="sunit">logged</div></div></div>';
+  const imp=sessions.length>1?((latest.weight-first.weight)/(first.weight||1)*100).toFixed(1):null;
+  ps.innerHTML='<div class="sgrid"><div class="sbox"><div class="slbl">PR Weight</div><div class="sval">'+(pr?pr.weight:'—')+'</div><div class="sunit">'+(pr?pr.unit:'')+'</div></div><div class="sbox"><div class="slbl">Sessions</div><div class="sval">'+sessions.length+'</div><div class="sunit">logged</div></div><div class="sbox"><div class="slbl">'+(imp!==null?(+imp>=0?'↑ Gained':'↓ Change'):'Progress')+'</div><div class="sval" style="font-size:'+(imp!==null?'1.3rem':'1.5rem')+';color:'+(imp===null?'inherit':+imp>=0?'var(--ac)':'var(--rd)')+'">'+( imp!==null?Math.abs(imp)+'%':'—')+'</div><div class="sunit">best set wt</div></div></div>';
   if(sessions.length>=2){
-    const wPts=sessions.map(s=>({date:s.date,w:bestSet(s).weight}));
-    const rPts=sessions.map(s=>({date:s.date,w:bestSet(s).reps}));
-    pc.innerHTML='<div class="cbox"><div class="chart-tabs"><button class="chart-tab'+(chartTab==='weight'?' on':'')+'" onclick="switchChartTab(\'weight\')">Weight</button><button class="chart-tab'+(chartTab==='reps'?' on':'')+'" onclick="switchChartTab(\'reps\')">Reps</button></div><div id="chart-meta" style="font-size:.65rem;margin-bottom:8px;min-height:18px"></div><div id="cwrap" style="position:relative;height:150px"></div></div>';
-    drawChartForTab(chartTab,wPts,rPts,impW,impR);
-  }else pc.innerHTML='<div class="empty" style="padding:14px">Log 2+ sessions to see chart</div>';
+    const pts=sessions.map(s=>({date:s.date,w:bestSet(s).weight}));
+    pc.innerHTML='<div class="cbox"><div class="ctitle">Best Set Weight Per Session</div><div id="cwrap" style="position:relative;height:150px"></div></div>';
+    drawChart(pts);
+  }else{
+    pc.innerHTML='<div class="empty" style="padding:14px">Log 2+ sessions to see chart</div>';
+  }
   const sd=document.createElement('div');sd.className='cbox';
   const st=document.createElement('div');st.className='ctitle';st.textContent='All Sessions';sd.appendChild(st);
   sessions.slice().reverse().forEach(s=>{
@@ -680,7 +668,7 @@ function renderProgress(){
     const chips=document.createElement('div');chips.style.cssText='display:flex;gap:4px;flex-wrap:wrap;flex:1';
     s.sets.forEach(set=>{const ch=document.createElement('span');ch.className='chip';ch.textContent=set.weight+(set.unit||'kg')+'×'+set.reps;chips.appendChild(ch);});
     const db=document.createElement('button');db.style.cssText='background:none;border:none;color:var(--m1);font-size:.72rem;flex-shrink:0;padding:2px 5px';db.textContent='✕';
-    db.addEventListener('click',()=>{DATA[name]=(DATA[name]||[]).filter(x=>x.date!==s.date);if(!DATA[name].length)delete DATA[name];scheduleSave();renderProgress();renderHistory();buildProgSel();toast('Removed');});
+    db.addEventListener('click',()=>{DATA[name]=(DATA[name]||[]).filter(x=>x.date!==s.date);if(!DATA[name].length)delete DATA[name];scheduleSave();renderProgress();renderHistory();renderProgList();toast('Removed');});
     const isPR=pr&&bestSet(s).weight===pr.weight&&s.date===pr.date;
     row.appendChild(dt);row.appendChild(chips);
     if(isPR){const pb=document.createElement('span');pb.className='prbadge';pb.style.flexShrink='0';pb.textContent='PR';row.appendChild(pb);}
@@ -689,40 +677,13 @@ function renderProgress(){
   pp.appendChild(sd);
 }
 
-function switchChartTab(tab){
-  chartTab=tab;
-  const name=document.getElementById('progex').value;
-  if(!name||!DATA[name]?.length)return;
-  const sessions=DATA[name];
-  const wPts=sessions.map(s=>({date:s.date,w:bestSet(s).weight}));
-  const rPts=sessions.map(s=>({date:s.date,w:bestSet(s).reps}));
-  const latest=bestSet(sessions[sessions.length-1]);
-  const first=bestSet(sessions[0]);
-  const impW=sessions.length>1?((latest.weight-first.weight)/(first.weight||1)*100).toFixed(1):null;
-  const impR=sessions.length>1?((latest.reps-first.reps)/(first.reps||1)*100).toFixed(1):null;
-  document.querySelectorAll('.chart-tab').forEach(t=>t.classList.toggle('on',t.textContent.toLowerCase()===tab));
-  drawChartForTab(tab,wPts,rPts,impW,impR);
-}
-
-function drawChartForTab(tab,wPts,rPts,impW,impR){
-  const pts=tab==='weight'?wPts:rPts;
-  const imp=tab==='weight'?impW:impR;
-  const color=tab==='weight'?'#e8ff47':'#35b8ff';
-  const meta=document.getElementById('chart-meta');
-  if(meta){
-    if(imp!==null){const up=+imp>=0;meta.innerHTML='<span style="color:'+(up?'var(--ac)':'var(--rd)')+';">'+(up?'↑':'↓')+' '+Math.abs(imp)+'%</span> <span style="font-size:.55rem;color:var(--m1)">vs first session</span>';}
-    else meta.innerHTML='';
-  }
-  drawChart(pts,color);
-}
-
-function drawChart(pts,lineColor){
-  lineColor=lineColor||'#e8ff47';
+function drawChart(pts){
   requestAnimationFrame(()=>{
     const wrap=document.getElementById('cwrap');if(!wrap)return;
     wrap.innerHTML='';
     const cv=document.createElement('canvas');wrap.appendChild(cv);
     const W=wrap.offsetWidth,H=150;
+    if(!W)return;
     cv.width=W*devicePixelRatio;cv.height=H*devicePixelRatio;
     cv.style.width=W+'px';cv.style.height=H+'px';
     const ctx=cv.getContext('2d');ctx.scale(devicePixelRatio,devicePixelRatio);
@@ -738,15 +699,14 @@ function drawChart(pts,lineColor){
       ctx.fillStyle='#444';ctx.font='8px monospace';ctx.textAlign='right';
       ctx.fillText((mn+(mx-mn)*(1-i/3)).toFixed(1),pad.l-4,y+3);
     }
-    const rgb=lineColor==='#35b8ff'?'53,184,255':'232,255,71';
     const gr=ctx.createLinearGradient(0,pad.t,0,pad.t+ch);
-    gr.addColorStop(0,'rgba('+rgb+',.15)');gr.addColorStop(1,'rgba('+rgb+',0)');
+    gr.addColorStop(0,'rgba(232,255,71,.15)');gr.addColorStop(1,'rgba(232,255,71,0)');
     ctx.beginPath();pts.forEach((p,i)=>i===0?ctx.moveTo(px(i),py(p.w)):ctx.lineTo(px(i),py(p.w)));
     ctx.lineTo(px(pts.length-1),pad.t+ch);ctx.lineTo(px(0),pad.t+ch);ctx.closePath();ctx.fillStyle=gr;ctx.fill();
-    ctx.beginPath();ctx.strokeStyle=lineColor;ctx.lineWidth=2;ctx.lineJoin='round';
+    ctx.beginPath();ctx.strokeStyle='#e8ff47';ctx.lineWidth=2;ctx.lineJoin='round';
     pts.forEach((p,i)=>i===0?ctx.moveTo(px(i),py(p.w)):ctx.lineTo(px(i),py(p.w)));ctx.stroke();
     pts.forEach((p,i)=>{
-      ctx.beginPath();ctx.arc(px(i),py(p.w),3.5,0,Math.PI*2);ctx.fillStyle=lineColor;ctx.fill();
+      ctx.beginPath();ctx.arc(px(i),py(p.w),3.5,0,Math.PI*2);ctx.fillStyle='#e8ff47';ctx.fill();
       if(i===0||i===pts.length-1||pts.length<=5){ctx.fillStyle='#555';ctx.font='7px monospace';ctx.textAlign='center';ctx.fillText(p.date.slice(5),px(i),H-pad.b+11);}
     });
   });
@@ -758,7 +718,6 @@ function getWorkoutDates(){
   Object.keys(DATA).forEach(n=>{if(n.startsWith('_'))return;(DATA[n]||[]).forEach(s=>{if(s.date)d.add(s.date);});});
   return[...d].sort();
 }
-
 function calcStreak(){
   const dates=getWorkoutDates();
   if(!dates.length)return{current:0,best:0,total:0};
@@ -766,23 +725,20 @@ function calcStreak(){
   const gap=restDays+1;
   let streaks=[],cur=[dates[0]];
   for(let i=1;i<dates.length;i++){
-    const diff=Math.round((new Date(dates[i])-new Date(dates[i-1]))/(864e5));
+    const diff=Math.round((new Date(dates[i])-new Date(dates[i-1]))/864e5);
     if(diff<=gap)cur.push(dates[i]);else{streaks.push(cur);cur=[dates[i]];}
   }
   streaks.push(cur);
   const best=Math.max(...streaks.map(s=>s.length));
   const last=streaks[streaks.length-1];
-  const daysSince=Math.round((new Date(today)-new Date(last[last.length-1]))/(864e5));
-  const current=daysSince<=gap?last.length:0;
-  return{current,best,total:dates.length};
+  const daysSince=Math.round((new Date(today)-new Date(last[last.length-1]))/864e5);
+  return{current:daysSince<=gap?last.length:0,best,total:dates.length};
 }
-
 function changeRestDays(dir){
   restDays=Math.max(0,Math.min(7,restDays+dir));
   document.getElementById('rest-val').textContent=restDays;
   DATA._restDays=restDays;scheduleSave();renderStreak();
 }
-
 function renderStreak(){
   restDays=typeof DATA._restDays==='number'?DATA._restDays:1;
   document.getElementById('rest-val').textContent=restDays;
@@ -792,10 +748,8 @@ function renderStreak(){
   document.getElementById('streak-total').textContent=total;
   renderCal();
 }
-
 function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCal();}
 function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCal();}
-
 function renderCal(){
   const today=new Date().toISOString().slice(0,10);
   const wdates=new Set(getWorkoutDates());
@@ -812,13 +766,12 @@ function renderCal(){
     const el=document.createElement('div');el.className='cal-day';el.textContent=d;
     if(wdates.has(ds)){el.classList.add('worked');}
     else if(ds<=today){
-      const dates=[...wdates].sort();
-      let ok=false;
+      const dates=[...wdates].sort();let ok=false;
       for(let i=0;i<dates.length-1;i++){
         const a=new Date(dates[i]),b=new Date(dates[i+1]),cur=new Date(ds);
         if(cur>a&&cur<b&&Math.round((b-a)/864e5)<=gap){ok=true;break;}
       }
-      if(!ok&&dates.length){const last=new Date(dates[dates.length-1]);const diff=Math.round((new Date(ds)-last)/864e5);if(diff>0&&diff<=gap)ok=true;}
+      if(!ok&&dates.length){const diff=Math.round((new Date(ds)-new Date(dates[dates.length-1]))/864e5);if(diff>0&&diff<=gap)ok=true;}
       if(ok)el.classList.add('rest-ok');
     }
     if(ds===today)el.classList.add('today');
@@ -833,7 +786,6 @@ function moveEx(catId,idx,dir){
   [list[idx],list[ni]]=[list[ni],list[idx]];
   scheduleSave();renderManage();renderPicker();
 }
-
 function renderManage(){
   const w=document.getElementById('mlist');w.innerHTML='';
   CATS.forEach(cat=>{
@@ -844,11 +796,7 @@ function renderManage(){
     const lbl=document.createElement('span');lbl.className='mcatlbl';lbl.style.color=cat.color;lbl.textContent=cat.label;
     const cnt=document.createElement('span');cnt.className='mcatcnt';cnt.textContent=list.length+' exercise'+(list.length!==1?'s':'');
     const dcb=document.createElement('button');dcb.className='delcatbtn';dcb.textContent='Delete';
-    dcb.addEventListener('click',()=>{
-      if(!confirm('Delete category "'+cat.label+'"?'))return;
-      CATS=CATS.filter(c=>c.id!==cat.id);delete EX[cat.id];
-      scheduleSave();renderManage();buildCatPills();renderPicker();toast('Category deleted');
-    });
+    dcb.addEventListener('click',()=>{if(!confirm('Delete category "'+cat.label+'"?'))return;CATS=CATS.filter(c=>c.id!==cat.id);delete EX[cat.id];scheduleSave();renderManage();buildCatPills();renderPicker();toast('Category deleted');});
     hdr.appendChild(dot);hdr.appendChild(lbl);hdr.appendChild(cnt);hdr.appendChild(dcb);sec.appendChild(hdr);
     const rows=document.createElement('div');
     list.forEach((name,idx)=>{
@@ -861,51 +809,31 @@ function renderManage(){
       ud.appendChild(ub);ud.appendChild(db2);
       const nm=document.createElement('span');nm.className='mname';nm.textContent=name;
       const db=document.createElement('button');db.className='mdel';db.textContent='✕';
-      db.addEventListener('click',e=>{
-        e.stopPropagation();e.preventDefault();
-        if(!confirm('Remove "'+name+'" from '+cat.label+'?'))return;
-        EX[cat.id]=(EX[cat.id]||[]).filter(n=>n!==name);
-        scheduleSave();renderManage();renderPicker();toast('Removed');
-      });
+      db.addEventListener('click',e=>{e.stopPropagation();e.preventDefault();if(!confirm('Remove "'+name+'" from '+cat.label+'?'))return;EX[cat.id]=(EX[cat.id]||[]).filter(n=>n!==name);scheduleSave();renderManage();renderPicker();toast('Removed');});
       r.appendChild(ud);r.appendChild(nm);r.appendChild(db);rows.appendChild(r);
     });
     const ab=document.createElement('button');ab.className='addbtn';
     ab.innerHTML='<span style="font-size:.9rem;line-height:1">+</span> Add exercise';
-    ab.addEventListener('click',()=>{
-      document.getElementById('ex-mtitle').textContent='Add to '+cat.label;
-      modalCats=new Set([cat.id]);
-      document.getElementById('ex-name').value='';
-      renderExCatPills();
-      document.getElementById('modal-ex').classList.add('on');
-      setTimeout(()=>document.getElementById('ex-name').focus(),220);
-    });
+    ab.addEventListener('click',()=>{document.getElementById('ex-mtitle').textContent='Add to '+cat.label;modalCats=new Set([cat.id]);document.getElementById('ex-name').value='';renderExCatPills();document.getElementById('modal-ex').classList.add('on');setTimeout(()=>document.getElementById('ex-name').focus(),220);});
     rows.appendChild(ab);sec.appendChild(rows);w.appendChild(sec);
   });
 }
 
 // ── MODALS ───────────────────────────────────────────
 function openModal(type){
-  if(type==='newcat'){
-    document.getElementById('cat-name').value='';
-    document.getElementById('cat-color').value='#a78bfa';
-    document.getElementById('modal-cat').classList.add('on');
-    setTimeout(()=>document.getElementById('cat-name').focus(),220);
-  }
+  if(type==='newcat'){document.getElementById('cat-name').value='';document.getElementById('cat-color').value='#a78bfa';document.getElementById('modal-cat').classList.add('on');setTimeout(()=>document.getElementById('cat-name').focus(),220);}
 }
 function closeModal(type){document.getElementById('modal-'+type).classList.remove('on');}
-
 function renderExCatPills(){
   const g=document.getElementById('ex-catpills');g.innerHTML='';
   CATS.forEach(cat=>{
     const on=modalCats.has(cat.id);
     const b=document.createElement('button');b.className='catpill'+(on?' on':'');b.textContent=cat.label;
-    if(on){b.style.background=cat.color;b.style.borderColor=cat.color;b.style.color='#000';}
-    else{b.style.background='';b.style.borderColor='';}
+    if(on){b.style.background=cat.color;b.style.borderColor=cat.color;b.style.color='#000';}else{b.style.background='';b.style.borderColor='';}
     b.addEventListener('click',()=>{if(modalCats.has(cat.id))modalCats.delete(cat.id);else modalCats.add(cat.id);renderExCatPills();});
     g.appendChild(b);
   });
 }
-
 function saveEx(){
   const name=document.getElementById('ex-name').value.trim();
   if(!name){toast('Enter a name');return;}
@@ -915,15 +843,13 @@ function saveEx(){
   if(!added){toast('Already in those categories');return;}
   scheduleSave();closeModal('ex');renderManage();buildCatPills();renderPicker();toast('Added ✓');
 }
-
 function saveCat(){
   const label=document.getElementById('cat-name').value.trim();
   if(!label){toast('Enter a name');return;}
   const color=document.getElementById('cat-color').value;
   const id='cat_'+Date.now();
   CATS.push({id,label,color});EX[id]=[];
-  scheduleSave();closeModal('cat');renderManage();buildCatPills();renderPicker();
-  toast('"'+label+'" created ✓');
+  scheduleSave();closeModal('cat');renderManage();buildCatPills();renderPicker();toast('"'+label+'" created ✓');
 }
 
 // ── NAV ──────────────────────────────────────────────
@@ -933,7 +859,7 @@ function go(id){
   document.getElementById('s-'+id).classList.add('on');
   document.querySelector('.ntab[onclick="go(\''+id+'\')"]').classList.add('on');
   if(id==='history')renderHistory();
-  if(id==='progress'){buildProgSel();renderProgress();}
+  if(id==='progress')renderProgList();
   if(id==='streak')renderStreak();
   if(id==='manage')renderManage();
 }
