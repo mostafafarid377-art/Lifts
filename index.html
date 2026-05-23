@@ -166,6 +166,12 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .catpill{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border:1px solid var(--b2);background:none;color:var(--m2);border-radius:2px}
 .catpill.on{color:#000}
 
+/* SHOW PASSWORD */
+.pass-wrap{position:relative;margin-bottom:10px}
+.pass-wrap .auth-field{margin-bottom:0;padding-right:56px}
+.show-pass{position:absolute;right:11px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--m2);font-size:.6rem;letter-spacing:.05em;padding:4px 6px;cursor:pointer}
+.show-pass:active{color:var(--ac)}
+
 /* SYNC */
 .sync-bar{font-size:.52rem;color:var(--m1);letter-spacing:.12em;text-align:center;padding:4px;background:var(--s2);display:none}
 .sync-bar.show{display:block}
@@ -228,10 +234,16 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
       <button class="auth-tab" onclick="switchTab('signup')">Sign Up</button>
     </div>
     <input class="auth-field" id="auth-email" type="email" placeholder="Email" autocomplete="email">
-    <input class="auth-field" id="auth-pass" type="password" placeholder="Password" autocomplete="current-password"
-      onkeydown="if(event.key==='Enter')doAuth()">
-    <input class="auth-field" id="auth-pass2" type="password" placeholder="Confirm password" style="display:none"
-      onkeydown="if(event.key==='Enter')doAuth()">
+    <div class="pass-wrap">
+      <input class="auth-field" id="auth-pass" type="password" placeholder="Password" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')doAuth()">
+      <button class="show-pass" type="button" onclick="togglePass('auth-pass',this)">SHOW</button>
+    </div>
+    <div class="pass-wrap" id="pass2-wrap" style="display:none">
+      <input class="auth-field" id="auth-pass2" type="password" placeholder="Confirm password"
+        onkeydown="if(event.key==='Enter')doAuth()">
+      <button class="show-pass" type="button" onclick="togglePass('auth-pass2',this)">SHOW</button>
+    </div>
     <button class="auth-btn" onclick="doAuth()" id="auth-btn-label">Sign In</button>
     <div class="auth-err" id="auth-err"></div>
     <div class="auth-divider">or</div>
@@ -534,9 +546,17 @@ function switchTab(mode){
   document.querySelectorAll('.auth-tab').forEach((t,i)=>{
     t.classList.toggle('on',(mode==='login'&&i===0)||(mode==='signup'&&i===1));
   });
-  document.getElementById('auth-pass2').style.display=mode==='signup'?'block':'none';
+  const p2wrap=document.getElementById('pass2-wrap');
+  if(p2wrap) p2wrap.style.display=mode==='signup'?'block':'none';
   document.getElementById('auth-btn-label').textContent=mode==='login'?'Sign In':'Create Account';
   document.getElementById('auth-err').textContent='';
+}
+
+function togglePass(id,btn){
+  const inp=document.getElementById(id);
+  if(!inp)return;
+  inp.type=inp.type==='password'?'text':'password';
+  btn.textContent=inp.type==='password'?'SHOW':'HIDE';
 }
 
 async function doAuth(){
@@ -1124,3 +1144,4 @@ function go(id){
 </script>
 </body>
 </html>
+
