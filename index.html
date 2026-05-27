@@ -1071,14 +1071,15 @@ function calcStreak(){
   }
   streaks.push(cur);
 
-  const best = streaks.length ? Math.max(...streaks.map(s=>s.length)) : 0;
-
   // Current streak: check if last workout is recent enough
   const lastGroup = streaks[streaks.length-1];
   const lastDate = new Date(lastGroup[lastGroup.length-1]);
   const todayDate = new Date(today);
   const daysSinceLast = Math.round((todayDate-lastDate)/(1000*60*60*24));
   const current = daysSinceLast <= allowedGap ? lastGroup.length : 0;
+
+  // Best = highest of all groups including current live streak
+  const best = Math.max(...streaks.map(s=>s.length), current);
 
   return {current, best, total: dates.length};
 }
