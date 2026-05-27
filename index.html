@@ -1087,9 +1087,10 @@ function calcStreak(){
 function renderStreak(){
   initStreak();
   const {current, best, total} = calcStreak();
-  document.getElementById('streak-current').textContent = current;
-  document.getElementById('streak-best').textContent = best;
-  document.getElementById('streak-total').textContent = total;
+  // use querySelectorAll to update ALL elements with these IDs (handles duplicates)
+  document.querySelectorAll('#streak-current').forEach(el=>el.textContent=current);
+  document.querySelectorAll('#streak-best').forEach(el=>el.textContent=best);
+  document.querySelectorAll('#streak-total').forEach(el=>el.textContent=total);
   renderCal();
 }
 
