@@ -202,17 +202,18 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .rest-btn{background:none;border:1px solid var(--b2);color:var(--tx);width:28px;height:28px;border-radius:2px;font-size:1rem;display:flex;align-items:center;justify-content:center}
 .rest-btn:active{border-color:var(--ac);color:var(--ac)}
 .rest-val{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--ac);min-width:20px;text-align:center}
-.cal-wrap{background:var(--sf);border:1px solid var(--b1);border-radius:2px;padding:13px;margin-bottom:12px}
+.cal-wrap{background:var(--sf);border:1px solid var(--b1);border-radius:2px;padding:13px;margin-bottom:12px;overflow:hidden}
 .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .cal-title{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.08em;color:var(--tx)}
 .cal-nav{background:none;border:1px solid var(--b2);color:var(--m2);width:28px;height:28px;border-radius:2px;font-size:.8rem;display:flex;align-items:center;justify-content:center}
 .cal-nav:active{border-color:var(--ac);color:var(--ac)}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.cal-day-name{font-size:.5rem;color:var(--m1);text-align:center;letter-spacing:.1em;padding-bottom:4px}
-.cal-day{aspect-ratio:1;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:var(--m2);position:relative}
-.cal-day.worked{background:var(--ac);color:#000;font-weight:600}
-.cal-day.today{border:1px solid var(--ac)}
-.cal-day.rest-ok{background:var(--s2);color:var(--m1)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;width:100%}
+.cal-day-name{font-size:.48rem;color:var(--m1);text-align:center;letter-spacing:.05em;padding-bottom:4px}
+.cal-day{width:100%;padding-top:100%;position:relative;border-radius:2px}
+.cal-day-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:var(--m2);border-radius:2px}
+.cal-day.worked .cal-day-inner{background:var(--ac);color:#000;font-weight:600}
+.cal-day.today .cal-day-inner{border:1px solid var(--ac)}
+.cal-day.rest-ok .cal-day-inner{background:var(--s2);color:var(--m1)}
 .cal-day.empty{opacity:0}
 
 /* MISC */
@@ -239,12 +240,16 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
         onkeydown="if(event.key==='Enter')doAuth()">
       <button class="show-pass" type="button" onclick="togglePass('auth-pass',this)">SHOW</button>
     </div>
-    <div class="pass-wrap" id="pass2-wrap" style="display:none">
+    <div id="pass2-wrap" style="display:none;position:relative;margin-bottom:10px">
       <input class="auth-field" id="auth-pass2" type="password" placeholder="Confirm password"
-        onkeydown="if(event.key==='Enter')doAuth()">
-      <button class="show-pass" type="button" onclick="togglePass('auth-pass2',this)">SHOW</button>
+        onkeydown="if(event.key==='Enter')doAuth()" style="margin-bottom:0;padding-right:56px;width:100%">
+      <button type="button" onclick="togglePass('auth-pass2',this)"
+        style="position:absolute;right:11px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--m2);font-size:.6rem;letter-spacing:.05em;padding:4px 6px;cursor:pointer">SHOW</button>
     </div>
     <button class="auth-btn" onclick="doAuth()" id="auth-btn-label">Sign In</button>
+    <div id="forgot-wrap" style="text-align:center;margin-top:10px">
+      <button onclick="doForgot()" style="background:none;border:none;color:var(--m2);font-size:.6rem;letter-spacing:.08em;cursor:pointer;text-decoration:underline">Forgot password?</button>
+    </div>
     <div class="auth-err" id="auth-err"></div>
     <div class="auth-divider">or</div>
     <button class="google-btn" onclick="doGoogle()">
@@ -550,6 +555,8 @@ function switchTab(mode){
   if(p2wrap) p2wrap.style.display=mode==='signup'?'block':'none';
   document.getElementById('auth-btn-label').textContent=mode==='login'?'Sign In':'Create Account';
   document.getElementById('auth-err').textContent='';
+  const fw=document.getElementById('forgot-wrap');
+  if(fw) fw.style.display=mode==='login'?'block':'none';
 }
 
 function togglePass(id,btn){
@@ -557,6 +564,25 @@ function togglePass(id,btn){
   if(!inp)return;
   inp.type=inp.type==='password'?'text':'password';
   btn.textContent=inp.type==='password'?'SHOW':'HIDE';
+}
+
+async function doForgot(){
+  const email=document.getElementById('auth-email').value.trim();
+  const errEl=document.getElementById('auth-err');
+  const loadEl=document.getElementById('auth-loading');
+  if(!email){errEl.textContent='Enter your email above first';return;}
+  if(!auth){errEl.textContent='Service unavailable';return;}
+  errEl.textContent='';
+  loadEl.textContent='Sending reset email...';
+  try{
+    await auth.sendPasswordResetEmail(email);
+    errEl.style.color='var(--ac)';
+    errEl.textContent='Reset email sent! Check your inbox.';
+    setTimeout(()=>{errEl.style.color='var(--rd)';errEl.textContent='';},5000);
+  }catch(e){
+    errEl.textContent=friendlyErr(e.code||'unknown');
+  }
+  loadEl.textContent='';
 }
 
 async function doAuth(){
@@ -1045,7 +1071,7 @@ function calcStreak(){
   }
   streaks.push(cur);
 
-  const best = Math.max(...streaks.map(s=>s.length));
+  const best = streaks.length ? Math.max(...streaks.map(s=>s.length)) : 0;
 
   // Current streak: check if last workout is recent enough
   const lastGroup = streaks[streaks.length-1];
@@ -1094,19 +1120,26 @@ function renderCal(){
 
   // Empty cells before first day
   for(let i=0;i<firstDay;i++){
-    const el=document.createElement('div');el.className='cal-day empty';grid.appendChild(el);
+    const el=document.createElement('div');
+    el.className='cal-day empty';
+    const inner=document.createElement('div');inner.className='cal-day-inner';
+    el.appendChild(inner);grid.appendChild(el);
   }
 
   for(let d=1;d<=daysInMonth;d++){
     const dateStr = calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const el=document.createElement('div');
     el.className='cal-day';
-    el.textContent=d;
+
+    // inner div holds the visible content
+    const inner=document.createElement('div');
+    inner.className='cal-day-inner';
+    inner.textContent=d;
+    el.appendChild(inner);
 
     if(workoutDates.has(dateStr)){
       el.classList.add('worked');
     } else if(dateStr <= today){
-      // Check if this is a valid rest day (within gap of surrounding workouts)
       const dates=[...workoutDates].sort();
       let isRestOk=false;
       for(let i=0;i<dates.length-1;i++){
@@ -1115,7 +1148,6 @@ function renderCal(){
         const gapAB=Math.round((b-a)/(1000*60*60*24));
         if(cur>a && cur<b && gapAB<=allowedGap){ isRestOk=true; break; }
       }
-      // Also check if it's a rest day after last workout within gap
       if(!isRestOk && dates.length){
         const last=new Date(dates[dates.length-1]);
         const cur=new Date(dateStr);
@@ -1144,4 +1176,3 @@ function go(id){
 </script>
 </body>
 </html>
-
