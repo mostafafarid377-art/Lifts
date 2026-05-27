@@ -166,6 +166,24 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .catpill{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border:1px solid var(--b2);background:none;color:var(--m2);border-radius:2px}
 .catpill.on{color:#000}
 
+/* REST TIMER */
+.timer-bar{position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--sf);border-top:1px solid var(--b1);padding:12px 16px;padding-bottom:calc(12px + var(--sfb));display:none;align-items:center;gap:12px}
+.timer-bar.show{display:flex}
+.timer-circle{width:52px;height:52px;border-radius:50%;background:var(--s2);border:2px solid var(--ac);display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative}
+.timer-num{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--ac);line-height:1}
+.timer-info{flex:1}
+.timer-label{font-size:.6rem;color:var(--m1);letter-spacing:.15em;text-transform:uppercase}
+.timer-ex{font-size:.72rem;color:var(--tx);letter-spacing:.04em;text-transform:uppercase;margin-top:2px}
+.timer-btns{display:flex;gap:6px;flex-shrink:0}
+.timer-btn{font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;padding:7px 11px;border-radius:2px;border:1px solid var(--b2);background:none;color:var(--m2)}
+.timer-btn.stop{border-color:var(--rd);color:var(--rd)}
+.timer-btn.add{border-color:var(--b2);color:var(--m2)}
+.timer-preset{display:flex;gap:5px;margin-top:6px}
+.tpreset{font-size:.58rem;letter-spacing:.08em;padding:4px 9px;border:1px solid var(--b2);border-radius:1px;background:none;color:var(--m2)}
+.tpreset.on{background:var(--ac);color:#000;border-color:var(--ac)}
+/* progress ring */
+.timer-ring{position:absolute;inset:0;border-radius:50%;transform:rotate(-90deg)}
+
 /* SHOW PASSWORD */
 .pass-wrap{position:relative;margin-bottom:10px}
 .pass-wrap .auth-field{margin-bottom:0;padding-right:56px}
@@ -786,7 +804,9 @@ function saveLog(){
   const entry={date,sets:valid.map(s=>({weight:parseFloat(s.w),reps:parseInt(s.r),unit:s.u||unit}))};
   if(idx>=0)DATA[selEx][idx]=entry;else DATA[selEx].push(entry);
   DATA[selEx].sort((a,b)=>a.date.localeCompare(b.date));
-  scheduleSave();toast('Saved ✓');cancelLog();buildProgSel();
+  scheduleSave();toast('Saved ✓');
+  startTimer(selEx);
+  cancelLog();buildProgSel();
 }
 
 // ── HISTORY ──────────────────────────────────────────
@@ -1175,6 +1195,74 @@ function go(id){
   if(id==='streak')renderStreak();
   if(id==='manage')renderManage();
 }
+
+
+// ── REST TIMER ────────────────────────────────────────
+let timerInterval=null,timerTotal=90,timerLeft=90;
+const CIRC=2*Math.PI*23;
+
+function startTimer(exName){
+  timerLeft=timerTotal;
+  const exEl=document.getElementById('timer-ex');
+  if(exEl)exEl.textContent=exName||'';
+  updateTimerDisplay();
+  document.getElementById('timer-bar').classList.add('show');
+  clearInterval(timerInterval);
+  timerInterval=setInterval(()=>{
+    timerLeft--;updateTimerDisplay();
+    if(timerLeft<=0){
+      clearInterval(timerInterval);timerInterval=null;
+      if(navigator.vibrate)navigator.vibrate([300,100,300]);
+      setTimeout(stopTimer,2500);
+    }
+  },1000);
+}
+function stopTimer(){
+  clearInterval(timerInterval);timerInterval=null;timerLeft=timerTotal;
+  document.getElementById('timer-bar').classList.remove('show');
+}
+function setTimer(secs){
+  timerTotal=secs;timerLeft=secs;
+  document.querySelectorAll('.tpreset').forEach(b=>{
+    const map={'1m':60,'90s':90,'2m':120,'3m':180};
+    b.classList.toggle('on',map[b.textContent]===secs);
+  });
+  updateTimerDisplay();
+  if(timerInterval){clearInterval(timerInterval);startTimer(document.getElementById('timer-ex').textContent);}
+}
+function addTimerSeconds(s){timerLeft=Math.min(timerLeft+s,600);updateTimerDisplay();}
+function updateTimerDisplay(){
+  const m=Math.floor(timerLeft/60),s=timerLeft%60;
+  const numEl=document.getElementById('timer-num');
+  if(numEl){numEl.textContent=m>0?m+':'+String(s).padStart(2,'0'):String(timerLeft);numEl.style.color=timerLeft<=10?'var(--rd)':'var(--ac)';}
+  const ring=document.getElementById('timer-ring');
+  if(ring){ring.style.strokeDashoffset=CIRC*(1-timerLeft/(timerTotal||1));ring.style.stroke=timerLeft<=10?'var(--rd)':'var(--ac)';}
+}
 </script>
+<!-- REST TIMER BAR -->
+<div class="timer-bar" id="timer-bar">
+  <div class="timer-circle">
+    <svg style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 52 52">
+      <circle id="timer-ring" cx="26" cy="26" r="23" fill="none" stroke="var(--ac)" stroke-width="2.5"
+        stroke-dasharray="144.5" stroke-dashoffset="0" style="transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset .9s linear"/>
+    </svg>
+    <div class="timer-num" id="timer-num">90</div>
+  </div>
+  <div class="timer-info">
+    <div class="timer-label">Rest Timer</div>
+    <div class="timer-ex" id="timer-ex"></div>
+    <div class="timer-preset">
+      <button class="tpreset" onclick="setTimer(60)">1m</button>
+      <button class="tpreset on" onclick="setTimer(90)">90s</button>
+      <button class="tpreset" onclick="setTimer(120)">2m</button>
+      <button class="tpreset" onclick="setTimer(180)">3m</button>
+    </div>
+  </div>
+  <div class="timer-btns">
+    <button class="timer-btn add" onclick="addTimerSeconds(30)">+30s</button>
+    <button class="timer-btn stop" onclick="stopTimer()">✕</button>
+  </div>
+</div>
+
 </body>
 </html>
