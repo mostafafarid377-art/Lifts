@@ -28,15 +28,7 @@
   --sft:env(safe-area-inset-top,0px);
   --sfb:env(safe-area-inset-bottom,0px);
 }
-body.light{
-  --bg:#f5f5f0;--sf:#ffffff;--s2:#f0f0eb;
-  --b1:#e0e0da;--b2:#ccc;
-  --tx:#111;--m1:#999;--m2:#777;
-  --ac:#b8a800;--rd:#cc2222;
-}
-body.light .nav{background:rgba(245,245,240,.97)}
-body.light .auth-btn{color:#000}
-body.light .bacc{color:#000}
+
 html,body{height:100%;overscroll-behavior:none}
 body{background:var(--bg);color:var(--tx);font-family:'IBM Plex Mono',monospace;min-height:100dvh;-webkit-font-smoothing:antialiased}
 input,select,button{font-family:inherit}
@@ -212,9 +204,7 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .prof-stat{background:var(--sf);border:1px solid var(--b1);padding:13px 12px;border-radius:2px}
 .prof-stat-num{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:.04em;line-height:1;color:var(--ac)}
 .prof-stat-lbl{font-size:.5rem;color:var(--m1);letter-spacing:.2em;text-transform:uppercase;margin-top:3px}
-.theme-toggle{display:flex;align-items:center;background:var(--sf);border:1px solid var(--b1);border-radius:2px;overflow:hidden;margin-bottom:2px}
-.theme-opt{flex:1;padding:11px;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;background:none;border:none;color:var(--m2);text-align:center}
-.theme-opt.on{background:var(--ac);color:#000;font-weight:600}
+
 .export-btn{width:100%;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--sf);border:1px solid var(--b1);border-radius:2px;margin-bottom:2px;font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;color:var(--tx)}
 .export-btn:active{background:var(--s2)}
 .export-icon{font-size:1rem}
@@ -443,14 +433,6 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
         <div class="prof-stat"><div class="prof-stat-num" id="pstat-exercises">0</div><div class="prof-stat-lbl">Exercises Logged</div></div>
         <div class="prof-stat"><div class="prof-stat-num" id="pstat-streak">0</div><div class="prof-stat-lbl">Current Streak 🔥</div></div>
         <div class="prof-stat"><div class="prof-stat-num" id="pstat-best">0</div><div class="prof-stat-lbl">Best Streak 🏆</div></div>
-      </div>
-    </div>
-
-    <div class="prof-section">
-      <div class="prof-section-title">Appearance</div>
-      <div class="theme-toggle">
-        <button class="theme-opt on" id="theme-dark" onclick="setTheme('dark')">🌙 Dark</button>
-        <button class="theme-opt" id="theme-light" onclick="setTheme('light')">☀️ Light</button>
       </div>
     </div>
 
@@ -754,7 +736,6 @@ function friendlyErr(code){
 
 // ── Boot app ─────────────────────────────────────────
 function bootApp(){
-  loadTheme();
   document.getElementById('logdate').value=new Date().toISOString().slice(0,10);
   buildCatPills();
   renderPicker();
@@ -1257,23 +1238,6 @@ function renderCal(){
     if(dateStr===today) el.classList.add('today');
     grid.appendChild(el);
   }
-}
-
-// ── THEME ────────────────────────────────────────────
-function setTheme(mode){
-  document.body.classList.toggle('light', mode==='light');
-  localStorage.setItem('lx_theme', mode);
-  // these elements only exist after login — guard with null check
-  const td=document.getElementById('theme-dark');
-  const tl=document.getElementById('theme-light');
-  if(td) td.classList.toggle('on', mode==='dark');
-  if(tl) tl.classList.toggle('on', mode==='light');
-  const meta=document.querySelector('meta[name="theme-color"]');
-  if(meta) meta.content = mode==='light'?'#f5f5f0':'#0c0c0c';
-}
-function loadTheme(){
-  const t=localStorage.getItem('lx_theme')||'dark';
-  setTheme(t);
 }
 
 // ── PROFILE ──────────────────────────────────────────
