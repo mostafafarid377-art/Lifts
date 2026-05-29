@@ -1277,8 +1277,7 @@ function exportCSV(){
       });
     });
   });
-  const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('
-');
+  const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
   downloadFile('LIFTS_export_'+new Date().toISOString().slice(0,10)+'.csv', csv, 'text/csv');
   toast('CSV downloaded ✓');
 }
