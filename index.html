@@ -1263,9 +1263,11 @@ function renderCal(){
 function setTheme(mode){
   document.body.classList.toggle('light', mode==='light');
   localStorage.setItem('lx_theme', mode);
-  document.getElementById('theme-dark').classList.toggle('on', mode==='dark');
-  document.getElementById('theme-light').classList.toggle('on', mode==='light');
-  // update meta theme-color
+  // these elements only exist after login — guard with null check
+  const td=document.getElementById('theme-dark');
+  const tl=document.getElementById('theme-light');
+  if(td) td.classList.toggle('on', mode==='dark');
+  if(tl) tl.classList.toggle('on', mode==='light');
   const meta=document.querySelector('meta[name="theme-color"]');
   if(meta) meta.content = mode==='light'?'#f5f5f0':'#0c0c0c';
 }
