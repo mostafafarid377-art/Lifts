@@ -167,6 +167,15 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .catpill{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border:1px solid var(--b2);background:none;color:var(--m2);border-radius:2px}
 .catpill.on{color:#000}
 
+/* EXPORT */
+.exp-label{font-size:.55rem;color:var(--m1);letter-spacing:.2em;text-transform:uppercase;margin-bottom:6px}
+.exp-pills{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px}
+.exp-pill{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;padding:5px 11px;border:1px solid var(--b2);background:none;color:var(--m2);border-radius:1px}
+.exp-pill.on{color:#000;background:var(--ac);border-color:var(--ac)}
+.exp-range-btns{display:flex;gap:2px}
+.exp-range-btn{flex:1;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;padding:8px 4px;border:1px solid var(--b2);background:none;color:var(--m2);border-radius:2px}
+.exp-range-btn.on{background:var(--ac);color:#000;border-color:var(--ac)}
+
 /* REST TIMER */
 .timer-bar{position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--sf);border-top:1px solid var(--b1);padding:12px 16px;padding-bottom:calc(12px + var(--sfb));display:none;align-items:center;gap:12px}
 .timer-bar.show{display:flex}
@@ -438,14 +447,33 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 
     <div class="prof-section">
       <div class="prof-section-title">Export Data</div>
-      <button class="export-btn" onclick="exportCSV()">
-        <span>Download as CSV</span>
-        <span class="export-icon">📊</span>
-      </button>
-      <button class="export-btn" onclick="exportJSON()">
-        <span>Download as JSON</span>
-        <span class="export-icon">📄</span>
-      </button>
+
+      <!-- Categories -->
+      <div class="exp-label">Categories</div>
+      <div class="exp-pills" id="exp-cats"></div>
+
+      <!-- Date range -->
+      <div class="exp-label" style="margin-top:12px">Date Range</div>
+      <div class="exp-range-btns">
+        <button class="exp-range-btn on" id="exp-all" onclick="setExpRange('all')">All Time</button>
+        <button class="exp-range-btn" id="exp-month" onclick="setExpRange('month')">This Month</button>
+        <button class="exp-range-btn" id="exp-custom" onclick="setExpRange('custom')">Custom</button>
+      </div>
+      <div id="exp-custom-dates" style="display:none;margin-top:8px;display:none">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="date" id="exp-from" class="field" style="flex:1;margin-bottom:0">
+          <span style="color:var(--m1);font-size:.7rem">→</span>
+          <input type="date" id="exp-to" class="field" style="flex:1;margin-bottom:0">
+        </div>
+      </div>
+
+      <!-- Format + Export -->
+      <div class="exp-label" style="margin-top:12px">Format</div>
+      <div style="display:flex;gap:2px;margin-bottom:12px">
+        <button class="exp-range-btn on" id="exp-csv" onclick="setExpFormat('csv')" style="flex:1">CSV</button>
+        <button class="exp-range-btn" id="exp-json" onclick="setExpFormat('json')" style="flex:1">JSON</button>
+      </div>
+      <button class="btn bacc" style="width:100%" onclick="doExport()">Export ↓</button>
     </div>
 
     <div class="prof-section">
@@ -1262,46 +1290,139 @@ function renderProfile(){
   document.getElementById('pstat-best').textContent=best;
 
   // theme toggle state
-  const t=localStorage.getItem('lx_theme')||'dark';
-  document.getElementById('theme-dark').classList.toggle('on',t==='dark');
-  document.getElementById('theme-light').classList.toggle('on',t==='light');
+  // init export UI fresh each time
+  expCats=new Set();
+  initExport();
+  setExpRange('all');
+  setExpFormat('csv');
 }
 
 // ── DATA EXPORT ──────────────────────────────────────
-function exportCSV(){
-  const rows=[['Exercise','Date','Set','Weight','Unit','Reps']];
-  Object.keys(DATA).filter(n=>!n.startsWith('_')).sort().forEach(name=>{
-    (DATA[name]||[]).forEach(session=>{
-      session.sets.forEach((set,i)=>{
-        rows.push([name, session.date, i+1, set.weight, set.unit||'kg', set.reps]);
-      });
+let expRange='all', expFormat='csv';
+let expCats=new Set();
+
+function initExport(){
+  // build category pills
+  const wrap=document.getElementById('exp-cats');
+  if(!wrap)return;
+  wrap.innerHTML='';
+  // start with all selected
+  if(expCats.size===0) CATS.forEach(c=>expCats.add(c.id));
+  CATS.forEach(cat=>{
+    const b=document.createElement('button');
+    b.className='exp-pill'+(expCats.has(cat.id)?' on':'');
+    b.textContent=cat.label;
+    if(expCats.has(cat.id)){b.style.background=cat.color;b.style.borderColor=cat.color;b.style.color='#000';}
+    b.addEventListener('click',()=>{
+      if(expCats.has(cat.id)) expCats.delete(cat.id);
+      else expCats.add(cat.id);
+      initExport();
     });
+    wrap.appendChild(b);
   });
-  const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
-  downloadFile('LIFTS_export_'+new Date().toISOString().slice(0,10)+'.csv', csv, 'text/csv');
-  toast('CSV downloaded ✓');
+  // set default dates for custom range
+  const today=new Date().toISOString().slice(0,10);
+  const monthAgo=new Date(Date.now()-30*864e5).toISOString().slice(0,10);
+  const fromEl=document.getElementById('exp-from');
+  const toEl=document.getElementById('exp-to');
+  if(fromEl&&!fromEl.value) fromEl.value=monthAgo;
+  if(toEl&&!toEl.value) toEl.value=today;
 }
 
-function exportJSON(){
+function setExpRange(r){
+  expRange=r;
+  ['all','month','custom'].forEach(x=>{
+    const el=document.getElementById('exp-'+x);
+    if(el) el.classList.toggle('on',x===r);
+  });
+  const custom=document.getElementById('exp-custom-dates');
+  if(custom) custom.style.display=r==='custom'?'block':'none';
+}
+
+function setExpFormat(f){
+  expFormat=f;
+  ['csv','json'].forEach(x=>{
+    const el=document.getElementById('exp-'+x);
+    if(el) el.classList.toggle('on',x===f);
+  });
+}
+
+function getDateFilter(){
+  const today=new Date().toISOString().slice(0,10);
+  if(expRange==='all') return {from:'2000-01-01',to:today};
+  if(expRange==='month'){
+    const from=new Date(Date.now()-30*864e5).toISOString().slice(0,10);
+    return {from,to:today};
+  }
+  // custom
+  const from=document.getElementById('exp-from')?.value||'2000-01-01';
+  const to=document.getElementById('exp-to')?.value||today;
+  return {from,to};
+}
+
+function getExercisesForExport(){
+  // get all exercise names belonging to selected categories
+  const names=new Set();
+  expCats.forEach(catId=>{
+    (EX[catId]||[]).forEach(n=>names.add(n));
+  });
+  return [...names];
+}
+
+function doExport(){
+  if(expCats.size===0){toast('Select at least one category');return;}
+  const {from,to}=getDateFilter();
+  const exercises=getExercisesForExport();
+  if(!exercises.length){toast('No exercises in selected categories');return;}
+
+  if(expFormat==='csv') doExportCSV(exercises,from,to);
+  else doExportJSON(exercises,from,to);
+}
+
+function doExportCSV(exercises,from,to){
+  const rows=[['Exercise','Date','Set','Weight','Unit','Reps']];
+  exercises.sort().forEach(name=>{
+    (DATA[name]||[])
+      .filter(s=>s.date>=from&&s.date<=to)
+      .forEach(session=>{
+        session.sets.forEach((set,i)=>{
+          rows.push([name,session.date,i+1,set.weight,set.unit||'kg',set.reps]);
+        });
+      });
+  });
+  if(rows.length===1){toast('No data in selected range');return;}
+  const lines=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(','));
+  const csv=lines.join('\n');
+  downloadFile('LIFTS_'+from+'_'+to+'.csv',csv,'text/csv');
+  toast('CSV exported ✓ ('+( rows.length-1)+' sets)');
+}
+
+function doExportJSON(exercises,from,to){
+  const filtered={};
+  exercises.sort().forEach(name=>{
+    const sessions=(DATA[name]||[]).filter(s=>s.date>=from&&s.date<=to);
+    if(sessions.length) filtered[name]=sessions;
+  });
+  if(!Object.keys(filtered).length){toast('No data in selected range');return;}
   const exportData={
-    exportedAt: new Date().toISOString(),
-    user: currentUser?.email||'',
-    workouts: DATA
+    exportedAt:new Date().toISOString(),
+    user:currentUser?.email||'',
+    dateRange:{from,to},
+    categories:[...expCats].map(id=>catLabel(id)),
+    workouts:filtered
   };
-  const json=JSON.stringify(exportData, null, 2);
-  downloadFile('LIFTS_export_'+new Date().toISOString().slice(0,10)+'.json', json, 'application/json');
-  toast('JSON downloaded ✓');
+  const json=JSON.stringify(exportData,null,2);
+  downloadFile('LIFTS_'+from+'_'+to+'.json',json,'application/json');
+  toast('JSON exported ✓');
 }
 
-function downloadFile(filename, content, type){
+function downloadFile(filename,content,type){
   const blob=new Blob([content],{type});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  a.href=url; a.download=filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  a.href=url;a.download=filename;
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
 }
 
 // ── NAV ──────────────────────────────────────────────
@@ -1319,46 +1440,108 @@ function go(id){
 
 
 // ── REST TIMER ────────────────────────────────────────
-let timerInterval=null,timerTotal=90,timerLeft=90;
+let timerInterval=null, timerTotal=90, timerEndTime=null;
 const CIRC=2*Math.PI*23;
 
+// Beep sound using Web Audio API (works on iOS + Android)
+function beep(){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const play=(freq,start,dur)=>{
+      const o=ctx.createOscillator();
+      const g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);
+      o.frequency.value=freq;
+      o.type='sine';
+      g.gain.setValueAtTime(0.6,ctx.currentTime+start);
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+start+dur);
+      o.start(ctx.currentTime+start);
+      o.stop(ctx.currentTime+start+dur+0.05);
+    };
+    play(880,0,0.15);
+    play(880,0.2,0.15);
+    play(1100,0.4,0.3);
+    // also try vibrate on Android
+    if(navigator.vibrate) navigator.vibrate([200,100,200,100,400]);
+  }catch(e){}
+}
+
+function getTimerLeft(){
+  if(!timerEndTime) return timerTotal;
+  return Math.max(0, Math.round((timerEndTime - Date.now()) / 1000));
+}
+
 function startTimer(exName){
-  timerLeft=timerTotal;
+  timerEndTime = Date.now() + timerTotal * 1000;
   const exEl=document.getElementById('timer-ex');
-  if(exEl)exEl.textContent=exName||'';
+  if(exEl) exEl.textContent=exName||'';
   updateTimerDisplay();
   document.getElementById('timer-bar').classList.add('show');
   clearInterval(timerInterval);
   timerInterval=setInterval(()=>{
-    timerLeft--;updateTimerDisplay();
-    if(timerLeft<=0){
+    const left=getTimerLeft();
+    updateTimerDisplay();
+    if(left<=0){
       clearInterval(timerInterval);timerInterval=null;
-      if(navigator.vibrate)navigator.vibrate([300,100,300]);
-      setTimeout(stopTimer,2500);
+      beep();
+      setTimeout(stopTimer,3000);
     }
-  },1000);
+  },500); // tick every 500ms so resuming from background is accurate
 }
+
 function stopTimer(){
-  clearInterval(timerInterval);timerInterval=null;timerLeft=timerTotal;
+  clearInterval(timerInterval);timerInterval=null;timerEndTime=null;
   document.getElementById('timer-bar').classList.remove('show');
 }
+
 function setTimer(secs){
-  timerTotal=secs;timerLeft=secs;
+  timerTotal=secs;
   document.querySelectorAll('.tpreset').forEach(b=>{
     const map={'1m':60,'90s':90,'2m':120,'3m':180};
     b.classList.toggle('on',map[b.textContent]===secs);
   });
   updateTimerDisplay();
-  if(timerInterval){clearInterval(timerInterval);startTimer(document.getElementById('timer-ex').textContent);}
+  if(timerInterval){
+    clearInterval(timerInterval);
+    startTimer(document.getElementById('timer-ex').textContent);
+  }
 }
-function addTimerSeconds(s){timerLeft=Math.min(timerLeft+s,600);updateTimerDisplay();}
+
+function addTimerSeconds(s){
+  if(timerEndTime) timerEndTime+=s*1000;
+  else timerEndTime=Date.now()+s*1000;
+  updateTimerDisplay();
+}
+
 function updateTimerDisplay(){
-  const m=Math.floor(timerLeft/60),s=timerLeft%60;
+  const left=timerEndTime?getTimerLeft():timerTotal;
+  const m=Math.floor(left/60), s=left%60;
   const numEl=document.getElementById('timer-num');
-  if(numEl){numEl.textContent=m>0?m+':'+String(s).padStart(2,'0'):String(timerLeft);numEl.style.color=timerLeft<=10?'var(--rd)':'var(--ac)';}
+  if(numEl){
+    numEl.textContent=m>0?m+':'+String(s).padStart(2,'0'):String(left);
+    numEl.style.color=left<=10?'var(--rd)':'var(--ac)';
+  }
   const ring=document.getElementById('timer-ring');
-  if(ring){ring.style.strokeDashoffset=CIRC*(1-timerLeft/(timerTotal||1));ring.style.stroke=timerLeft<=10?'var(--rd)':'var(--ac)';}
+  if(ring){
+    const progress=timerEndTime?left/timerTotal:1;
+    ring.style.strokeDashoffset=CIRC*(1-Math.max(0,Math.min(1,progress)));
+    ring.style.stroke=left<=10?'var(--rd)':'var(--ac)';
+  }
 }
+
+// Resume timer correctly when user comes back to the page
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden && timerEndTime){
+    const left=getTimerLeft();
+    if(left<=0){
+      clearInterval(timerInterval);timerInterval=null;
+      beep();
+      setTimeout(stopTimer,3000);
+    } else {
+      updateTimerDisplay();
+    }
+  }
+});
 </script>
 <!-- REST TIMER BAR -->
 <div class="timer-bar" id="timer-bar">
