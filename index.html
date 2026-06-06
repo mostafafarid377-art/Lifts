@@ -1580,10 +1580,9 @@ function calcWarmup(){
   const working = parseFloat(firstW);
   const u = sets[0]?.u || unit;
   const percents = [
-    {pct:40, reps:10},
-    {pct:60, reps:6},
-    {pct:75, reps:4},
-    {pct:90, reps:2},
+    {pct:50, reps:5},
+    {pct:75, reps:3},
+    {pct:90, reps:1},
   ];
   return {
     warmups: percents.map(p=>({
