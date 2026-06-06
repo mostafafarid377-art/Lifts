@@ -167,6 +167,20 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .catpill{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border:1px solid var(--b2);background:none;color:var(--m2);border-radius:2px}
 .catpill.on{color:#000}
 
+/* WARM-UP CALCULATOR */
+.warmup-panel{background:var(--s2);border:1px solid var(--b2);border-radius:2px;padding:13px;margin-bottom:12px;display:none}
+.warmup-panel.show{display:block}
+.warmup-title{font-size:.58rem;color:var(--m1);letter-spacing:.2em;text-transform:uppercase;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.warmup-close{background:none;border:none;color:var(--m2);font-size:.9rem;cursor:pointer;padding:2px 4px}
+.warmup-table{width:100%;border-collapse:collapse}
+.warmup-table th{font-size:.5rem;color:var(--m1);letter-spacing:.15em;text-transform:uppercase;padding:4px 6px;text-align:left;border-bottom:1px solid var(--b1)}
+.warmup-table td{font-size:.72rem;padding:8px 6px;border-bottom:1px solid var(--b1);color:var(--tx)}
+.warmup-table tr:last-child td{border-bottom:none}
+.warmup-table tr.working td{color:var(--ac);font-weight:600}
+.warmup-pct{font-size:.58rem;color:var(--m1)}
+.warmup-btn{font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;padding:7px 13px;border:1px solid var(--b2);background:none;color:var(--m2);border-radius:2px;margin-top:2px}
+.warmup-btn:active{border-color:var(--ac);color:var(--ac)}
+
 /* EXPORT */
 .exp-label{font-size:.55rem;color:var(--m1);letter-spacing:.2em;text-transform:uppercase;margin-bottom:6px}
 .exp-pills{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px}
@@ -366,6 +380,17 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
           <button class="btn bgh" onclick="addSet()">+ Set</button>
           <button class="btn bacc" onclick="saveLog()">Save</button>
           <button class="btn bgh" onclick="cancelLog()">Cancel</button>
+        </div>
+        <button class="warmup-btn" onclick="toggleWarmup()" id="warmup-toggle-btn" style="width:100%;margin-top:10px">🏋️ Show Warm-up Sets</button>
+        <div class="warmup-panel" id="warmup-panel">
+          <div class="warmup-title">
+            <span>Warm-up Sets</span>
+            <button class="warmup-close" onclick="toggleWarmup()">✕</button>
+          </div>
+          <table class="warmup-table">
+            <thead><tr><th>Set</th><th>Weight</th><th>Reps</th><th>%</th></tr></thead>
+            <tbody id="warmup-tbody"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -842,6 +867,7 @@ function selectEx(name){
 }
 
 function cancelLog(){
+  hideWarmup();
   selEx=null;sets=[];
   document.getElementById('logwrap').style.display='none';
   document.getElementById('exsearch').style.display='block';
@@ -1542,6 +1568,83 @@ document.addEventListener('visibilitychange',()=>{
     }
   }
 });
+
+
+// ── WARM-UP CALCULATOR ────────────────────────────────
+function roundTo2_5(w){ return Math.round(w/2.5)*2.5; }
+
+function calcWarmup(){
+  // Get working weight from first set input
+  const firstW = sets[0]?.w;
+  if(!firstW || parseFloat(firstW)<=0) return null;
+  const working = parseFloat(firstW);
+  const u = sets[0]?.u || unit;
+  const percents = [
+    {pct:40, reps:10},
+    {pct:60, reps:6},
+    {pct:75, reps:4},
+    {pct:90, reps:2},
+  ];
+  return {
+    warmups: percents.map(p=>({
+      weight: roundTo2_5(working * p.pct/100),
+      reps: p.reps,
+      pct: p.pct,
+      unit: u
+    })),
+    working, unit: u
+  };
+}
+
+function toggleWarmup(){
+  const panel = document.getElementById('warmup-panel');
+  const btn = document.getElementById('warmup-toggle-btn');
+  if(!panel) return;
+  const isOpen = panel.classList.contains('show');
+  if(isOpen){
+    panel.classList.remove('show');
+    if(btn) btn.textContent='🏋️ Show Warm-up Sets';
+    return;
+  }
+  // calculate
+  const result = calcWarmup();
+  if(!result){
+    toast('Enter a weight in Set 1 first');
+    return;
+  }
+  // build table
+  const tbody = document.getElementById('warmup-tbody');
+  tbody.innerHTML='';
+  result.warmups.forEach((s,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=
+      '<td>'+( i+1)+'</td>'+
+      '<td><strong>'+s.weight+' '+s.unit+'</strong></td>'+
+      '<td>'+s.reps+' reps</td>'+
+      '<td class="warmup-pct">'+s.pct+'%</td>';
+    tbody.appendChild(tr);
+  });
+  // working set row
+  const trW=document.createElement('tr');
+  trW.className='working';
+  trW.innerHTML=
+    '<td>➡️</td>'+
+    '<td><strong>'+result.working+' '+result.unit+'</strong></td>'+
+    '<td>Your target</td>'+
+    '<td class="warmup-pct">100%</td>';
+  tbody.appendChild(trW);
+
+  panel.classList.add('show');
+  if(btn) btn.textContent='Hide Warm-up Sets';
+}
+
+// hide warmup panel when exercise changes
+function hideWarmup(){
+  const panel=document.getElementById('warmup-panel');
+  const btn=document.getElementById('warmup-toggle-btn');
+  if(panel) panel.classList.remove('show');
+  if(btn) btn.textContent='🏋️ Show Warm-up Sets';
+}
 </script>
 <!-- REST TIMER BAR -->
 <div class="timer-bar" id="timer-bar">
