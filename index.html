@@ -167,6 +167,22 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .catpill{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border:1px solid var(--b2);background:none;color:var(--m2);border-radius:2px}
 .catpill.on{color:#000}
 
+/* GOAL */
+.goal-box{background:var(--sf);border:1px solid var(--b1);border-radius:2px;padding:13px;margin-bottom:12px}
+.goal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.goal-title{font-size:.58rem;color:var(--m1);letter-spacing:.2em;text-transform:uppercase}
+.goal-edit-btn{font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;background:none;border:1px solid var(--b2);color:var(--m2);padding:4px 10px;border-radius:2px}
+.goal-edit-btn:active{border-color:var(--ac);color:var(--ac)}
+.goal-empty{font-size:.65rem;color:var(--m2);letter-spacing:.05em}
+.goal-target{font-size:.8rem;color:var(--tx);letter-spacing:.05em;margin-bottom:10px}
+.goal-target span{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--ac);letter-spacing:.04em}
+.goal-bar-wrap{margin-bottom:6px}
+.goal-bar-track{height:8px;background:var(--s2);border-radius:4px;overflow:hidden;margin-bottom:5px}
+.goal-bar-fill{height:100%;border-radius:4px;background:var(--ac);transition:width .4s ease}
+.goal-bar-fill.done{background:#4fff91}
+.goal-pct{font-size:.65rem;color:var(--m2);display:flex;justify-content:space-between}
+.goal-achieved{font-size:.7rem;color:#4fff91;letter-spacing:.1em;text-transform:uppercase;margin-top:6px}
+
 /* WARM-UP CALCULATOR */
 .warmup-panel{background:var(--s2);border:1px solid var(--b2);border-radius:2px;padding:13px;margin-bottom:12px;display:none}
 .warmup-panel.show{display:block}
@@ -411,6 +427,7 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
     <select class="field" id="progex" onchange="renderProgress()" style="margin-bottom:16px;cursor:pointer">
       <option value="">— Pick an exercise —</option>
     </select>
+    <div id="pgoal"></div>
     <div id="pstats"></div>
     <div id="pchart"></div>
     <div id="psess"></div>
@@ -518,6 +535,29 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 </div>
 
 <!-- MODAL: Exercise -->
+<!-- GOAL MODAL -->
+<div class="moverlay" id="modal-goal" onclick="if(event.target===this)closeModal('goal')">
+  <div class="mpanel">
+    <div class="mtitle">Set Goal</div>
+    <div style="font-size:.62rem;color:var(--m2);margin-bottom:16px;letter-spacing:.04em" id="goal-modal-ex"></div>
+    <label class="mflbl" style="margin-top:0">Target Weight</label>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
+      <input class="field" id="goal-weight" type="number" step="0.5" min="0" placeholder="e.g. 120" style="margin-bottom:0;flex:1">
+      <div style="display:flex;gap:4px">
+        <button class="ubtn on" id="goal-ukg" onclick="setGoalUnit('kg')">kg</button>
+        <button class="ubtn" id="goal-ulb" onclick="setGoalUnit('lb')">lb</button>
+      </div>
+    </div>
+    <label class="mflbl">Target Reps</label>
+    <input class="field" id="goal-reps" type="number" min="1" placeholder="e.g. 5" style="margin-bottom:14px">
+    <div class="brow">
+      <button class="btn bacc" onclick="saveGoal()">Save Goal</button>
+      <button class="btn bgh" onclick="closeModal('goal')">Cancel</button>
+      <button class="btn brd" id="goal-delete-btn" onclick="deleteGoal()" style="display:none">Remove</button>
+    </div>
+  </div>
+</div>
+
 <div class="moverlay" id="modal-ex" onclick="if(event.target===this)closeModal('ex')">
   <div class="mpanel">
     <div class="mtitle" id="ex-mtitle">Add Exercise</div>
@@ -970,12 +1010,14 @@ function renderProgress(){
   const name=document.getElementById('progex').value;
   const ps=document.getElementById('pstats'),pc=document.getElementById('pchart'),pp=document.getElementById('psess');
   ps.innerHTML='';pc.innerHTML='';pp.innerHTML='';
+  const pg=document.getElementById('pgoal');if(pg)pg.innerHTML='';
   if(!name||!DATA[name]?.length)return;
   const sessions=DATA[name];
   const pr=getPR(sessions);
   const latest=bestSet(sessions[sessions.length-1]);
   const first=bestSet(sessions[0]);
   const imp=sessions.length>1?((latest.weight-first.weight)/first.weight*100).toFixed(1):null;
+  renderGoal(name);
   ps.innerHTML='<div class="sgrid">'
     +'<div class="sbox"><div class="slbl">PR Weight</div><div class="sval">'+(pr?pr.weight:'—')+'</div><div class="sunit">'+(pr?pr.unit:'')+'</div></div>'
     +'<div class="sbox"><div class="slbl">Sessions</div><div class="sval">'+sessions.length+'</div><div class="sunit">logged</div></div>'
@@ -1643,6 +1685,113 @@ function hideWarmup(){
   const btn=document.getElementById('warmup-toggle-btn');
   if(panel) panel.classList.remove('show');
   if(btn) btn.textContent='🏋️ Show Warm-up Sets';
+}
+
+
+// ── GOALS ─────────────────────────────────────────────
+// Goals stored in DATA._goals = { exerciseName: {weight, reps, unit} }
+let goalUnit = 'kg';
+let goalExName = '';
+
+function getGoal(name){ return (DATA._goals||{})[name]||null; }
+
+function renderGoal(name){
+  const pg = document.getElementById('pgoal');
+  if(!pg) return;
+  const goal = getGoal(name);
+  const pr = getPR((DATA[name]||[]));
+
+  pg.innerHTML = '';
+  const box = document.createElement('div');
+  box.className = 'goal-box';
+
+  const hdr = document.createElement('div');
+  hdr.className = 'goal-header';
+  const title = document.createElement('div');
+  title.className = 'goal-title';
+  title.textContent = 'Goal';
+  const editBtn = document.createElement('button');
+  editBtn.className = 'goal-edit-btn';
+  editBtn.textContent = goal ? 'Edit' : '+ Set Goal';
+  editBtn.addEventListener('click', ()=>openGoalModal(name));
+  hdr.appendChild(title);
+  hdr.appendChild(editBtn);
+  box.appendChild(hdr);
+
+  if(!goal){
+    const empty = document.createElement('div');
+    empty.className = 'goal-empty';
+    empty.textContent = 'No goal set — tap Set Goal to add one';
+    box.appendChild(empty);
+  } else {
+    // Target line
+    const target = document.createElement('div');
+    target.className = 'goal-target';
+    target.innerHTML = 'Target: <span>'+goal.weight+' '+goal.unit+'</span> × <span>'+goal.reps+' reps</span>';
+    box.appendChild(target);
+
+    // Progress bar based on weight
+    const currentW = pr ? pr.weight : 0;
+    const pct = Math.min(100, Math.round((currentW / goal.weight) * 100));
+    const done = pct >= 100;
+
+    const barWrap = document.createElement('div');
+    barWrap.className = 'goal-bar-wrap';
+    barWrap.innerHTML =
+      '<div class="goal-bar-track"><div class="goal-bar-fill'+(done?' done':'')+'" style="width:'+pct+'%"></div></div>'+
+      '<div class="goal-pct"><span>Current: '+(pr?pr.weight+' '+pr.unit:'—')+'</span><span>'+pct+'%</span></div>';
+    box.appendChild(barWrap);
+
+    if(done){
+      const ach = document.createElement('div');
+      ach.className = 'goal-achieved';
+      ach.textContent = '🏆 Goal achieved!';
+      box.appendChild(ach);
+    }
+  }
+
+  pg.appendChild(box);
+}
+
+function openGoalModal(name){
+  goalExName = name;
+  const goal = getGoal(name);
+  document.getElementById('goal-modal-ex').textContent = name;
+  document.getElementById('goal-weight').value = goal ? goal.weight : '';
+  document.getElementById('goal-reps').value = goal ? goal.reps : '';
+  goalUnit = goal ? goal.unit : unit;
+  setGoalUnit(goalUnit);
+  document.getElementById('goal-delete-btn').style.display = goal ? 'inline-flex' : 'none';
+  document.getElementById('modal-goal').classList.add('on');
+  setTimeout(()=>document.getElementById('goal-weight').focus(), 220);
+}
+
+function setGoalUnit(u){
+  goalUnit = u;
+  document.getElementById('goal-ukg').classList.toggle('on', u==='kg');
+  document.getElementById('goal-ulb').classList.toggle('on', u==='lb');
+}
+
+function saveGoal(){
+  const w = parseFloat(document.getElementById('goal-weight').value);
+  const r = parseInt(document.getElementById('goal-reps').value);
+  if(!w || w<=0){toast('Enter a target weight');return;}
+  if(!r || r<=0){toast('Enter target reps');return;}
+  if(!DATA._goals) DATA._goals = {};
+  DATA._goals[goalExName] = {weight:w, reps:r, unit:goalUnit};
+  scheduleSave();
+  closeModal('goal');
+  renderGoal(goalExName);
+  toast('Goal saved ✓');
+}
+
+function deleteGoal(){
+  if(!confirm('Remove goal for "'+goalExName+'"?')) return;
+  if(DATA._goals) delete DATA._goals[goalExName];
+  scheduleSave();
+  closeModal('goal');
+  renderGoal(goalExName);
+  toast('Goal removed');
 }
 </script>
 <!-- REST TIMER BAR -->
