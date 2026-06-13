@@ -167,6 +167,27 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .catpill{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border:1px solid var(--b2);background:none;color:var(--m2);border-radius:2px}
 .catpill.on{color:#000}
 
+/* BODY STATS */
+.body-stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:10px}
+.bstat-card{background:var(--sf);border:1px solid var(--b1);border-radius:2px;padding:13px 12px}
+.bstat-num{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:.04em;line-height:1;color:var(--ac)}
+.bstat-lbl{font-size:.5rem;color:var(--m1);letter-spacing:.2em;text-transform:uppercase;margin-top:3px}
+.bstat-sub{font-size:.58rem;color:var(--m2);margin-top:2px}
+.bstat-edit{background:none;border:none;color:var(--m2);font-size:.58rem;float:right;cursor:pointer;padding:0;letter-spacing:.05em;text-decoration:underline}
+.body-goal-bar{background:var(--sf);border:1px solid var(--b1);border-radius:2px;padding:13px;margin-bottom:2px}
+.body-goal-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.body-goal-label{font-size:.62rem;color:var(--tx);letter-spacing:.05em}
+.body-goal-pct{font-size:.62rem;color:var(--ac);font-family:'Bebas Neue',sans-serif;font-size:.9rem}
+.bgoal-track{height:6px;background:var(--s2);border-radius:3px;overflow:hidden;margin-bottom:4px}
+.bgoal-fill{height:100%;border-radius:3px;background:var(--ac);transition:width .4s}
+.bgoal-fill.done{background:#4fff91}
+.bgoal-meta{display:flex;justify-content:space-between;font-size:.55rem;color:var(--m1)}
+.body-log-list{display:flex;flex-direction:column;gap:2px}
+.body-log-row{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--sf);border:1px solid var(--b1);border-radius:2px}
+.body-log-date{font-size:.6rem;color:var(--m2)}
+.body-log-val{font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--ac)}
+.body-log-del{background:none;border:none;color:var(--m1);font-size:.65rem;cursor:pointer;padding:2px 4px}
+
 /* GOAL */
 .goal-box{background:var(--sf);border:1px solid var(--b1);border-radius:2px;padding:13px;margin-bottom:12px}
 .goal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
@@ -488,6 +509,41 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
     </div>
 
     <div class="prof-section">
+      <div class="prof-section-title">Body Stats</div>
+
+      <div class="body-stats-grid">
+        <div class="bstat-card">
+          <button class="bstat-edit" onclick="openBodyModal('weight')">Edit</button>
+          <div class="bstat-num" id="bstat-weight">—</div>
+          <div class="bstat-lbl">Body Weight</div>
+          <div class="bstat-sub" id="bstat-weight-unit">kg</div>
+        </div>
+        <div class="bstat-card">
+          <button class="bstat-edit" onclick="openBodyModal('bf')">Edit</button>
+          <div class="bstat-num" id="bstat-bf">—</div>
+          <div class="bstat-lbl">Body Fat %</div>
+          <div class="bstat-sub" id="bstat-bf-date"></div>
+        </div>
+      </div>
+
+      <!-- Weight goal bar -->
+      <div class="body-goal-bar" id="weight-goal-bar" style="display:none">
+        <div class="body-goal-row">
+          <span class="body-goal-label">Weight Goal</span>
+          <span class="body-goal-pct" id="weight-goal-pct">0%</span>
+        </div>
+        <div class="bgoal-track"><div class="bgoal-fill" id="weight-goal-fill" style="width:0%"></div></div>
+        <div class="bgoal-meta">
+          <span id="weight-goal-current">—</span>
+          <span id="weight-goal-target">Goal: —</span>
+        </div>
+      </div>
+
+      <!-- Recent log -->
+      <div id="body-log-list" style="margin-top:8px"></div>
+    </div>
+
+    <div class="prof-section">
       <div class="prof-section-title">Export Data</div>
 
       <!-- Categories -->
@@ -535,6 +591,32 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 </div>
 
 <!-- MODAL: Exercise -->
+<!-- BODY STATS MODAL -->
+<div class="moverlay" id="modal-body" onclick="if(event.target===this)closeModal('body')">
+  <div class="mpanel">
+    <div class="mtitle" id="body-modal-title">Log Weight</div>
+
+    <label class="mflbl" style="margin-top:0">Today's Value</label>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
+      <input class="field" id="body-val" type="number" step="0.1" min="0" placeholder="e.g. 80" style="margin-bottom:0;flex:1">
+      <div id="body-unit-toggle" style="display:flex;gap:4px">
+        <button class="ubtn on" id="body-ukg" onclick="setBodyUnit('kg')">kg</button>
+        <button class="ubtn" id="body-ulb" onclick="setBodyUnit('lb')">lb</button>
+      </div>
+    </div>
+
+    <div id="body-goal-section">
+      <label class="mflbl">Goal Weight (optional)</label>
+      <input class="field" id="body-goal-val" type="number" step="0.1" min="0" placeholder="e.g. 75" style="margin-bottom:14px">
+    </div>
+
+    <div class="brow">
+      <button class="btn bacc" onclick="saveBodyStat()">Save</button>
+      <button class="btn bgh" onclick="closeModal('body')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- GOAL MODAL -->
 <div class="moverlay" id="modal-goal" onclick="if(event.target===this)closeModal('goal')">
   <div class="mpanel">
@@ -1358,6 +1440,9 @@ function renderProfile(){
   document.getElementById('pstat-best').textContent=best;
 
   // theme toggle state
+  // body stats
+  renderBodyStats();
+
   // init export UI fresh each time
   expCats=new Set();
   initExport();
@@ -1792,6 +1877,173 @@ function deleteGoal(){
   closeModal('goal');
   renderGoal(goalExName);
   toast('Goal removed');
+}
+
+
+// ── BODY STATS ────────────────────────────────────────
+// DATA._bodyWeight = [{date, value, unit}]
+// DATA._bodyFat    = [{date, value}]
+// DATA._weightGoal = {value, unit}
+
+let bodyStatType = 'weight'; // 'weight' or 'bf'
+let bodyUnit = 'kg';
+
+function openBodyModal(type){
+  bodyStatType = type;
+  const isBF = type === 'bf';
+  document.getElementById('body-modal-title').textContent = isBF ? 'Log Body Fat %' : 'Log Body Weight';
+  document.getElementById('body-unit-toggle').style.display = isBF ? 'none' : 'flex';
+  document.getElementById('body-goal-section').style.display = isBF ? 'none' : 'block';
+  document.getElementById('body-val').value = '';
+  document.getElementById('body-val').placeholder = isBF ? 'e.g. 18.5' : 'e.g. 80';
+
+  if(!isBF){
+    // pre-fill goal if exists
+    const goal = DATA._weightGoal;
+    document.getElementById('body-goal-val').value = goal ? goal.value : '';
+    bodyUnit = goal ? goal.unit : 'kg';
+    setBodyUnit(bodyUnit);
+    // pre-fill latest weight
+    const logs = DATA._bodyWeight || [];
+    if(logs.length) document.getElementById('body-val').value = logs[logs.length-1].value;
+  }
+
+  document.getElementById('modal-body').classList.add('on');
+  setTimeout(()=>document.getElementById('body-val').focus(), 220);
+}
+
+function setBodyUnit(u){
+  bodyUnit = u;
+  const kg = document.getElementById('body-ukg');
+  const lb = document.getElementById('body-ulb');
+  if(kg) kg.classList.toggle('on', u==='kg');
+  if(lb) lb.classList.toggle('on', u==='lb');
+}
+
+function saveBodyStat(){
+  const val = parseFloat(document.getElementById('body-val').value);
+  if(!val || val <= 0){ toast('Enter a value'); return; }
+
+  const today = new Date().toISOString().slice(0,10);
+
+  if(bodyStatType === 'bf'){
+    if(!DATA._bodyFat) DATA._bodyFat = [];
+    // replace if same date
+    const idx = DATA._bodyFat.findIndex(e=>e.date===today);
+    const entry = {date:today, value:val};
+    if(idx>=0) DATA._bodyFat[idx]=entry; else DATA._bodyFat.push(entry);
+    DATA._bodyFat.sort((a,b)=>a.date.localeCompare(b.date));
+  } else {
+    if(!DATA._bodyWeight) DATA._bodyWeight = [];
+    const idx = DATA._bodyWeight.findIndex(e=>e.date===today);
+    const entry = {date:today, value:val, unit:bodyUnit};
+    if(idx>=0) DATA._bodyWeight[idx]=entry; else DATA._bodyWeight.push(entry);
+    DATA._bodyWeight.sort((a,b)=>a.date.localeCompare(b.date));
+
+    // save goal if entered
+    const goalVal = parseFloat(document.getElementById('body-goal-val').value);
+    if(goalVal && goalVal > 0){
+      DATA._weightGoal = {value:goalVal, unit:bodyUnit};
+    }
+  }
+
+  scheduleSave();
+  closeModal('body');
+  renderBodyStats();
+  toast('Saved ✓');
+}
+
+function renderBodyStats(){
+  // Weight
+  const wLogs = DATA._bodyWeight || [];
+  const latest = wLogs.slice(-1)[0];
+  const wEl = document.getElementById('bstat-weight');
+  const wUnitEl = document.getElementById('bstat-weight-unit');
+  if(wEl) wEl.textContent = latest ? latest.value : '—';
+  if(wUnitEl) wUnitEl.textContent = latest ? latest.unit : 'kg';
+
+  // BF
+  const bfLogs = DATA._bodyFat || [];
+  const latestBF = bfLogs.slice(-1)[0];
+  const bfEl = document.getElementById('bstat-bf');
+  const bfDateEl = document.getElementById('bstat-bf-date');
+  if(bfEl) bfEl.textContent = latestBF ? latestBF.value+'%' : '—';
+  if(bfDateEl) bfDateEl.textContent = latestBF ? fmtDate(latestBF.date) : '';
+
+  // Weight goal bar
+  const goal = DATA._weightGoal;
+  const goalBar = document.getElementById('weight-goal-bar');
+  if(goalBar){
+    if(goal && latest){
+      goalBar.style.display = 'block';
+      const start = wLogs[0]?.value || latest.value;
+      const current = latest.value;
+      const target = goal.value;
+      // progress toward goal (works for both gain and loss)
+      const totalChange = Math.abs(target - start);
+      const currentChange = Math.abs(current - start);
+      const pct = totalChange > 0 ? Math.min(100, Math.round(currentChange/totalChange*100)) : 100;
+      const done = (target <= start && current <= target) || (target >= start && current >= target);
+
+      const fill = document.getElementById('weight-goal-fill');
+      const pctEl = document.getElementById('weight-goal-pct');
+      const curEl = document.getElementById('weight-goal-current');
+      const tgtEl = document.getElementById('weight-goal-target');
+
+      if(fill){ fill.style.width = pct+'%'; fill.className = 'bgoal-fill'+(done?' done':''); }
+      if(pctEl) pctEl.textContent = pct+'%';
+      if(curEl) curEl.textContent = 'Current: '+current+' '+(latest.unit||'kg');
+      if(tgtEl) tgtEl.textContent = 'Goal: '+target+' '+(goal.unit||'kg');
+    } else {
+      goalBar.style.display = 'none';
+    }
+  }
+
+  // Recent log (last 5 entries combined)
+  const logList = document.getElementById('body-log-list');
+  if(!logList) return;
+  logList.innerHTML = '';
+
+  // merge weight + bf logs sorted by date descending
+  const allLogs = [
+    ...wLogs.map(e=>({...e, type:'weight'})),
+    ...bfLogs.map(e=>({...e, type:'bf'}))
+  ].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8);
+
+  if(!allLogs.length) return;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'body-log-list';
+  allLogs.forEach(entry=>{
+    const row = document.createElement('div');
+    row.className = 'body-log-row';
+    const left = document.createElement('div');
+    const dateEl = document.createElement('div');
+    dateEl.className = 'body-log-date';
+    dateEl.textContent = fmtDate(entry.date)+' · '+(entry.type==='weight'?'Weight':'Body Fat');
+    const valEl = document.createElement('div');
+    valEl.className = 'body-log-val';
+    valEl.textContent = entry.type==='weight'
+      ? entry.value+' '+(entry.unit||'kg')
+      : entry.value+'%';
+    left.appendChild(dateEl);
+    left.appendChild(valEl);
+    const del = document.createElement('button');
+    del.className = 'body-log-del';
+    del.textContent = '✕';
+    del.addEventListener('click',()=>{
+      if(entry.type==='weight'){
+        DATA._bodyWeight=(DATA._bodyWeight||[]).filter(e=>e.date!==entry.date);
+      } else {
+        DATA._bodyFat=(DATA._bodyFat||[]).filter(e=>e.date!==entry.date);
+      }
+      scheduleSave();renderBodyStats();toast('Removed');
+    });
+    row.appendChild(left);
+    row.appendChild(del);
+    wrap.appendChild(row);
+  });
+  logList.appendChild(wrap);
 }
 </script>
 <!-- REST TIMER BAR -->
