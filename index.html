@@ -959,13 +959,21 @@ function renderPicker(){
   if(!list.length){w.innerHTML='<div class="empty">No exercises found</div>';return;}
   list.forEach(name=>{
     const cat=primCat(name);
-    const last=(DATA[name]||[]).slice(-1)[0];
+    const sessions=DATA[name]||[];
+    const last=sessions.slice(-1)[0];
+    const pr=sessions.length?getPR(sessions):null;
     const b=document.createElement('button');b.className='pitem';
     const dot=document.createElement('span');dot.className='dot';dot.style.background=catColor(cat);
     const inner=document.createElement('span');inner.style.cssText='display:flex;flex-direction:column;gap:3px;flex:1';
     const n=document.createElement('span');n.textContent=name;
     const sub=document.createElement('span');sub.style.cssText='font-size:.57rem;color:var(--m1)';
-    sub.textContent=last?last.date+' · '+last.sets.map(s=>s.weight+s.unit+'×'+s.reps).join(', '):'No history';
+    if(last){
+      let txt=last.date+' · '+last.sets.map(s=>s.weight+s.unit+'×'+s.reps).join(', ');
+      if(pr) txt+=' <span style="color:var(--ac)">· PR '+pr.weight+pr.unit+'×'+pr.reps+'</span>';
+      sub.innerHTML=txt;
+    } else {
+      sub.textContent='No history';
+    }
     inner.appendChild(n);inner.appendChild(sub);
     b.appendChild(dot);b.appendChild(inner);
     b.addEventListener('click',()=>selectEx(name));
