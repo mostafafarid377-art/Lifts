@@ -167,6 +167,22 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .catpill{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border:1px solid var(--b2);background:none;color:var(--m2);border-radius:2px}
 .catpill.on{color:#000}
 
+/* RENAME / EDIT EXERCISE */
+.ex-edit-btn{background:none;border:1px solid var(--b2);color:var(--m2);width:26px;height:26px;font-size:.65rem;border-radius:2px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ex-edit-btn:active{border-color:var(--ac);color:var(--ac)}
+
+/* SPLITS */
+.split-card{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--sf);border:1px solid var(--b1);border-radius:2px;margin-bottom:2px}
+.split-card.active{border-color:var(--ac);background:#1a1f00}
+.split-info{flex:1}
+.split-name{font-size:.76rem;letter-spacing:.05em;text-transform:uppercase}
+.split-cats{font-size:.58rem;color:var(--m1);margin-top:3px;letter-spacing:.04em}
+.split-active-badge{font-size:.5rem;background:var(--ac);color:#000;padding:2px 7px;border-radius:1px;font-weight:700;letter-spacing:.1em;flex-shrink:0}
+.split-btns{display:flex;gap:5px;flex-shrink:0}
+.split-btn{background:none;border:1px solid var(--b2);color:var(--m2);font-size:.58rem;padding:5px 9px;border-radius:2px;letter-spacing:.08em;text-transform:uppercase}
+.split-btn.activate{border-color:var(--ac);color:var(--ac)}
+.split-btn.del{border-color:var(--b2);color:var(--rd)}
+
 /* BODY STATS */
 .body-stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:10px}
 .bstat-card{background:var(--sf);border:1px solid var(--b1);border-radius:2px;padding:13px 12px}
@@ -591,6 +607,25 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 </div>
 
 <!-- MODAL: Exercise -->
+<!-- EDIT EXERCISE MODAL -->
+<div class="moverlay" id="modal-editex" onclick="if(event.target===this)closeModal('editex')">
+  <div class="mpanel">
+    <div class="mtitle">Edit Exercise</div>
+
+    <label class="mflbl" style="margin-top:0">Exercise Name</label>
+    <input class="field" id="editex-name" type="text" placeholder="Exercise name" autocomplete="off"
+      onkeydown="if(event.key==='Enter')saveEditEx()" style="margin-bottom:14px">
+
+    <label class="mflbl">Categories (select all that apply)</label>
+    <div class="catpills" id="editex-catpills" style="margin-top:6px"></div>
+
+    <div class="brow">
+      <button class="btn bacc" onclick="saveEditEx()">Save</button>
+      <button class="btn bgh" onclick="closeModal('editex')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- BODY STATS MODAL -->
 <div class="moverlay" id="modal-body" onclick="if(event.target===this)closeModal('body')">
   <div class="mpanel">
@@ -726,6 +761,8 @@ const SEED={
 
 // ── App state ─────────────────────────────────────────
 let CATS=[...DC], EX=JSON.parse(JSON.stringify(DE)), DATA={};
+// SPLITS: [{id, name, catIds:[]}]  activeSplitId: string|null
+let SPLITS=[], activeSplitId=null;
 let currentUser=null;
 let selDay='all', selEx=null, sets=[], unit='kg';
 let modalCats=new Set();
@@ -1209,6 +1246,12 @@ function renderManage(){
       db2.addEventListener('click',e=>{e.stopPropagation();moveEx(cat.id,idx,1);});
       ud.appendChild(ub);ud.appendChild(db2);
       const nm=document.createElement('span');nm.className='mname';nm.textContent=name;
+      // Edit button (rename + add to category)
+      const eb=document.createElement('button');eb.className='ex-edit-btn';eb.textContent='✎';eb.title='Rename / Add to category';
+      eb.addEventListener('click',e=>{
+        e.stopPropagation();
+        openEditExModal(name,cat.id);
+      });
       const db=document.createElement('button');db.className='mdel';db.textContent='✕';
       db.addEventListener('click',e=>{
         e.stopPropagation();e.preventDefault();
@@ -1216,7 +1259,7 @@ function renderManage(){
         EX[cat.id]=(EX[cat.id]||[]).filter(n=>n!==name);
         scheduleSave();renderManage();renderPicker();toast('Removed');
       });
-      r.appendChild(ud);r.appendChild(nm);r.appendChild(db);rows.appendChild(r);
+      r.appendChild(ud);r.appendChild(nm);r.appendChild(eb);r.appendChild(db);rows.appendChild(r);
     });
     const ab=document.createElement('button');ab.className='addbtn';
     ab.innerHTML='<span style="font-size:.9rem;line-height:1">+</span> Add exercise';
@@ -2052,6 +2095,89 @@ function renderBodyStats(){
     wrap.appendChild(row);
   });
   logList.appendChild(wrap);
+}
+
+
+// ── EDIT EXERCISE ─────────────────────────────────────
+let editExOrigName = '';
+let editExCats = new Set();
+
+function openEditExModal(name, fromCatId){
+  editExOrigName = name;
+  // find all cats this exercise is currently in
+  editExCats = new Set();
+  CATS.forEach(cat=>{
+    if((EX[cat.id]||[]).includes(name)) editExCats.add(cat.id);
+  });
+  document.getElementById('editex-name').value = name;
+  renderEditExCatPills();
+  document.getElementById('modal-editex').classList.add('on');
+  setTimeout(()=>document.getElementById('editex-name').focus(), 220);
+}
+
+function renderEditExCatPills(){
+  const g = document.getElementById('editex-catpills');
+  g.innerHTML = '';
+  CATS.forEach(cat=>{
+    const on = editExCats.has(cat.id);
+    const b = document.createElement('button');
+    b.className = 'catpill'+(on?' on':'');
+    b.textContent = cat.label;
+    if(on){ b.style.background=cat.color; b.style.borderColor=cat.color; b.style.color='#000'; }
+    else { b.style.background=''; b.style.borderColor=''; }
+    b.addEventListener('click',()=>{
+      if(editExCats.has(cat.id)) editExCats.delete(cat.id);
+      else editExCats.add(cat.id);
+      renderEditExCatPills();
+    });
+    g.appendChild(b);
+  });
+}
+
+function saveEditEx(){
+  const newName = document.getElementById('editex-name').value.trim();
+  if(!newName){ toast('Enter a name'); return; }
+  if(!editExCats.size){ toast('Pick at least one category'); return; }
+
+  const oldName = editExOrigName;
+  const renamed = newName !== oldName;
+
+  // Check new name doesn't conflict (unless it's same name)
+  if(renamed){
+    const allEx = [...new Set(CATS.flatMap(c=>EX[c.id]||[]))];
+    if(allEx.includes(newName)){
+      toast('"'+newName+'" already exists');
+      return;
+    }
+  }
+
+  // Update EX: remove old name from all cats, add new name to selected cats
+  CATS.forEach(cat=>{
+    // remove old name
+    EX[cat.id] = (EX[cat.id]||[]).filter(n=>n!==oldName);
+    // add new name if selected
+    if(editExCats.has(cat.id)){
+      EX[cat.id].push(newName);
+    }
+  });
+
+  // Rename workout DATA if name changed
+  if(renamed && DATA[oldName]){
+    DATA[newName] = DATA[oldName];
+    delete DATA[oldName];
+  }
+
+  // Rename goals if name changed
+  if(renamed && DATA._goals && DATA._goals[oldName]){
+    DATA._goals[newName] = DATA._goals[oldName];
+    delete DATA._goals[oldName];
+  }
+
+  scheduleSave();
+  closeModal('editex');
+  renderManage();
+  renderPicker();
+  toast(renamed ? 'Renamed to "'+newName+'" ✓' : 'Categories updated ✓');
 }
 </script>
 <!-- REST TIMER BAR -->
