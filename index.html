@@ -1057,7 +1057,7 @@ function renderPicker(){
     const ctxCat=selDay==='all'?cat:selDay;
     // Always show the exercise's true shared history/PR, regardless of which
     // category tab you're viewing from — weight and PR are the same everywhere.
-    const sessions=DATA[name]||[];
+    const sessions=sessionsFor(name);
     const last=sessions.slice(-1)[0];
     const pr=sessions.length?getPR(sessions):null;
     const b=document.createElement('button');b.className='pitem';
@@ -1079,21 +1079,45 @@ function renderPicker(){
   });
 }
 
+// Returns a normalized, flat, date-sorted session array for an exercise —
+// self-healing in case DATA[name] is still sitting in an old shape that the
+// startup migration missed (so a stale entry can never silently break logging).
+function sessionsFor(name){
+  const v=DATA[name];
+  if(!v)return [];
+  if(Array.isArray(v))return v;
+  if(typeof v==='object'){
+    let flat=[];
+    Object.keys(v).forEach(catId=>{
+      (v[catId]||[]).forEach(s=>flat.push({...s,cat:catId}));
+    });
+    flat.sort((a,b)=>a.date.localeCompare(b.date));
+    DATA[name]=flat; // fix it in place so this only ever happens once
+    return flat;
+  }
+  return [];
+}
+
 function selectEx(name,catId){
-  selEx=name;selCatCtx=catId;sets=[];
-  document.getElementById('lftitle').textContent=name+(catId?' · '+catLabel(catId):'');
-  document.getElementById('logwrap').style.display='block';
-  document.getElementById('picker').innerHTML='';
-  document.getElementById('exsearch').style.display='none';
-  document.getElementById('catpills').style.display='none';
-  // Prefill from the exercise's true last session (shared across all categories),
-  // so weight/reps are always consistent no matter which tab you logged from.
-  const last=(DATA[name]||[]).slice(-1)[0];
-  if(last){
-    last.sets.forEach(s=>sets.push({w:String(s.weight),r:String(s.reps),u:s.unit||unit}));
-    if(last.sets[0])setUnit(last.sets[0].unit||'kg');
-  }else sets.push({w:'',r:'',u:unit});
-  renderSets();
+  try{
+    selEx=name;selCatCtx=catId;sets=[];
+    document.getElementById('lftitle').textContent=name+(catId?' · '+catLabel(catId):'');
+    document.getElementById('logwrap').style.display='block';
+    document.getElementById('picker').innerHTML='';
+    document.getElementById('exsearch').style.display='none';
+    document.getElementById('catpills').style.display='none';
+    // Prefill from the exercise's true last session (shared across all categories),
+    // so weight/reps are always consistent no matter which tab you logged from.
+    const last=sessionsFor(name).slice(-1)[0];
+    if(last){
+      last.sets.forEach(s=>sets.push({w:String(s.weight),r:String(s.reps),u:s.unit||unit}));
+      if(last.sets[0])setUnit(last.sets[0].unit||'kg');
+    }else sets.push({w:'',r:'',u:unit});
+    renderSets();
+  }catch(e){
+    console.error('selectEx error:',e);
+    toast('Could not open exercise: '+e.message);
+  }
 }
 
 function cancelLog(){
@@ -1135,31 +1159,36 @@ function addSet(){
 }
 
 function saveLog(){
-  if(!selEx)return;
-  const valid=sets.filter(s=>s.w!==''&&s.r!=='');
-  if(!valid.length){toast('Add at least one set');return;}
-  const date=document.getElementById('logdate').value;
-  const catId=selCatCtx||primCat(selEx);
-  if(!DATA[selEx])DATA[selEx]=[];
-  const arr=DATA[selEx];
-  const idx=arr.findIndex(e=>e.date===date&&e.cat===catId);
-  const entry={date,cat:catId,sets:valid.map(s=>({weight:parseFloat(s.w),reps:parseInt(s.r),unit:s.u||unit}))};
-  if(idx>=0)arr[idx]=entry;else arr.push(entry);
-  arr.sort((a,b)=>a.date.localeCompare(b.date));
-  scheduleSave();toast('Saved ✓');
-  startTimer(selEx);
-  cancelLog();buildProgSel();renderMuscleSets();
+  try{
+    if(!selEx)return;
+    const valid=sets.filter(s=>s.w!==''&&s.r!=='');
+    if(!valid.length){toast('Add at least one set');return;}
+    const date=document.getElementById('logdate').value;
+    const catId=selCatCtx||primCat(selEx);
+    const arr=sessionsFor(selEx);
+    DATA[selEx]=arr; // ensure it's normalized/attached even if it was empty before
+    const idx=arr.findIndex(e=>e.date===date&&e.cat===catId);
+    const entry={date,cat:catId,sets:valid.map(s=>({weight:parseFloat(s.w),reps:parseInt(s.r),unit:s.u||unit}))};
+    if(idx>=0)arr[idx]=entry;else arr.push(entry);
+    arr.sort((a,b)=>a.date.localeCompare(b.date));
+    scheduleSave();toast('Saved ✓');
+    startTimer(selEx);
+    cancelLog();buildProgSel();renderMuscleSets();
+  }catch(e){
+    console.error('saveLog error:',e);
+    toast('Save failed: '+e.message);
+  }
 }
 
 // ── HISTORY ──────────────────────────────────────────
 function renderHistory(){
   const q=document.getElementById('hsearch').value.toLowerCase();
   const w=document.getElementById('hlist');w.innerHTML='';
-  let names=Object.keys(DATA).filter(n=>!n.startsWith('_')&&(DATA[n]||[]).length);
+  let names=Object.keys(DATA).filter(n=>!n.startsWith('_')&&sessionsFor(n).length);
   if(q)names=names.filter(n=>n.toLowerCase().includes(q));
   if(!names.length){w.innerHTML='<div class="empty">Nothing logged yet</div>';return;}
   names.sort().forEach(name=>{
-    const sessions=DATA[name]||[];if(!sessions.length)return;
+    const sessions=sessionsFor(name);if(!sessions.length)return;
     const pr=getPR(sessions);
     const el=document.createElement('div');el.className='hent';
     const hdr=document.createElement('div');hdr.className='hhdr';
@@ -1199,8 +1228,8 @@ function renderMuscleSets(){
     let total=0;
     Object.keys(EXM).forEach(exName=>{
       if(!(EXM[exName]||[]).includes(m.id))return;
-      const sessions=DATA[exName];
-      if(!sessions||!sessions.length)return;
+      const sessions=sessionsFor(exName);
+      if(!sessions.length)return;
       const byCat={};
       sessions.forEach(s=>{ byCat[s.cat]=s; }); // later entries overwrite — sessions is date-sorted ascending, so this leaves the latest per cat
       Object.values(byCat).forEach(latest=>{
@@ -1231,7 +1260,7 @@ function buildProgSel(){
   const sel=document.getElementById('progex');if(!sel)return;
   const prev=sel.value;
   sel.innerHTML='<option value="">— Pick an exercise —</option>';
-  Object.keys(DATA).filter(n=>!n.startsWith('_')&&(DATA[n]||[]).length).sort().forEach(n=>{
+  Object.keys(DATA).filter(n=>!n.startsWith('_')&&sessionsFor(n).length).sort().forEach(n=>{
     const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);
   });
   if(prev)sel.value=prev;
@@ -1242,7 +1271,7 @@ function renderProgress(){
   const ps=document.getElementById('pstats'),pc=document.getElementById('pchart'),pp=document.getElementById('psess');
   ps.innerHTML='';pc.innerHTML='';pp.innerHTML='';
   const pg=document.getElementById('pgoal');if(pg)pg.innerHTML='';
-  const sessions=DATA[name]||[];
+  const sessions=sessionsFor(name);
   if(!name||!sessions.length)return;
   const pr=getPR(sessions);
   const latest=bestSet(sessions[sessions.length-1]);
@@ -1270,7 +1299,7 @@ function renderProgress(){
     s.sets.forEach(set=>{const chip=document.createElement('span');chip.className='chip';chip.textContent=set.weight+(set.unit||'kg')+'×'+set.reps;chips.appendChild(chip);});
     const db=document.createElement('button');db.style.cssText='background:none;border:none;color:var(--m1);font-size:.72rem;flex-shrink:0;padding:2px 5px';db.textContent='✕';
     db.addEventListener('click',()=>{
-      DATA[name]=(DATA[name]||[]).filter(x=>!(x.date===s.date&&x.cat===s.cat));
+      DATA[name]=sessionsFor(name).filter(x=>!(x.date===s.date&&x.cat===s.cat));
       if(!DATA[name].length)delete DATA[name];
       scheduleSave();renderProgress();renderHistory();buildProgSel();renderMuscleSets();toast('Removed');
     });
@@ -1476,7 +1505,7 @@ function getWorkoutDates(){
   const dates = new Set();
   Object.keys(DATA).forEach(name=>{
     if(name.startsWith('_')) return;
-    (DATA[name]||[]).forEach(s=>{ if(s.date) dates.add(s.date); });
+    sessionsFor(name).forEach(s=>{ if(s.date) dates.add(s.date); });
   });
   return [...dates].sort();
 }
@@ -1608,8 +1637,8 @@ function renderProfile(){
   document.querySelectorAll('#prof-email').forEach(el=>el.textContent=email||'—');
 
   // stats
-  const loggedNames=Object.keys(DATA).filter(n=>!n.startsWith('_')&&(DATA[n]||[]).length);
-  const totalSessions=loggedNames.reduce((t,n)=>t+(DATA[n]||[]).length,0);
+  const loggedNames=Object.keys(DATA).filter(n=>!n.startsWith('_')&&sessionsFor(n).length);
+  const totalSessions=loggedNames.reduce((t,n)=>t+sessionsFor(n).length,0);
   document.getElementById('pstat-sessions').textContent=totalSessions;
   document.getElementById('pstat-exercises').textContent=loggedNames.length;
 
@@ -1714,7 +1743,7 @@ function doExport(){
 function doExportCSV(exercises,from,to){
   const rows=[['Exercise','Category','Date','Set','Weight','Unit','Reps']];
   exercises.sort().forEach(name=>{
-    (DATA[name]||[])
+    sessionsFor(name)
       .filter(s=>s.date>=from&&s.date<=to)
       .forEach(session=>{
         session.sets.forEach((set,i)=>{
@@ -1732,7 +1761,7 @@ function doExportCSV(exercises,from,to){
 function doExportJSON(exercises,from,to){
   const filtered={};
   exercises.sort().forEach(name=>{
-    const sessions=(DATA[name]||[]).filter(s=>s.date>=from&&s.date<=to)
+    const sessions=sessionsFor(name).filter(s=>s.date>=from&&s.date<=to)
       .map(s=>({date:s.date,category:catLabel(s.cat),sets:s.sets}));
     if(sessions.length) filtered[name]=sessions;
   });
@@ -1964,7 +1993,7 @@ function renderGoal(name){
   const pg = document.getElementById('pgoal');
   if(!pg) return;
   const goal = getGoal(name);
-  const pr = getPR(DATA[name]||[]);
+  const pr = getPR(sessionsFor(name));
 
   pg.innerHTML = '';
   const box = document.createElement('div');
