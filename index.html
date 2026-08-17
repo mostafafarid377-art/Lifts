@@ -789,31 +789,27 @@ let EXM={}; // exercise name -> array of muscle ids, e.g. {'Incline Bench Press'
 let CUSTOM_MUSCLES=[]; // user-added muscles, e.g. [{id:'custom_forearms',label:'Forearms'}]
 const allMuscles=()=>[...MUSCLES,...CUSTOM_MUSCLES];
 
-// DATA shape: DATA[exerciseName] = { [categoryId]: [ {date,sets}, ... ] }
-// Each exercise keeps a SEPARATE set of logged sessions per category it belongs to,
-// so logging "DB Press" under Push doesn't affect "DB Press" under Upper.
+// DATA shape: DATA[exerciseName] = [ {date, cat, sets}, ... ]
+// One shared history per exercise (same weight/PR/prefill everywhere), but each
+// session remembers which category it was logged under (cat), purely so
+// "Sets by Muscle" can add up the most recent session per category.
 function migrateDataShape(){
   Object.keys(DATA).forEach(name=>{
     if(name.startsWith('_'))return; // skip _goals, _restDays, etc.
     const v=DATA[name];
     if(Array.isArray(v)){
-      // old flat format — move it under its primary category
-      DATA[name]={[primCat(name)]:v};
+      // ensure every session has a cat tag; default missing ones to primary category
+      DATA[name]=v.map(s=>s.cat?s:{...s,cat:primCat(name)});
+    } else if(v && typeof v==='object'){
+      // previous per-category nested shape — flatten back into one shared list
+      let flat=[];
+      Object.keys(v).forEach(catId=>{
+        (v[catId]||[]).forEach(s=>flat.push({...s,cat:catId}));
+      });
+      flat.sort((a,b)=>a.date.localeCompare(b.date));
+      DATA[name]=flat;
     }
   });
-}
-// Merge all categories' sessions for an exercise into one date-sorted list.
-// Each returned session gets a non-persisted _cat field so callers know which
-// category bucket it came from (needed to delete/edit it correctly).
-function flatSessions(name){
-  const byCat=DATA[name];
-  if(!byCat||typeof byCat!=='object'||Array.isArray(byCat))return [];
-  let out=[];
-  Object.keys(byCat).forEach(catId=>{
-    (byCat[catId]||[]).forEach(s=>out.push({...s,_cat:catId}));
-  });
-  out.sort((a,b)=>a.date.localeCompare(b.date));
-  return out;
 }
 // SPLITS: [{id, name, catIds:[]}]  activeSplitId: string|null
 let SPLITS=[], activeSplitId=null;
@@ -1059,10 +1055,9 @@ function renderPicker(){
   list.forEach(name=>{
     const cat=primCat(name);
     const ctxCat=selDay==='all'?cat:selDay;
-    // preview: when viewing "All", show the combined picture; when viewing a specific
-    // category tab, show only that category's own sessions (this is the data that'll
-    // actually be edited if tapped)
-    const sessions=selDay==='all'?flatSessions(name):((DATA[name]&&DATA[name][selDay])||[]);
+    // Always show the exercise's true shared history/PR, regardless of which
+    // category tab you're viewing from — weight and PR are the same everywhere.
+    const sessions=DATA[name]||[];
     const last=sessions.slice(-1)[0];
     const pr=sessions.length?getPR(sessions):null;
     const b=document.createElement('button');b.className='pitem';
@@ -1091,7 +1086,9 @@ function selectEx(name,catId){
   document.getElementById('picker').innerHTML='';
   document.getElementById('exsearch').style.display='none';
   document.getElementById('catpills').style.display='none';
-  const last=((DATA[name]&&DATA[name][catId])||[]).slice(-1)[0];
+  // Prefill from the exercise's true last session (shared across all categories),
+  // so weight/reps are always consistent no matter which tab you logged from.
+  const last=(DATA[name]||[]).slice(-1)[0];
   if(last){
     last.sets.forEach(s=>sets.push({w:String(s.weight),r:String(s.reps),u:s.unit||unit}));
     if(last.sets[0])setUnit(last.sets[0].unit||'kg');
@@ -1143,11 +1140,10 @@ function saveLog(){
   if(!valid.length){toast('Add at least one set');return;}
   const date=document.getElementById('logdate').value;
   const catId=selCatCtx||primCat(selEx);
-  if(!DATA[selEx])DATA[selEx]={};
-  if(!DATA[selEx][catId])DATA[selEx][catId]=[];
-  const arr=DATA[selEx][catId];
-  const idx=arr.findIndex(e=>e.date===date);
-  const entry={date,sets:valid.map(s=>({weight:parseFloat(s.w),reps:parseInt(s.r),unit:s.u||unit}))};
+  if(!DATA[selEx])DATA[selEx]=[];
+  const arr=DATA[selEx];
+  const idx=arr.findIndex(e=>e.date===date&&e.cat===catId);
+  const entry={date,cat:catId,sets:valid.map(s=>({weight:parseFloat(s.w),reps:parseInt(s.r),unit:s.u||unit}))};
   if(idx>=0)arr[idx]=entry;else arr.push(entry);
   arr.sort((a,b)=>a.date.localeCompare(b.date));
   scheduleSave();toast('Saved ✓');
@@ -1159,11 +1155,11 @@ function saveLog(){
 function renderHistory(){
   const q=document.getElementById('hsearch').value.toLowerCase();
   const w=document.getElementById('hlist');w.innerHTML='';
-  let names=Object.keys(DATA).filter(n=>!n.startsWith('_')&&flatSessions(n).length);
+  let names=Object.keys(DATA).filter(n=>!n.startsWith('_')&&(DATA[n]||[]).length);
   if(q)names=names.filter(n=>n.toLowerCase().includes(q));
   if(!names.length){w.innerHTML='<div class="empty">Nothing logged yet</div>';return;}
   names.sort().forEach(name=>{
-    const sessions=flatSessions(name);if(!sessions.length)return;
+    const sessions=DATA[name]||[];if(!sessions.length)return;
     const pr=getPR(sessions);
     const el=document.createElement('div');el.className='hent';
     const hdr=document.createElement('div');hdr.className='hhdr';
@@ -1179,12 +1175,12 @@ function renderHistory(){
         const isPR=pr&&set.weight===pr.weight&&set.reps===pr.reps&&s.date===pr.date;
         return'<span class="chip">'+set.weight+(set.unit||'kg')+' × '+set.reps+(isPR?'<span class="prbadge">PR</span>':'')+'</span>';
       }).join('');
-      blk.innerHTML='<div class="sdate">'+fmtDate(s.date)+' <span style="color:var(--m1);font-size:.55rem">· '+catLabel(s._cat)+'</span></div><div class="schips">'+chips+'</div>';
+      blk.innerHTML='<div class="sdate">'+fmtDate(s.date)+' <span style="color:var(--m1);font-size:.55rem">· '+catLabel(s.cat)+'</span></div><div class="schips">'+chips+'</div>';
       body.appendChild(blk);
     });
     const db=document.createElement('button');db.className='btn brd';db.style.cssText='font-size:.55rem;padding:6px 11px;margin-top:6px';db.textContent='Delete all logs';
     db.addEventListener('click',()=>{
-      if(!confirm('Delete all logs for "'+name+'" (all categories)?'))return;
+      if(!confirm('Delete all logs for "'+name+'"?'))return;
       delete DATA[name];scheduleSave();renderHistory();buildProgSel();renderMuscleSets();toast('Deleted');
     });
     body.appendChild(db);el.appendChild(hdr);el.appendChild(body);w.appendChild(el);
@@ -1196,18 +1192,18 @@ function renderMuscleSets(){
   const wrap=document.getElementById('msets-wrap');if(!wrap)return;
 
   // For each muscle: sum, over every exercise tagged to it, the sets from the
-  // most recent session in EACH category that exercise belongs to (so an exercise
-  // logged separately under Push and Upper contributes both, e.g. 2 + 3 = 5).
+  // most recent session logged under EACH category that exercise belongs to
+  // (so Pec Deck logged separately under Push and Upper contributes both,
+  // e.g. 2 + 3 = 5) — while the exercise's weight/PR/history stay one shared list.
   const totals=allMuscles().map(m=>{
     let total=0;
     Object.keys(EXM).forEach(exName=>{
       if(!(EXM[exName]||[]).includes(m.id))return;
-      const byCat=DATA[exName];
-      if(!byCat||typeof byCat!=='object')return;
-      Object.keys(byCat).forEach(catId=>{
-        const sessions=byCat[catId]||[];
-        if(!sessions.length)return;
-        const latest=sessions[sessions.length-1]; // date-sorted ascending
+      const sessions=DATA[exName];
+      if(!sessions||!sessions.length)return;
+      const byCat={};
+      sessions.forEach(s=>{ byCat[s.cat]=s; }); // later entries overwrite — sessions is date-sorted ascending, so this leaves the latest per cat
+      Object.values(byCat).forEach(latest=>{
         total+=(latest.sets||[]).length;
       });
     });
@@ -1235,7 +1231,7 @@ function buildProgSel(){
   const sel=document.getElementById('progex');if(!sel)return;
   const prev=sel.value;
   sel.innerHTML='<option value="">— Pick an exercise —</option>';
-  Object.keys(DATA).filter(n=>!n.startsWith('_')&&flatSessions(n).length).sort().forEach(n=>{
+  Object.keys(DATA).filter(n=>!n.startsWith('_')&&(DATA[n]||[]).length).sort().forEach(n=>{
     const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);
   });
   if(prev)sel.value=prev;
@@ -1246,7 +1242,7 @@ function renderProgress(){
   const ps=document.getElementById('pstats'),pc=document.getElementById('pchart'),pp=document.getElementById('psess');
   ps.innerHTML='';pc.innerHTML='';pp.innerHTML='';
   const pg=document.getElementById('pgoal');if(pg)pg.innerHTML='';
-  const sessions=flatSessions(name);
+  const sessions=DATA[name]||[];
   if(!name||!sessions.length)return;
   const pr=getPR(sessions);
   const latest=bestSet(sessions[sessions.length-1]);
@@ -1269,16 +1265,13 @@ function renderProgress(){
   sessions.slice().reverse().forEach(s=>{
     const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;padding:7px 0;border-bottom:1px solid var(--b1);gap:7px';
     const dt=document.createElement('span');dt.style.cssText='font-size:.6rem;color:var(--m2);flex-shrink:0;min-width:55px';dt.textContent=fmtDate(s.date);
-    const catTag=document.createElement('span');catTag.style.cssText='font-size:.55rem;color:var(--m1);flex-shrink:0';catTag.textContent=catLabel(s._cat);
+    const catTag=document.createElement('span');catTag.style.cssText='font-size:.55rem;color:var(--m1);flex-shrink:0';catTag.textContent=catLabel(s.cat);
     const chips=document.createElement('div');chips.style.cssText='display:flex;gap:4px;flex-wrap:wrap;flex:1';
     s.sets.forEach(set=>{const chip=document.createElement('span');chip.className='chip';chip.textContent=set.weight+(set.unit||'kg')+'×'+set.reps;chips.appendChild(chip);});
     const db=document.createElement('button');db.style.cssText='background:none;border:none;color:var(--m1);font-size:.72rem;flex-shrink:0;padding:2px 5px';db.textContent='✕';
     db.addEventListener('click',()=>{
-      if(DATA[name]&&DATA[name][s._cat]){
-        DATA[name][s._cat]=DATA[name][s._cat].filter(x=>x.date!==s.date);
-        if(!DATA[name][s._cat].length)delete DATA[name][s._cat];
-        if(!Object.keys(DATA[name]).length)delete DATA[name];
-      }
+      DATA[name]=(DATA[name]||[]).filter(x=>!(x.date===s.date&&x.cat===s.cat));
+      if(!DATA[name].length)delete DATA[name];
       scheduleSave();renderProgress();renderHistory();buildProgSel();renderMuscleSets();toast('Removed');
     });
     const isPR=pr&&bestSet(s).weight===pr.weight&&s.date===pr.date;
@@ -1483,7 +1476,7 @@ function getWorkoutDates(){
   const dates = new Set();
   Object.keys(DATA).forEach(name=>{
     if(name.startsWith('_')) return;
-    flatSessions(name).forEach(s=>{ if(s.date) dates.add(s.date); });
+    (DATA[name]||[]).forEach(s=>{ if(s.date) dates.add(s.date); });
   });
   return [...dates].sort();
 }
@@ -1615,8 +1608,8 @@ function renderProfile(){
   document.querySelectorAll('#prof-email').forEach(el=>el.textContent=email||'—');
 
   // stats
-  const loggedNames=Object.keys(DATA).filter(n=>!n.startsWith('_')&&flatSessions(n).length);
-  const totalSessions=loggedNames.reduce((t,n)=>t+flatSessions(n).length,0);
+  const loggedNames=Object.keys(DATA).filter(n=>!n.startsWith('_')&&(DATA[n]||[]).length);
+  const totalSessions=loggedNames.reduce((t,n)=>t+(DATA[n]||[]).length,0);
   document.getElementById('pstat-sessions').textContent=totalSessions;
   document.getElementById('pstat-exercises').textContent=loggedNames.length;
 
@@ -1721,11 +1714,11 @@ function doExport(){
 function doExportCSV(exercises,from,to){
   const rows=[['Exercise','Category','Date','Set','Weight','Unit','Reps']];
   exercises.sort().forEach(name=>{
-    flatSessions(name)
+    (DATA[name]||[])
       .filter(s=>s.date>=from&&s.date<=to)
       .forEach(session=>{
         session.sets.forEach((set,i)=>{
-          rows.push([name,catLabel(session._cat),session.date,i+1,set.weight,set.unit||'kg',set.reps]);
+          rows.push([name,catLabel(session.cat),session.date,i+1,set.weight,set.unit||'kg',set.reps]);
         });
       });
   });
@@ -1739,8 +1732,8 @@ function doExportCSV(exercises,from,to){
 function doExportJSON(exercises,from,to){
   const filtered={};
   exercises.sort().forEach(name=>{
-    const sessions=flatSessions(name).filter(s=>s.date>=from&&s.date<=to)
-      .map(s=>({date:s.date,category:catLabel(s._cat),sets:s.sets}));
+    const sessions=(DATA[name]||[]).filter(s=>s.date>=from&&s.date<=to)
+      .map(s=>({date:s.date,category:catLabel(s.cat),sets:s.sets}));
     if(sessions.length) filtered[name]=sessions;
   });
   if(!Object.keys(filtered).length){toast('No data in selected range');return;}
@@ -1971,7 +1964,7 @@ function renderGoal(name){
   const pg = document.getElementById('pgoal');
   if(!pg) return;
   const goal = getGoal(name);
-  const pr = getPR(flatSessions(name));
+  const pr = getPR(DATA[name]||[]);
 
   pg.innerHTML = '';
   const box = document.createElement('div');
