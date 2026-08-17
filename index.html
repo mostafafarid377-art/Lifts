@@ -786,6 +786,8 @@ const MUSCLES=[
 // ── App state ─────────────────────────────────────────
 let CATS=[...DC], EX=JSON.parse(JSON.stringify(DE)), DATA={};
 let EXM={}; // exercise name -> array of muscle ids, e.g. {'Incline Bench Press':['chest','shoulders']}
+let CUSTOM_MUSCLES=[]; // user-added muscles, e.g. [{id:'custom_forearms',label:'Forearms'}]
+const allMuscles=()=>[...MUSCLES,...CUSTOM_MUSCLES];
 // SPLITS: [{id, name, catIds:[]}]  activeSplitId: string|null
 let SPLITS=[], activeSplitId=null;
 let currentUser=null;
@@ -807,13 +809,15 @@ async function loadUserData(uid){
       EX   = d.ex   ? JSON.parse(JSON.stringify(d.ex))   : JSON.parse(JSON.stringify(DE));
       DATA = d.data  ? JSON.parse(JSON.stringify(d.data)) : {};
       EXM  = d.exm   ? JSON.parse(JSON.stringify(d.exm))  : {};
+      CUSTOM_MUSCLES = d.customMuscles ? JSON.parse(JSON.stringify(d.customMuscles)) : [];
     } else {
       // Brand new user — completely blank, no categories, no exercises
       CATS=[];
       EX={};
       DATA={};
       EXM={};
-      try{ await userRef(uid).set({cats:CATS,ex:EX,data:DATA,exm:EXM}); }
+      CUSTOM_MUSCLES=[];
+      try{ await userRef(uid).set({cats:CATS,ex:EX,data:DATA,exm:EXM,customMuscles:CUSTOM_MUSCLES}); }
       catch(e2){ console.warn('Could not save new user:',e2.message); }
     }
   }catch(e){
@@ -823,6 +827,7 @@ async function loadUserData(uid){
     EX=JSON.parse(JSON.stringify(DE));
     DATA={};
     EXM={};
+    CUSTOM_MUSCLES=[];
   }
   showSync(false);
   bootApp();
@@ -833,7 +838,7 @@ function scheduleSave(){
   saveTimer=setTimeout(async()=>{
     if(!currentUser)return;
     showSync(true);
-    try{ await userRef(currentUser.uid).set({cats:CATS,ex:EX,data:DATA,exm:EXM}); }
+    try{ await userRef(currentUser.uid).set({cats:CATS,ex:EX,data:DATA,exm:EXM,customMuscles:CUSTOM_MUSCLES}); }
     catch(e){ console.error('Save error',e); }
     showSync(false);
   },900);
@@ -1157,7 +1162,7 @@ function renderMuscleSets(){
 
   // For each muscle: sum, over every exercise tagged to it,
   // the number of sets in that exercise's most recent logged session.
-  const totals=MUSCLES.map(m=>{
+  const totals=allMuscles().map(m=>{
     let total=0;
     Object.keys(EXM).forEach(exName=>{
       if(!(EXM[exName]||[]).includes(m.id))return;
@@ -1369,7 +1374,7 @@ function renderExCatPills(){
 let modalMuscles=new Set();
 function renderExMusclePills(){
   const g=document.getElementById('ex-mchips');g.innerHTML='';
-  MUSCLES.forEach(m=>{
+  allMuscles().forEach(m=>{
     const on=modalMuscles.has(m.id);
     const b=document.createElement('button');b.className='mchip'+(on?' on':'');b.textContent=m.label;
     b.addEventListener('click',()=>{
@@ -1378,6 +1383,12 @@ function renderExMusclePills(){
     });
     g.appendChild(b);
   });
+  const addBtn=document.createElement('button');addBtn.className='mchip';addBtn.textContent='+ Add Muscle';
+  addBtn.addEventListener('click',()=>{
+    const id=promptNewMuscle();
+    if(id){modalMuscles.add(id);renderExMusclePills();}
+  });
+  g.appendChild(addBtn);
 }
 
 function saveEx(){
@@ -2200,7 +2211,7 @@ function openEditExModal(name, fromCatId){
 
 function renderEditExMusclePills(){
   const g=document.getElementById('editex-mchips');g.innerHTML='';
-  MUSCLES.forEach(m=>{
+  allMuscles().forEach(m=>{
     const on=editExMuscles.has(m.id);
     const b=document.createElement('button');b.className='mchip'+(on?' on':'');b.textContent=m.label;
     b.addEventListener('click',()=>{
@@ -2209,6 +2220,26 @@ function renderEditExMusclePills(){
     });
     g.appendChild(b);
   });
+  const addBtn=document.createElement('button');addBtn.className='mchip';addBtn.textContent='+ Add Muscle';
+  addBtn.addEventListener('click',()=>{
+    const id=promptNewMuscle();
+    if(id){editExMuscles.add(id);renderEditExMusclePills();}
+  });
+  g.appendChild(addBtn);
+}
+
+// Prompts for a new custom muscle name, adds it to CUSTOM_MUSCLES if new, returns its id (or null if cancelled)
+function promptNewMuscle(){
+  const label=prompt('New muscle name (e.g. Forearms)');
+  if(!label||!label.trim())return null;
+  const trimmed=label.trim();
+  const id='custom_'+trimmed.toLowerCase().replace(/[^a-z0-9]+/g,'_');
+  const exists=allMuscles().find(m=>m.id===id);
+  if(!exists){
+    CUSTOM_MUSCLES.push({id,label:trimmed});
+    scheduleSave();
+  }
+  return id;
 }
 
 function renderEditExCatPills(){
