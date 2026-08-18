@@ -1019,8 +1019,8 @@ const catLabel = id=>catById(id)?.label||id;
 const primCat  = name=>{for(const c of CATS)if((EX[c.id]||[]).includes(name))return c.id;return CATS[0]?.id||'other';};
 const allNames = ()=>[...new Set(CATS.flatMap(c=>EX[c.id]||[]))].sort();
 const fmtDate  = d=>{if(!d)return'';const[,m,dy]=d.split('-');return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+ +dy;};
-const getPR    = sessions=>{let pr=null;sessions.forEach(s=>s.sets.forEach(set=>{if(!pr||set.weight>pr.weight||(set.weight===pr.weight&&set.reps>pr.reps))pr={...set,date:s.date};}));return pr;};
-const bestSet  = sess=>sess.sets.reduce((b,s)=>s.weight>b.weight?s:b,sess.sets[0]);
+const getPR    = sessions=>{let pr=null;sessions.forEach(s=>(s.sets||[]).forEach(set=>{if(!pr||set.weight>pr.weight||(set.weight===pr.weight&&set.reps>pr.reps))pr={...set,date:s.date};}));return pr;};
+const bestSet  = sess=>(sess.sets&&sess.sets.length)?sess.sets.reduce((b,s)=>s.weight>b.weight?s:b,sess.sets[0]):{weight:0,reps:0,unit:'kg'};
 
 let toastTimer=null;
 function toast(msg){
@@ -1053,29 +1053,50 @@ function renderPicker(){
   if(q)list=list.filter(n=>n.toLowerCase().includes(q));
   if(!list.length){w.innerHTML='<div class="empty">No exercises found</div>';return;}
   list.forEach(name=>{
-    const cat=primCat(name);
-    const ctxCat=selDay==='all'?cat:selDay;
-    // Always show the exercise's true shared history/PR, regardless of which
-    // category tab you're viewing from — weight and PR are the same everywhere.
-    const sessions=sessionsFor(name);
-    const last=sessions.slice(-1)[0];
-    const pr=sessions.length?getPR(sessions):null;
-    const b=document.createElement('button');b.className='pitem';
-    const dot=document.createElement('span');dot.className='dot';dot.style.background=catColor(cat);
-    const inner=document.createElement('span');inner.style.cssText='display:flex;flex-direction:column;gap:3px;flex:1';
-    const n=document.createElement('span');n.textContent=name;
-    const sub=document.createElement('span');sub.style.cssText='font-size:.57rem;color:var(--m1)';
-    if(last){
-      let txt=last.date+' · '+last.sets.map(s=>s.weight+s.unit+'×'+s.reps).join(', ');
-      if(pr) txt+=' <span style="color:var(--ac)">· PR '+pr.weight+pr.unit+'×'+pr.reps+'</span>';
-      sub.innerHTML=txt;
-    } else {
-      sub.textContent='No history';
+    try{
+      const cat=primCat(name);
+      const ctxCat=selDay==='all'?cat:selDay;
+      // Always show the exercise's true shared history/PR, regardless of which
+      // category tab you're viewing from — weight and PR are the same everywhere.
+      const sessions=sessionsFor(name);
+      const last=sessions.slice(-1)[0];
+      const pr=sessions.length?getPR(sessions):null;
+      const b=document.createElement('button');b.className='pitem';
+      const dot=document.createElement('span');dot.className='dot';dot.style.background=catColor(cat);
+      const inner=document.createElement('span');inner.style.cssText='display:flex;flex-direction:column;gap:3px;flex:1';
+      const n=document.createElement('span');n.textContent=name;
+      const sub=document.createElement('span');sub.style.cssText='font-size:.57rem;color:var(--m1)';
+      if(last){
+        let txt=last.date+' · '+(last.sets||[]).map(s=>s.weight+(s.unit||'')+'×'+s.reps).join(', ');
+        if(pr) txt+=' <span style="color:var(--ac)">· PR '+pr.weight+pr.unit+'×'+pr.reps+'</span>';
+        sub.innerHTML=txt;
+      } else {
+        sub.textContent='No history';
+      }
+      inner.appendChild(n);inner.appendChild(sub);
+      b.appendChild(dot);b.appendChild(inner);
+      b.addEventListener('click',()=>selectEx(name,ctxCat));
+      w.appendChild(b);
+    }catch(e){
+      console.error('renderPicker item error for "'+name+'":',e);
+      const b=document.createElement('button');b.className='pitem';
+      b.style.borderColor='var(--rd,#ff5c5c)';
+      const n=document.createElement('span');n.textContent=name;
+      const sub=document.createElement('span');sub.style.cssText='font-size:.57rem;color:var(--rd,#ff5c5c);display:block';
+      sub.textContent='⚠ Data error: '+e.message+' — tap to reset this exercise\'s history';
+      const inner=document.createElement('span');inner.style.cssText='display:flex;flex-direction:column;gap:3px;flex:1';
+      inner.appendChild(n);inner.appendChild(sub);
+      b.appendChild(inner);
+      b.addEventListener('click',()=>{
+        if(confirm('This exercise\'s saved data is corrupted and can\'t be read. Reset its history so you can log it again? (This clears old sessions for "'+name+'" only.)')){
+          delete DATA[name];
+          scheduleSave();
+          toast('Reset — try logging it again');
+          renderPicker();
+        }
+      });
+      w.appendChild(b);
     }
-    inner.appendChild(n);inner.appendChild(sub);
-    b.appendChild(dot);b.appendChild(inner);
-    b.addEventListener('click',()=>selectEx(name,ctxCat));
-    w.appendChild(b);
   });
 }
 
@@ -1085,12 +1106,17 @@ function renderPicker(){
 function sessionsFor(name){
   const v=DATA[name];
   if(!v)return [];
-  if(Array.isArray(v))return v;
+  const clean=arr=>arr
+    .filter(s=>s&&s.date) // drop anything without even a date — unusable
+    .map(s=>({...s,sets:Array.isArray(s.sets)?s.sets.filter(x=>x&&typeof x.weight==='number'&&typeof x.reps==='number'):[]}))
+    .filter(s=>s.sets.length); // drop sessions that ended up with zero valid sets
+  if(Array.isArray(v))return clean(v);
   if(typeof v==='object'){
     let flat=[];
     Object.keys(v).forEach(catId=>{
       (v[catId]||[]).forEach(s=>flat.push({...s,cat:catId}));
     });
+    flat=clean(flat);
     flat.sort((a,b)=>a.date.localeCompare(b.date));
     DATA[name]=flat; // fix it in place so this only ever happens once
     return flat;
