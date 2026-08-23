@@ -169,14 +169,17 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .mchip{font-size:.6rem;letter-spacing:.06em;text-transform:uppercase;padding:6px 12px;border:1px solid var(--b2);background:none;color:var(--m2);border-radius:20px}
 .mchip.on{background:var(--ac);border-color:var(--ac);color:#000;font-weight:600}
 .mchips{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
-.msets-card{background:var(--bgc,#16161b);border:1px solid var(--b2);border-radius:14px;padding:16px;margin-bottom:18px}
-.msets-title{font-size:.72rem;font-weight:600;margin-bottom:10px}
-.msets-row{display:flex;align-items:center;gap:10px;padding:8px 0}
+.msets-card{background:var(--bgc,#16161b);border:1px solid var(--b2);border-radius:18px;padding:20px;margin-bottom:18px}
+.msets-title{font-size:1.05rem;font-weight:700;margin-bottom:16px}
+.msets-row{display:flex;align-items:center;gap:8px;padding:11px 0}
 .msets-row:not(:last-child){border-bottom:1px solid var(--b2)}
-.msets-label{width:82px;font-size:.68rem;font-weight:600;flex-shrink:0}
-.msets-barbg{flex:1;height:8px;background:var(--b1,#26262e);border-radius:5px;overflow:hidden}
+.msets-label{width:92px;font-size:.85rem;font-weight:700;flex-shrink:0}
+.msets-barbg{flex:1;height:9px;background:var(--b1,#26262e);border-radius:5px;overflow:hidden}
 .msets-barfill{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--ac),#ff8c35)}
-.msets-count{width:56px;text-align:right;font-size:.68rem;color:var(--tx);font-weight:600;flex-shrink:0}
+.msets-count{min-width:58px;text-align:right;font-size:.85rem;color:var(--tx);font-weight:700;flex-shrink:0}
+.msets-stepbtn{width:24px;height:24px;border-radius:7px;background:var(--bg,#0d0d10);border:1px solid var(--b2);color:var(--tx);font-size:1rem;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
+.msets-delbtn{background:none;border:none;color:var(--m1);font-size:.72rem;flex-shrink:0;padding:2px 4px}
+.msets-addbtn{width:100%;margin-top:12px;background:none;border:1px dashed var(--b2);color:var(--ac);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;border-radius:10px;padding:10px}
 
 /* RENAME / EDIT EXERCISE */
 .ex-edit-btn{background:none;border:1px solid var(--b2);color:var(--m2);width:26px;height:26px;font-size:.65rem;border-radius:2px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -631,9 +634,6 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
     <label class="mflbl">Categories (select all that apply)</label>
     <div class="catpills" id="editex-catpills" style="margin-top:6px"></div>
 
-    <label class="mflbl">Muscles Worked</label>
-    <div class="mchips" id="editex-mchips"></div>
-
     <div class="brow">
       <button class="btn bacc" onclick="saveEditEx()">Save</button>
       <button class="btn bgh" onclick="closeModal('editex')">Cancel</button>
@@ -698,8 +698,6 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
       onkeydown="if(event.key==='Enter')saveEx()">
     <label class="mflbl">Categories</label>
     <div class="catpills" id="ex-catpills"></div>
-    <label class="mflbl">Muscles Worked</label>
-    <div class="mchips" id="ex-mchips"></div>
     <div class="brow">
       <button class="btn bacc" onclick="saveEx()">Save</button>
       <button class="btn bgh" onclick="closeModal('ex')">Cancel</button>
@@ -785,9 +783,10 @@ const MUSCLES=[
 
 // ── App state ─────────────────────────────────────────
 let CATS=[...DC], EX=JSON.parse(JSON.stringify(DE)), DATA={};
-let EXM={}; // exercise name -> array of muscle ids, e.g. {'Incline Bench Press':['chest','shoulders']}
+let MSETS={}; // manual, user-entered set counts per muscle id, e.g. {chest:10, biceps:6}
 let CUSTOM_MUSCLES=[]; // user-added muscles, e.g. [{id:'custom_forearms',label:'Forearms'}]
-const allMuscles=()=>[...MUSCLES,...CUSTOM_MUSCLES];
+let HIDDEN_MUSCLES=new Set(); // built-in muscle ids the user removed from their list
+const allMuscles=()=>[...MUSCLES.filter(m=>!HIDDEN_MUSCLES.has(m.id)),...CUSTOM_MUSCLES];
 
 // DATA shape: DATA[exerciseName] = [ {date, cat, sets}, ... ]
 // One shared history per exercise (same weight/PR/prefill everywhere), but each
@@ -831,17 +830,19 @@ async function loadUserData(uid){
       CATS = d.cats ? JSON.parse(JSON.stringify(d.cats)) : JSON.parse(JSON.stringify(DC));
       EX   = d.ex   ? JSON.parse(JSON.stringify(d.ex))   : JSON.parse(JSON.stringify(DE));
       DATA = d.data  ? JSON.parse(JSON.stringify(d.data)) : {};
-      EXM  = d.exm   ? JSON.parse(JSON.stringify(d.exm))  : {};
+      MSETS = d.msets ? JSON.parse(JSON.stringify(d.msets)) : {};
       CUSTOM_MUSCLES = d.customMuscles ? JSON.parse(JSON.stringify(d.customMuscles)) : [];
+      HIDDEN_MUSCLES = new Set(d.hiddenMuscles || []);
       migrateDataShape();
     } else {
       // Brand new user — completely blank, no categories, no exercises
       CATS=[];
       EX={};
       DATA={};
-      EXM={};
+      MSETS={};
       CUSTOM_MUSCLES=[];
-      try{ await userRef(uid).set({cats:CATS,ex:EX,data:DATA,exm:EXM,customMuscles:CUSTOM_MUSCLES}); }
+      HIDDEN_MUSCLES=new Set();
+      try{ await userRef(uid).set({cats:CATS,ex:EX,data:DATA,msets:MSETS,customMuscles:CUSTOM_MUSCLES,hiddenMuscles:[]}); }
       catch(e2){ console.warn('Could not save new user:',e2.message); }
     }
   }catch(e){
@@ -850,8 +851,9 @@ async function loadUserData(uid){
     CATS=JSON.parse(JSON.stringify(DC));
     EX=JSON.parse(JSON.stringify(DE));
     DATA={};
-    EXM={};
+    MSETS={};
     CUSTOM_MUSCLES=[];
+    HIDDEN_MUSCLES=new Set();
   }
   showSync(false);
   bootApp();
@@ -862,7 +864,7 @@ function scheduleSave(){
   saveTimer=setTimeout(async()=>{
     if(!currentUser)return;
     showSync(true);
-    try{ await userRef(currentUser.uid).set({cats:CATS,ex:EX,data:DATA,exm:EXM,customMuscles:CUSTOM_MUSCLES}); }
+    try{ await userRef(currentUser.uid).set({cats:CATS,ex:EX,data:DATA,msets:MSETS,customMuscles:CUSTOM_MUSCLES,hiddenMuscles:[...HIDDEN_MUSCLES]}); }
     catch(e){ console.error('Save error',e); }
     showSync(false);
   },900);
@@ -1245,40 +1247,67 @@ function renderHistory(){
 // ── SETS BY MUSCLE ───────────────────────────────────
 function renderMuscleSets(){
   const wrap=document.getElementById('msets-wrap');if(!wrap)return;
+  wrap.innerHTML='';
 
-  // For each muscle: sum, over every exercise tagged to it, the sets from the
-  // most recent session logged under EACH category that exercise belongs to
-  // (so Pec Deck logged separately under Push and Upper contributes both,
-  // e.g. 2 + 3 = 5) — while the exercise's weight/PR/history stay one shared list.
-  const totals=allMuscles().map(m=>{
-    let total=0;
-    Object.keys(EXM).forEach(exName=>{
-      if(!(EXM[exName]||[]).includes(m.id))return;
-      const sessions=sessionsFor(exName);
-      if(!sessions.length)return;
-      const byCat={};
-      sessions.forEach(s=>{ byCat[s.cat]=s; }); // later entries overwrite — sessions is date-sorted ascending, so this leaves the latest per cat
-      Object.values(byCat).forEach(latest=>{
-        total+=(latest.sets||[]).length;
-      });
+  const list=allMuscles();
+  if(!list.length)return;
+
+  const max=Math.max(1,...list.map(m=>MSETS[m.id]||0));
+
+  const card=document.createElement('div');card.className='msets-card';
+  const title=document.createElement('div');title.className='msets-title';title.textContent='Sets by Muscle';
+  card.appendChild(title);
+
+  list.forEach(m=>{
+    const count=MSETS[m.id]||0;
+    const pct=Math.round(count/max*100);
+    const row=document.createElement('div');row.className='msets-row';
+
+    const label=document.createElement('div');label.className='msets-label';label.textContent=m.label;
+
+    const barbg=document.createElement('div');barbg.className='msets-barbg';
+    const barfill=document.createElement('div');barfill.className='msets-barfill';barfill.style.width=pct+'%';
+    barbg.appendChild(barfill);
+
+    const minus=document.createElement('button');minus.className='msets-stepbtn';minus.textContent='−';
+    minus.addEventListener('click',()=>{
+      MSETS[m.id]=Math.max(0,(MSETS[m.id]||0)-1);
+      scheduleSave();renderMuscleSets();
     });
-    return {label:m.label,total};
-  }).filter(t=>t.total>0);
 
-  if(!totals.length){wrap.innerHTML='';return;}
+    const countEl=document.createElement('div');countEl.className='msets-count';countEl.textContent=count+' set'+(count!==1?'s':'');
 
-  const max=Math.max(...totals.map(t=>t.total));
-  let html='<div class="msets-card"><div class="msets-title">Sets by Muscle</div>';
-  totals.forEach(t=>{
-    const pct=max?Math.round(t.total/max*100):0;
-    html+='<div class="msets-row">'
-      +'<div class="msets-label">'+t.label+'</div>'
-      +'<div class="msets-barbg"><div class="msets-barfill" style="width:'+pct+'%"></div></div>'
-      +'<div class="msets-count">'+t.total+' set'+(t.total!==1?'s':'')+'</div>'
-      +'</div>';
+    const plus=document.createElement('button');plus.className='msets-stepbtn';plus.textContent='+';
+    plus.addEventListener('click',()=>{
+      MSETS[m.id]=(MSETS[m.id]||0)+1;
+      scheduleSave();renderMuscleSets();
+    });
+
+    const del=document.createElement('button');del.className='msets-delbtn';del.textContent='✕';
+    del.title='Remove '+m.label;
+    del.addEventListener('click',()=>{
+      if(!confirm('Remove "'+m.label+'" from Sets by Muscle?'))return;
+      delete MSETS[m.id];
+      CUSTOM_MUSCLES=CUSTOM_MUSCLES.filter(cm=>cm.id!==m.id);
+      // built-in muscles (Chest, Back, etc.) can't be permanently deleted from the
+      // preset list, but hiding them is as simple as leaving their count at 0 —
+      // for a clean "remove" we track a hidden set of built-ins too:
+      if(MUSCLES.find(bm=>bm.id===m.id)) HIDDEN_MUSCLES.add(m.id);
+      scheduleSave();renderMuscleSets();
+    });
+
+    row.appendChild(label);row.appendChild(barbg);row.appendChild(minus);row.appendChild(countEl);row.appendChild(plus);row.appendChild(del);
+    card.appendChild(row);
   });
-  html+='</div>';
-  wrap.innerHTML=html;
+
+  const addBtn=document.createElement('button');addBtn.className='msets-addbtn';addBtn.textContent='+ Add Muscle';
+  addBtn.addEventListener('click',()=>{
+    const id=promptNewMuscle();
+    if(id){renderMuscleSets();}
+  });
+  card.appendChild(addBtn);
+
+  wrap.appendChild(card);
 }
 
 // ── PROGRESS ─────────────────────────────────────────
@@ -1426,10 +1455,8 @@ function renderManage(){
     ab.addEventListener('click',()=>{
       document.getElementById('ex-mtitle').textContent='Add to '+cat.label;
       modalCats=new Set([cat.id]);
-      modalMuscles=new Set();
       document.getElementById('ex-name').value='';
       renderExCatPills();
-      renderExMusclePills();
       document.getElementById('modal-ex').classList.add('on');
       setTimeout(()=>document.getElementById('ex-name').focus(),220);
     });
@@ -1463,26 +1490,6 @@ function renderExCatPills(){
   });
 }
 
-let modalMuscles=new Set();
-function renderExMusclePills(){
-  const g=document.getElementById('ex-mchips');g.innerHTML='';
-  allMuscles().forEach(m=>{
-    const on=modalMuscles.has(m.id);
-    const b=document.createElement('button');b.className='mchip'+(on?' on':'');b.textContent=m.label;
-    b.addEventListener('click',()=>{
-      if(modalMuscles.has(m.id))modalMuscles.delete(m.id);else modalMuscles.add(m.id);
-      renderExMusclePills();
-    });
-    g.appendChild(b);
-  });
-  const addBtn=document.createElement('button');addBtn.className='mchip';addBtn.textContent='+ Add Muscle';
-  addBtn.addEventListener('click',()=>{
-    const id=promptNewMuscle();
-    if(id){modalMuscles.add(id);renderExMusclePills();}
-  });
-  g.appendChild(addBtn);
-}
-
 function saveEx(){
   const name=document.getElementById('ex-name').value.trim();
   if(!name){toast('Enter a name');return;}
@@ -1492,8 +1499,7 @@ function saveEx(){
     if(!(EX[catId]||[]).includes(name)){if(!EX[catId])EX[catId]=[];EX[catId].push(name);added++;}
   });
   if(!added){toast('Already in those categories');return;}
-  EXM[name]=[...modalMuscles];
-  scheduleSave();closeModal('ex');renderManage();buildCatPills();renderPicker();renderMuscleSets();toast('Added ✓');
+  scheduleSave();closeModal('ex');renderManage();buildCatPills();renderPicker();toast('Added ✓');
 }
 
 function saveCat(){
@@ -2285,7 +2291,6 @@ function renderBodyStats(){
 // ── EDIT EXERCISE ─────────────────────────────────────
 let editExOrigName = '';
 let editExCats = new Set();
-let editExMuscles = new Set();
 
 function openEditExModal(name, fromCatId){
   editExOrigName = name;
@@ -2294,31 +2299,10 @@ function openEditExModal(name, fromCatId){
   CATS.forEach(cat=>{
     if((EX[cat.id]||[]).includes(name)) editExCats.add(cat.id);
   });
-  editExMuscles = new Set(EXM[name]||[]);
   document.getElementById('editex-name').value = name;
   renderEditExCatPills();
-  renderEditExMusclePills();
   document.getElementById('modal-editex').classList.add('on');
   setTimeout(()=>document.getElementById('editex-name').focus(), 220);
-}
-
-function renderEditExMusclePills(){
-  const g=document.getElementById('editex-mchips');g.innerHTML='';
-  allMuscles().forEach(m=>{
-    const on=editExMuscles.has(m.id);
-    const b=document.createElement('button');b.className='mchip'+(on?' on':'');b.textContent=m.label;
-    b.addEventListener('click',()=>{
-      if(editExMuscles.has(m.id))editExMuscles.delete(m.id);else editExMuscles.add(m.id);
-      renderEditExMusclePills();
-    });
-    g.appendChild(b);
-  });
-  const addBtn=document.createElement('button');addBtn.className='mchip';addBtn.textContent='+ Add Muscle';
-  addBtn.addEventListener('click',()=>{
-    const id=promptNewMuscle();
-    if(id){editExMuscles.add(id);renderEditExMusclePills();}
-  });
-  g.appendChild(addBtn);
 }
 
 // Prompts for a new custom muscle name, adds it to CUSTOM_MUSCLES if new, returns its id (or null if cancelled)
@@ -2330,6 +2314,7 @@ function promptNewMuscle(){
   const exists=allMuscles().find(m=>m.id===id);
   if(!exists){
     CUSTOM_MUSCLES.push({id,label:trimmed});
+    if(!MSETS[id])MSETS[id]=0;
     scheduleSave();
   }
   return id;
@@ -2393,15 +2378,10 @@ function saveEditEx(){
     delete DATA._goals[oldName];
   }
 
-  // Update muscle tags (and carry over on rename)
-  if(renamed && EXM[oldName]){ delete EXM[oldName]; }
-  EXM[newName] = [...editExMuscles];
-
   scheduleSave();
   closeModal('editex');
   renderManage();
   renderPicker();
-  renderMuscleSets();
   toast(renamed ? 'Renamed to "'+newName+'" ✓' : 'Categories updated ✓');
 }
 </script>
