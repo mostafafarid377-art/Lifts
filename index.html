@@ -89,6 +89,20 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .field::placeholder{color:var(--m1)}
 .field.mb{margin-bottom:10px}
 
+/* ONBOARDING */
+.ob-steps{display:flex;gap:6px;margin-bottom:14px}
+.ob-step{flex:1;height:4px;border-radius:2px;background:var(--b1)}
+.ob-step.done{background:var(--ac)}
+.ob-step.current{background:linear-gradient(90deg,var(--ac) 50%,var(--b1) 50%)}
+.ob-card{background:var(--sf);border:1px solid var(--b1);border-radius:14px;padding:20px;margin-bottom:16px}
+.ob-num{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--m1);margin-bottom:6px}
+.ob-title{font-size:1rem;font-weight:800;margin-bottom:6px}
+.ob-sub{font-size:.7rem;color:var(--m2);margin-bottom:16px;line-height:1.5}
+.ob-btn{width:100%;background:var(--ac);color:#000;border:none;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;padding:13px;border-radius:2px;font-weight:700;
+  box-shadow:0 4px 0 #a8b800,0 6px 10px rgba(0,0,0,.35);transform:translateY(0);transition:transform .09s ease,box-shadow .09s ease}
+.ob-btn:active{transform:translateY(4px);box-shadow:0 0 0 #a8b800,0 2px 4px rgba(0,0,0,.35)}
+.ob-skip{width:100%;background:none;border:none;color:var(--m1);font-size:.62rem;letter-spacing:.06em;padding:10px;margin-top:2px;text-decoration:underline}
+
 /* BUTTONS */
 .btn{font-size:.62rem;letter-spacing:.13em;text-transform:uppercase;padding:9px 15px;border-radius:2px;border:1px solid transparent;
   transform:translateY(0);transition:transform .09s ease,box-shadow .09s ease;cursor:pointer}
@@ -466,6 +480,7 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
   <div class="scr on" id="s-log">
     <div class="ptitle">Log Set</div>
     <div class="psub">Pick · sets · save</div>
+    <div id="onboard-wrap"></div>
     <div class="drow">
       <div class="dlbl">Date</div>
       <input class="field" type="date" id="logdate" style="margin-bottom:0;flex:1">
@@ -1044,12 +1059,84 @@ function friendlyErr(code){
 }
 
 // ── Boot app ─────────────────────────────────────────
+// ── ONBOARDING ───────────────────────────────────────
+// Guides a brand-new account through 3 steps using existing modals — no new
+// data structures, just a conditional banner based on current CATS/EX/DATA state.
+function renderOnboarding(){
+  const wrap=document.getElementById('onboard-wrap');if(!wrap)return;
+  wrap.innerHTML='';
+
+  if(DATA._onboardingSkipped)return;
+
+  const hasCat=CATS.length>0;
+  const hasEx=CATS.some(c=>(EX[c.id]||[]).length>0);
+  const hasLog=Object.keys(DATA).some(n=>!n.startsWith('_')&&sessionsFor(n).length>0);
+
+  let step;
+  if(!hasCat)step=1;
+  else if(!hasEx)step=2;
+  else if(!hasLog)step=3;
+  else return; // fully done — nothing to show, ever again
+
+  const steps=document.createElement('div');steps.className='ob-steps';
+  for(let i=1;i<=3;i++){
+    const s=document.createElement('div');
+    s.className='ob-step'+(i<step?' done':i===step?' current':'');
+    steps.appendChild(s);
+  }
+
+  const card=document.createElement('div');card.className='ob-card';
+  const num=document.createElement('div');num.className='ob-num';num.textContent='Step '+step+' of 3';
+  const title=document.createElement('div');title.className='ob-title';
+  const sub=document.createElement('div');sub.className='ob-sub';
+  const btn=document.createElement('button');btn.className='ob-btn';
+
+  if(step===1){
+    title.textContent='Add your first category';
+    sub.textContent="Categories group your exercises — like Push, Pull, or Legs. Let's create one to get started.";
+    btn.textContent='+ Add Category';
+    btn.addEventListener('click',()=>openModal('newcat'));
+  } else if(step===2){
+    title.textContent='Add your first exercise';
+    sub.textContent='Now add an exercise to "'+(CATS[0]?CATS[0].label:'your category')+'" — like Bench Press or Squat.';
+    btn.textContent='+ Add Exercise';
+    btn.addEventListener('click',()=>{
+      const cat=CATS[0];if(!cat)return;
+      document.getElementById('ex-mtitle').textContent='Add to '+cat.label;
+      modalCats=new Set([cat.id]);
+      document.getElementById('ex-name').value='';
+      renderExCatPills();
+      document.getElementById('modal-ex').classList.add('on');
+      setTimeout(()=>document.getElementById('ex-name').focus(),220);
+    });
+  } else if(step===3){
+    title.textContent='Log your first set';
+    sub.textContent='Almost there — tap an exercise below and log your first set.';
+    btn.style.display='none';
+  }
+
+  card.appendChild(num);card.appendChild(title);card.appendChild(sub);
+  if(btn.style.display!=='none')card.appendChild(btn);
+
+  const skip=document.createElement('button');skip.className='ob-skip';skip.textContent='Skip setup for now';
+  skip.addEventListener('click',()=>{
+    DATA._onboardingSkipped=true;
+    scheduleSave();
+    renderOnboarding();
+  });
+  card.appendChild(skip);
+
+  wrap.appendChild(steps);
+  wrap.appendChild(card);
+}
+
 function bootApp(){
   document.getElementById('logdate').value=new Date().toISOString().slice(0,10);
   buildCatPills();
   renderPicker();
   buildProgSel();
   renderMuscleSets();
+  renderOnboarding();
 }
 
 // ── Helpers ──────────────────────────────────────────
@@ -1239,7 +1326,7 @@ function saveLog(){
     arr.sort((a,b)=>a.date.localeCompare(b.date));
     scheduleSave();toast('Saved ✓');
     startTimer(selEx);
-    cancelLog();buildProgSel();renderMuscleSets();
+    cancelLog();buildProgSel();renderMuscleSets();renderOnboarding();
   }catch(e){
     console.error('saveLog error:',e);
     toast('Save failed: '+e.message);
@@ -1537,7 +1624,7 @@ function saveEx(){
     if(!(EX[catId]||[]).includes(name)){if(!EX[catId])EX[catId]=[];EX[catId].push(name);added++;}
   });
   if(!added){toast('Already in those categories');return;}
-  scheduleSave();closeModal('ex');renderManage();buildCatPills();renderPicker();toast('Added ✓');
+  scheduleSave();closeModal('ex');renderManage();buildCatPills();renderPicker();renderOnboarding();toast('Added ✓');
 }
 
 function saveCat(){
@@ -1546,7 +1633,7 @@ function saveCat(){
   const color=document.getElementById('cat-color').value;
   const id='cat_'+Date.now();
   CATS.push({id,label,color});EX[id]=[];
-  scheduleSave();closeModal('cat');renderManage();buildCatPills();renderPicker();
+  scheduleSave();closeModal('cat');renderManage();buildCatPills();renderPicker();renderOnboarding();
   toast('"'+label+'" created ✓');
 }
 
@@ -1863,6 +1950,7 @@ function go(id){
   document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
   document.getElementById('s-'+id).classList.add('on');
   document.querySelector('.ntab[onclick="go(\''+id+'\')"]').classList.add('on');
+  if(id==='log'){buildCatPills();renderPicker();renderOnboarding();}
   if(id==='history')renderHistory();
   if(id==='progress'){buildProgSel();renderProgress();renderMuscleSets();}
   if(id==='streak')renderStreak();
