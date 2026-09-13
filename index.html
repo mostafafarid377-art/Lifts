@@ -778,6 +778,26 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 <div class="toast" id="toast"></div>
 
 <script>
+// ── Global error safety net ────────────────────────────
+// Surfaces ANY uncaught JS error as a visible on-screen banner instead of
+// silently failing (this is how the earlier PR-calculation bug went unnoticed).
+window.addEventListener('error', function(e){
+  try{
+    console.error('Uncaught error:', e.message, 'at', e.filename+':'+e.lineno);
+    let banner=document.getElementById('global-err-banner');
+    if(!banner){
+      banner=document.createElement('div');
+      banner.id='global-err-banner';
+      banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#3a0000;color:#ff8080;font-size:.65rem;padding:10px 14px;font-family:monospace;line-height:1.5;max-height:40vh;overflow-y:auto';
+      document.body.appendChild(banner);
+    }
+    const line=document.createElement('div');
+    line.style.marginBottom='4px';
+    line.textContent='⚠ '+e.message+' (line '+e.lineno+')';
+    banner.appendChild(line);
+  }catch(err){ /* never let the error handler itself crash anything */ }
+});
+
 // ── Firebase init ─────────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyBYhRhYbbbNSXf0zH86wWbE_YaRiccXLaU",
@@ -1131,12 +1151,13 @@ function renderOnboarding(){
 }
 
 function bootApp(){
-  document.getElementById('logdate').value=new Date().toISOString().slice(0,10);
-  buildCatPills();
-  renderPicker();
-  buildProgSel();
-  renderMuscleSets();
-  renderOnboarding();
+  const step=(name,fn)=>{ try{ fn(); }catch(e){ console.error(name+' failed:',e); } };
+  step('set logdate',()=>{ document.getElementById('logdate').value=new Date().toISOString().slice(0,10); });
+  step('buildCatPills',buildCatPills);
+  step('renderPicker',renderPicker);
+  step('buildProgSel',buildProgSel);
+  step('renderMuscleSets',renderMuscleSets);
+  step('renderOnboarding',renderOnboarding);
 }
 
 // ── Helpers ──────────────────────────────────────────
