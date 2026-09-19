@@ -103,6 +103,36 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .ob-btn:active{transform:translateY(4px);box-shadow:0 0 0 #a8b800,0 2px 4px rgba(0,0,0,.35)}
 .ob-skip{width:100%;background:none;border:none;color:var(--m1);font-size:.62rem;letter-spacing:.06em;padding:10px;margin-top:2px;text-decoration:underline}
 
+/* WEIGHT GOAL */
+.glbl{font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--m2);text-align:center;margin-bottom:2px}
+.gbig{text-align:center;font-size:2.6rem;font-weight:800;color:var(--tx);margin-bottom:14px}
+.gbig span{font-size:1rem;color:var(--m2);font-weight:400;margin-left:4px}
+.ruler-wrap{position:relative;height:56px;margin-bottom:4px}
+.ruler-track{display:flex;align-items:flex-end;height:100%;overflow-x:scroll;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.ruler-track::-webkit-scrollbar{display:none}
+.tick{flex-shrink:0;width:8px;display:flex;justify-content:center;scroll-snap-align:center;transition:transform .1s}
+.tick .bar{width:2px;background:var(--b2);border-radius:1px;transition:background .1s}
+.tick.minor .bar{height:16px}
+.tick.mid .bar{height:26px;background:var(--m1)}
+.tick.major .bar{height:38px;background:var(--m2)}
+.tick.pulse{transform:scale(1.4)}
+.tick.pulse .bar{background:var(--ac)}
+.center-line{position:absolute;left:50%;top:0;bottom:10px;width:2px;background:var(--ac);transform:translateX(-1px);pointer-events:none}
+.warncard{display:flex;gap:12px;border-radius:10px;padding:14px;align-items:flex-start;transition:background .2s,border-color .2s}
+.warncard.hard{background:#2a1400;border:1px solid #4a2800}
+.warncard.mid{background:#2a2205;border:1px solid #4a3d0a}
+.warncard.ok{background:#0d2a12;border:1px solid #1a4a24}
+.warncard .icon{font-size:1rem;flex-shrink:0}
+.warncard .title{font-size:.75rem;font-weight:800;margin-bottom:3px}
+.warncard.hard .title{color:var(--or,#ff9d3d)}
+.warncard.mid .title,.warncard.ok .title{color:var(--ac)}
+.warncard .sub{font-size:.65rem;color:var(--m2);line-height:1.5}
+.summary{background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:4px 16px}
+.summary .srow{display:flex;justify-content:space-between;align-items:center;padding:12px 0;font-size:.7rem}
+.summary .srow:not(:last-child){border-bottom:1px solid var(--b1)}
+.summary .srow .l{color:var(--m1)}
+.summary .srow .r{font-weight:700}
+
 /* BUTTONS */
 .btn{font-size:.62rem;letter-spacing:.13em;text-transform:uppercase;padding:9px 15px;border-radius:2px;border:1px solid transparent;
   transform:translateY(0);transition:transform .09s ease,box-shadow .09s ease;cursor:pointer}
@@ -623,6 +653,8 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
         </div>
       </div>
 
+      <button class="btn bgh" onclick="openWeightGoalModal()" style="width:100%;margin-top:10px">🎯 Set Weight Goal</button>
+
       <!-- Recent log -->
       <div id="body-log-list" style="margin-top:8px"></div>
     </div>
@@ -716,6 +748,42 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
     <div class="brow">
       <button class="btn bacc" onclick="saveBodyStat()">Save</button>
       <button class="btn bgh" onclick="closeModal('body')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Weight Goal -->
+<div class="moverlay" id="modal-weightgoal" onclick="if(event.target===this)closeModal('weightgoal')">
+  <div class="mpanel">
+    <div class="mtitle">New Weight Goal</div>
+
+    <div class="glbl">Target Weight</div>
+    <div class="gbig" id="wg-bignum">—<span id="wg-unit">kg</span></div>
+    <div class="ruler-wrap">
+      <div class="ruler-track" id="wg-track"></div>
+      <div class="center-line"></div>
+    </div>
+
+    <div class="warncard" id="wg-warncard" style="margin-top:16px">
+      <div class="icon" id="wg-warnicon">✓</div>
+      <div>
+        <div class="title" id="wg-warntitle">Healthy Pace</div>
+        <div class="sub" id="wg-warnsub"></div>
+      </div>
+    </div>
+
+    <label class="mflbl">Target Date</label>
+    <input class="field" id="wg-date" type="date" onchange="wgRecalc()">
+
+    <div class="summary" style="margin-top:14px">
+      <div class="srow"><span class="l">Current Weight</span><span class="r" id="wg-current">—</span></div>
+      <div class="srow"><span class="l">Days Remaining</span><span class="r" id="wg-days">—</span></div>
+      <div class="srow"><span class="l">Required Pace</span><span class="r" id="wg-pace">—</span></div>
+    </div>
+
+    <div class="brow">
+      <button class="btn bacc" onclick="saveWeightGoal()">Set New Goal</button>
+      <button class="btn bgh" onclick="closeModal('weightgoal')">Cancel</button>
     </div>
   </div>
 </div>
@@ -2308,6 +2376,116 @@ function setBodyUnit(u){
   if(lb) lb.classList.toggle('on', u==='lb');
 }
 
+// ── WEIGHT GOAL (ruler picker) ─────────────────────────
+let wgMin=0, wgStep=0.5, wgTickW=8, wgUnit='kg', wgLastIdx=null, wgCurrentWeight=0;
+
+function openWeightGoalModal(){
+  const logs=DATA._bodyWeight||[];
+  const latest=logs.slice(-1)[0];
+  if(!latest){ toast('Log your current weight first'); openBodyModal('weight'); return; }
+
+  wgCurrentWeight=latest.value;
+  wgUnit=latest.unit||'kg';
+  wgStep=wgUnit==='kg'?0.5:1;
+  wgMin=Math.max(0,wgCurrentWeight-40);
+  const max=wgCurrentWeight+40;
+
+  document.getElementById('wg-unit').textContent=wgUnit;
+  document.getElementById('wg-current').textContent=wgCurrentWeight+' '+wgUnit;
+
+  // default target date: 12 weeks out, or keep existing goal's date if one exists
+  const existing=DATA._weightGoal;
+  const defaultDate=new Date(Date.now()+84*86400000).toISOString().slice(0,10);
+  document.getElementById('wg-date').value=(existing&&existing.targetDate)?existing.targetDate:defaultDate;
+
+  const track=document.getElementById('wg-track');
+  track.innerHTML='';
+  wgLastIdx=null;
+  const count=Math.round((max-wgMin)/wgStep);
+  for(let i=0;i<=count;i++){
+    const val=wgMin+i*wgStep;
+    const isMajor=wgUnit==='kg'?(val%5===0):(val%10===0);
+    const isMid=wgUnit==='kg'?(val%1===0):(val%5===0);
+    const t=document.createElement('div');
+    t.className='tick '+(isMajor?'major':isMid?'mid':'minor');
+    const bar=document.createElement('div');bar.className='bar';
+    t.appendChild(bar);
+    track.appendChild(t);
+  }
+
+  document.getElementById('modal-weightgoal').classList.add('on');
+
+  requestAnimationFrame(()=>{
+    const pad=track.parentElement.offsetWidth/2 - wgTickW/2;
+    track.style.paddingLeft=pad+'px';
+    track.style.paddingRight=pad+'px';
+    const startVal=existing?existing.value:wgCurrentWeight;
+    const startIdx=Math.round((startVal-wgMin)/wgStep);
+    track.scrollLeft=startIdx*wgTickW;
+    wgUpdate(wgMin+startIdx*wgStep,startIdx);
+  });
+}
+
+function wgUpdate(weight,idx){
+  document.getElementById('wg-bignum').innerHTML=weight.toFixed(wgUnit==='kg'?1:0)+'<span id="wg-unit">'+wgUnit+'</span>';
+
+  // haptic feedback on real devices that support it (Android Chrome — iOS Safari
+  // has no Vibration API at all, so this silently does nothing there); the
+  // visual tick "pulse" below is what actually gives feedback on iPhone
+  if(idx!==wgLastIdx){
+    wgLastIdx=idx;
+    try{ if(navigator.vibrate) navigator.vibrate(8); }catch(e){}
+    document.querySelectorAll('#wg-track .tick.pulse').forEach(t=>t.classList.remove('pulse'));
+    const activeTick=document.querySelectorAll('#wg-track .tick')[idx];
+    if(activeTick) activeTick.classList.add('pulse');
+  }
+
+  wgRecalc(weight);
+}
+
+function wgRecalc(weightOverride){
+  const weight=typeof weightOverride==='number'?weightOverride:parseFloat(document.getElementById('wg-bignum').textContent);
+  const dateVal=document.getElementById('wg-date').value;
+  if(!dateVal)return;
+  const days=Math.max(1,Math.round((new Date(dateVal)-new Date(new Date().toISOString().slice(0,10)))/86400000));
+  const diff=weight-wgCurrentWeight;
+  const weeks=days/7;
+  const pace=diff/weeks;
+  const absPace=Math.abs(pace);
+
+  document.getElementById('wg-days').textContent=days+' days';
+  document.getElementById('wg-pace').textContent=(pace>=0?'+':'')+pace.toFixed(2)+' '+wgUnit+'/week';
+
+  const card=document.getElementById('wg-warncard');
+  const icon=document.getElementById('wg-warnicon');
+  const title=document.getElementById('wg-warntitle');
+  const sub=document.getElementById('wg-warnsub');
+  const safeLimit=wgUnit==='kg'?1:2.2, midLimit=wgUnit==='kg'?0.5:1.1;
+
+  if(absPace<=midLimit){
+    card.className='warncard ok';icon.textContent='✓';title.textContent='Healthy Pace';
+    sub.textContent='This is a sustainable rate of change for your target date.';
+  } else if(absPace<=safeLimit){
+    card.className='warncard mid';icon.textContent='⚡';title.textContent='Ambitious Pace';
+    sub.textContent='Doable, but will take consistent effort to hit on time.';
+  } else {
+    card.className='warncard hard';icon.textContent='⚠';
+    title.textContent='Aggressive Pace '+(pace>=0?'+':'')+pace.toFixed(1)+' '+wgUnit+'/week';
+    sub.textContent='Faster than the typical safe range ('+midLimit+'\u2013'+safeLimit+' '+wgUnit+'/week). Consider a later target date.';
+  }
+}
+
+function saveWeightGoal(){
+  const weight=parseFloat(document.getElementById('wg-bignum').textContent);
+  const dateVal=document.getElementById('wg-date').value;
+  if(!weight||!dateVal){ toast('Pick a weight and date'); return; }
+  DATA._weightGoal={value:weight,unit:wgUnit,targetDate:dateVal,setDate:new Date().toISOString().slice(0,10)};
+  scheduleSave();
+  closeModal('weightgoal');
+  renderBodyStats();
+  toast('Goal set ✓');
+}
+
 function saveBodyStat(){
   const val = parseFloat(document.getElementById('body-val').value);
   if(!val || val <= 0){ toast('Enter a value'); return; }
@@ -2531,6 +2709,22 @@ function saveEditEx(){
   renderPicker();
   toast(renamed ? 'Renamed to "'+newName+'" ✓' : 'Categories updated ✓');
 }
+
+// Attached once (the track element persists across modal opens — only its
+// tick children get rebuilt each time), so this never stacks duplicate listeners.
+(function(){
+  const wgTrackEl=document.getElementById('wg-track');
+  if(!wgTrackEl)return;
+  let wgDebounce;
+  wgTrackEl.addEventListener('scroll',()=>{
+    clearTimeout(wgDebounce);
+    wgDebounce=setTimeout(()=>{
+      const idx=Math.round(wgTrackEl.scrollLeft/wgTickW);
+      const weight=wgMin+idx*wgStep;
+      wgUpdate(weight,idx);
+    },50);
+  });
+})();
 </script>
 <!-- REST TIMER BAR -->
 <div class="timer-bar" id="timer-bar">
