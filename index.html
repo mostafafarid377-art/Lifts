@@ -740,11 +740,6 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
       </div>
     </div>
 
-    <div id="body-goal-section">
-      <label class="mflbl">Goal Weight (optional)</label>
-      <input class="field" id="body-goal-val" type="number" step="0.1" min="0" placeholder="e.g. 75" style="margin-bottom:14px">
-    </div>
-
     <div class="brow">
       <button class="btn bacc" onclick="saveBodyStat()">Save</button>
       <button class="btn bgh" onclick="closeModal('body')">Cancel</button>
@@ -2349,14 +2344,11 @@ function openBodyModal(type){
   const isBF = type === 'bf';
   document.getElementById('body-modal-title').textContent = isBF ? 'Log Body Fat %' : 'Log Body Weight';
   document.getElementById('body-unit-toggle').style.display = isBF ? 'none' : 'flex';
-  document.getElementById('body-goal-section').style.display = isBF ? 'none' : 'block';
   document.getElementById('body-val').value = '';
   document.getElementById('body-val').placeholder = isBF ? 'e.g. 18.5' : 'e.g. 80';
 
   if(!isBF){
-    // pre-fill goal if exists
     const goal = DATA._weightGoal;
-    document.getElementById('body-goal-val').value = goal ? goal.value : '';
     bodyUnit = goal ? goal.unit : 'kg';
     setBodyUnit(bodyUnit);
     // pre-fill latest weight
@@ -2505,12 +2497,6 @@ function saveBodyStat(){
     const entry = {date:today, value:val, unit:bodyUnit};
     if(idx>=0) DATA._bodyWeight[idx]=entry; else DATA._bodyWeight.push(entry);
     DATA._bodyWeight.sort((a,b)=>a.date.localeCompare(b.date));
-
-    // save goal if entered
-    const goalVal = parseFloat(document.getElementById('body-goal-val').value);
-    if(goalVal && goalVal > 0){
-      DATA._weightGoal = {value:goalVal, unit:bodyUnit};
-    }
   }
 
   scheduleSave();
