@@ -1413,15 +1413,17 @@ function saveLog(){
     if(!valid.length){toast('Add at least one set');return;}
     const date=document.getElementById('logdate').value;
     const catId=selCatCtx||primCat(selEx);
-    const arr=sessionsFor(selEx);
-    DATA[selEx]=arr; // ensure it's normalized/attached even if it was empty before
+    const exName=selEx;
+    const arr=sessionsFor(exName);
+    DATA[exName]=arr; // ensure it's normalized/attached even if it was empty before
     const idx=arr.findIndex(e=>e.date===date&&e.cat===catId);
     const entry={date,cat:catId,sets:valid.map(s=>({weight:parseFloat(s.w),reps:parseInt(s.r),unit:s.u||unit}))};
     if(idx>=0)arr[idx]=entry;else arr.push(entry);
     arr.sort((a,b)=>a.date.localeCompare(b.date));
     scheduleSave();toast('Saved ✓');
-    startTimer(selEx);
+    startTimer(exName);
     cancelLog();buildProgSel();renderMuscleSets();renderOnboarding();
+    checkExerciseGoalCelebration(exName);
   }catch(e){
     console.error('saveLog error:',e);
     toast('Save failed: '+e.message);
@@ -2325,7 +2327,7 @@ function saveGoal(){
   if(!w || w<=0){toast('Enter a target weight');return;}
   if(!r || r<=0){toast('Enter target reps');return;}
   if(!DATA._goals) DATA._goals = {};
-  DATA._goals[goalExName] = {weight:w, reps:r, unit:goalUnit};
+  DATA._goals[goalExName] = {weight:w, reps:r, unit:goalUnit, celebrated:false};
   scheduleSave();
   closeModal('goal');
   renderGoal(goalExName);
@@ -2482,7 +2484,7 @@ function saveWeightGoal(){
   const weight=parseFloat(document.getElementById('wg-bignum').textContent);
   const dateVal=document.getElementById('wg-date').value;
   if(!weight||!dateVal){ toast('Pick a weight and date'); return; }
-  DATA._weightGoal={value:weight,unit:wgUnit,targetDate:dateVal,setDate:new Date().toISOString().slice(0,10),celebrated:false};
+  DATA._weightGoal={value:weight,unit:wgUnit,targetDate:dateVal,setDate:new Date().toISOString().slice(0,10)};
   scheduleSave();
   closeModal('weightgoal');
   renderBodyStats();
@@ -2514,32 +2516,16 @@ function saveBodyStat(){
   closeModal('body');
   renderBodyStats();
   toast('Saved ✓');
-  if(bodyStatType!=='bf') checkWeightGoalCelebration();
 }
 
-// ── WEIGHT GOAL CELEBRATION ────────────────────────────
-function checkWeightGoalCelebration(){
-  const goal=DATA._weightGoal;
-  if(!goal||goal.celebrated)return;
-  const wLogs=DATA._bodyWeight||[];
-  const latest=wLogs.slice(-1)[0];
-  if(!latest)return;
-  const start=wLogs[0].value, current=latest.value, target=goal.value;
-  const done=(target<=start&&current<=target)||(target>=start&&current>=target);
-  if(!done)return;
-
-  goal.celebrated=true;
-  scheduleSave();
-  showGoalCelebration(target,goal.unit||'kg');
-}
-
-function showGoalCelebration(target,unit){
+// ── CELEBRATION (reusable — used for exercise goals) ───
+function showCelebration(title,sub){
   const stage=document.createElement('div');
   stage.className='celeb-stage';
   stage.innerHTML='<div class="celeb-card">'
     +'<div class="celeb-burst">🎉</div>'
-    +'<div class="celeb-title">GOAL REACHED!</div>'
-    +'<div class="celeb-sub">You hit your target of '+target+' '+unit+'</div>'
+    +'<div class="celeb-title">'+title+'</div>'
+    +'<div class="celeb-sub">'+sub+'</div>'
     +'</div>';
   document.body.appendChild(stage);
 
@@ -2556,6 +2542,20 @@ function showGoalCelebration(target,unit){
 
   stage.addEventListener('click',()=>stage.remove());
   setTimeout(()=>{ if(stage.parentNode) stage.remove(); },3200);
+}
+
+// Checks whether any logged set for this exercise now meets or beats its
+// saved goal (weight AND reps together) — celebrates once per goal.
+function checkExerciseGoalCelebration(name){
+  const goal=getGoal(name);
+  if(!goal||goal.celebrated)return;
+  const sessions=sessionsFor(name);
+  const hit=sessions.some(s=>(s.sets||[]).some(set=>set.weight>=goal.weight&&set.reps>=goal.reps));
+  if(!hit)return;
+
+  goal.celebrated=true;
+  scheduleSave();
+  showCelebration('GOAL REACHED!', name+' — '+goal.weight+(goal.unit||'kg')+'×'+goal.reps);
 }
 
 function renderBodyStats(){
