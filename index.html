@@ -133,6 +133,17 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .summary .srow .l{color:var(--m1)}
 .summary .srow .r{font-weight:700}
 
+/* GOAL CELEBRATION */
+.celeb-stage{position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;overflow:hidden;animation:celebFadeIn .2s ease}
+@keyframes celebFadeIn{from{opacity:0}to{opacity:1}}
+.celeb-card{position:relative;z-index:2;text-align:center;padding:30px;animation:celebPop .5s cubic-bezier(.34,1.56,.64,1)}
+@keyframes celebPop{0%{transform:scale(0.3);opacity:0}70%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+.celeb-burst{font-size:2.6rem;margin-bottom:8px}
+.celeb-title{font-size:1.6rem;font-weight:900;color:var(--ac);letter-spacing:.03em}
+.celeb-sub{font-size:.85rem;color:var(--tx);margin-top:8px;font-weight:600}
+.celeb-confetti{position:absolute;top:-14px;width:8px;height:14px;opacity:0;animation:celebFall 2.2s linear infinite}
+@keyframes celebFall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(540deg);opacity:0}}
+
 /* BUTTONS */
 .btn{font-size:.62rem;letter-spacing:.13em;text-transform:uppercase;padding:9px 15px;border-radius:2px;border:1px solid transparent;
   transform:translateY(0);transition:transform .09s ease,box-shadow .09s ease;cursor:pointer}
@@ -2471,7 +2482,7 @@ function saveWeightGoal(){
   const weight=parseFloat(document.getElementById('wg-bignum').textContent);
   const dateVal=document.getElementById('wg-date').value;
   if(!weight||!dateVal){ toast('Pick a weight and date'); return; }
-  DATA._weightGoal={value:weight,unit:wgUnit,targetDate:dateVal,setDate:new Date().toISOString().slice(0,10)};
+  DATA._weightGoal={value:weight,unit:wgUnit,targetDate:dateVal,setDate:new Date().toISOString().slice(0,10),celebrated:false};
   scheduleSave();
   closeModal('weightgoal');
   renderBodyStats();
@@ -2503,6 +2514,48 @@ function saveBodyStat(){
   closeModal('body');
   renderBodyStats();
   toast('Saved ✓');
+  if(bodyStatType!=='bf') checkWeightGoalCelebration();
+}
+
+// ── WEIGHT GOAL CELEBRATION ────────────────────────────
+function checkWeightGoalCelebration(){
+  const goal=DATA._weightGoal;
+  if(!goal||goal.celebrated)return;
+  const wLogs=DATA._bodyWeight||[];
+  const latest=wLogs.slice(-1)[0];
+  if(!latest)return;
+  const start=wLogs[0].value, current=latest.value, target=goal.value;
+  const done=(target<=start&&current<=target)||(target>=start&&current>=target);
+  if(!done)return;
+
+  goal.celebrated=true;
+  scheduleSave();
+  showGoalCelebration(target,goal.unit||'kg');
+}
+
+function showGoalCelebration(target,unit){
+  const stage=document.createElement('div');
+  stage.className='celeb-stage';
+  stage.innerHTML='<div class="celeb-card">'
+    +'<div class="celeb-burst">🎉</div>'
+    +'<div class="celeb-title">GOAL REACHED!</div>'
+    +'<div class="celeb-sub">You hit your target of '+target+' '+unit+'</div>'
+    +'</div>';
+  document.body.appendChild(stage);
+
+  const colors=['#e8ff47','#ff9d3d','#ff4444','#4dd8ff','#c04dff'];
+  for(let i=0;i<26;i++){
+    const c=document.createElement('div');
+    c.className='celeb-confetti';
+    c.style.left=Math.random()*100+'%';
+    c.style.background=colors[i%colors.length];
+    c.style.animationDelay=(Math.random()*0.4)+'s';
+    c.style.animationDuration=(1.8+Math.random()*1)+'s';
+    stage.appendChild(c);
+  }
+
+  stage.addEventListener('click',()=>stage.remove());
+  setTimeout(()=>{ if(stage.parentNode) stage.remove(); },3200);
 }
 
 function renderBodyStats(){
