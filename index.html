@@ -270,7 +270,9 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .split-cats{font-size:.58rem;color:var(--m1);margin-top:3px;letter-spacing:.04em}
 .split-active-badge{font-size:.5rem;background:var(--ac);color:#000;padding:2px 7px;border-radius:1px;font-weight:700;letter-spacing:.1em;flex-shrink:0}
 .split-btns{display:flex;gap:5px;flex-shrink:0}
-.split-btn{background:none;border:1px solid var(--b2);color:var(--m2);font-size:.58rem;padding:5px 9px;border-radius:2px;letter-spacing:.08em;text-transform:uppercase}
+.split-btn{background:var(--sf);border:1px solid var(--b2);color:var(--m2);font-size:.58rem;padding:5px 9px;border-radius:2px;letter-spacing:.08em;text-transform:uppercase;
+  box-shadow:0 3px 0 #000;transform:translateY(0);transition:transform .09s ease,box-shadow .09s ease}
+.split-btn:active{transform:translateY(3px);box-shadow:0 0 0 #000}
 .split-btn.activate{border-color:var(--ac);color:var(--ac)}
 .split-btn.del{border-color:var(--b2);color:var(--rd)}
 
@@ -714,6 +716,11 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
     <div id="mlist"></div>
     <div class="divider"></div>
     <button class="btn bgh" style="width:100%" onclick="openModal('newcat')">+ New Category</button>
+
+    <div class="divider"></div>
+    <div class="psub" style="margin-bottom:10px">Splits — group categories, activate to filter Log</div>
+    <div id="splits-list"></div>
+    <button class="btn bgh" style="width:100%;margin-top:8px" onclick="openSplitModal()">+ New Split</button>
   </div>
 </div>
 
@@ -849,6 +856,21 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
   </div>
 </div>
 
+<!-- MODAL: Split -->
+<div class="moverlay" id="modal-split" onclick="if(event.target===this)closeModal('split')">
+  <div class="mpanel">
+    <div class="mtitle" id="split-mtitle">New Split</div>
+    <label class="mflbl" style="margin-top:0">Name</label>
+    <input class="field" id="split-name" placeholder="e.g. Upper Body" autocomplete="off">
+    <label class="mflbl">Categories</label>
+    <div class="catpills" id="split-catpills"></div>
+    <div class="brow">
+      <button class="btn bacc" onclick="saveSplit()">Save</button>
+      <button class="btn bgh" onclick="closeModal('split')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -980,6 +1002,8 @@ async function loadUserData(uid){
       MSETS = d.msets ? JSON.parse(JSON.stringify(d.msets)) : {};
       CUSTOM_MUSCLES = d.customMuscles ? JSON.parse(JSON.stringify(d.customMuscles)) : [];
       HIDDEN_MUSCLES = new Set(d.hiddenMuscles || []);
+      SPLITS = d.splits ? JSON.parse(JSON.stringify(d.splits)) : [];
+      activeSplitId = d.activeSplitId || null;
       migrateDataShape();
     } else {
       // Brand new user — completely blank, no categories, no exercises
@@ -989,7 +1013,9 @@ async function loadUserData(uid){
       MSETS={};
       CUSTOM_MUSCLES=[];
       HIDDEN_MUSCLES=new Set();
-      try{ await userRef(uid).set({cats:CATS,ex:EX,data:DATA,msets:MSETS,customMuscles:CUSTOM_MUSCLES,hiddenMuscles:[]}); }
+      SPLITS=[];
+      activeSplitId=null;
+      try{ await userRef(uid).set({cats:CATS,ex:EX,data:DATA,msets:MSETS,customMuscles:CUSTOM_MUSCLES,hiddenMuscles:[],splits:[],activeSplitId:null}); }
       catch(e2){ console.warn('Could not save new user:',e2.message); }
     }
   }catch(e){
@@ -1001,6 +1027,8 @@ async function loadUserData(uid){
     MSETS={};
     CUSTOM_MUSCLES=[];
     HIDDEN_MUSCLES=new Set();
+    SPLITS=[];
+    activeSplitId=null;
   }
   showSync(false);
   bootApp();
@@ -1011,7 +1039,7 @@ function scheduleSave(){
   saveTimer=setTimeout(async()=>{
     if(!currentUser)return;
     showSync(true);
-    try{ await userRef(currentUser.uid).set({cats:CATS,ex:EX,data:DATA,msets:MSETS,customMuscles:CUSTOM_MUSCLES,hiddenMuscles:[...HIDDEN_MUSCLES]}); }
+    try{ await userRef(currentUser.uid).set({cats:CATS,ex:EX,data:DATA,msets:MSETS,customMuscles:CUSTOM_MUSCLES,hiddenMuscles:[...HIDDEN_MUSCLES],splits:SPLITS,activeSplitId:activeSplitId}); }
     catch(e){ console.error('Save error',e); }
     showSync(false);
   },900);
@@ -1262,7 +1290,11 @@ function buildCatPills(){
     w.appendChild(b);
   };
   mk('all','All');
-  CATS.forEach(c=>mk(c.id,c.label));
+  const activeSplit=SPLITS.find(s=>s.id===activeSplitId);
+  const visibleCats=activeSplit?CATS.filter(c=>activeSplit.catIds.includes(c.id)):CATS;
+  // if a split filtered out the category currently selected, fall back to "all"
+  if(selDay!=='all'&&!visibleCats.some(c=>c.id===selDay))selDay='all';
+  visibleCats.forEach(c=>mk(c.id,c.label));
 }
 
 // ── LOG ──────────────────────────────────────────────
@@ -1643,6 +1675,7 @@ function renderManage(){
     dcb.addEventListener('click',()=>{
       if(!confirm('Delete category "'+cat.label+'"?'))return;
       CATS=CATS.filter(c=>c.id!==cat.id);delete EX[cat.id];
+      SPLITS.forEach(s=>{s.catIds=s.catIds.filter(id=>id!==cat.id);});
       scheduleSave();renderManage();buildCatPills();renderPicker();toast('Category deleted');
     });
     hdr.appendChild(dot);hdr.appendChild(lbl);hdr.appendChild(cnt);hdr.appendChild(dcb);
@@ -1684,6 +1717,99 @@ function renderManage(){
     });
     rows.appendChild(ab);sec.appendChild(rows);w.appendChild(sec);
   });
+  renderSplits();
+}
+
+// ── SPLITS ───────────────────────────────────────────
+let editSplitId=null;
+let splitCats=new Set();
+
+function renderSplits(){
+  const w=document.getElementById('splits-list');if(!w)return;
+  w.innerHTML='';
+  if(!SPLITS.length){
+    w.innerHTML='<div class="empty">No splits yet — group your categories into named splits like "Upper Body" or "Push Day".</div>';
+    return;
+  }
+  SPLITS.forEach(split=>{
+    const isActive=split.id===activeSplitId;
+    const card=document.createElement('div');card.className='split-card'+(isActive?' active':'');
+
+    const info=document.createElement('div');info.className='split-info';
+    const name=document.createElement('div');name.className='split-name';name.textContent=split.label;
+    const catsTxt=split.catIds.map(id=>{const c=CATS.find(x=>x.id===id);return c?c.label:null;}).filter(Boolean).join(' · ')||'No categories';
+    const cats=document.createElement('div');cats.className='split-cats';cats.textContent=catsTxt;
+    info.appendChild(name);info.appendChild(cats);
+
+    const btns=document.createElement('div');btns.className='split-btns';
+
+    if(isActive){
+      const badge=document.createElement('span');badge.className='split-active-badge';badge.textContent='ACTIVE';
+      btns.appendChild(badge);
+    }
+    const actBtn=document.createElement('button');actBtn.className='split-btn activate';
+    actBtn.textContent=isActive?'Deactivate':'Activate';
+    actBtn.addEventListener('click',()=>{
+      activeSplitId=isActive?null:split.id;
+      scheduleSave();renderSplits();buildCatPills();renderPicker();
+      toast(isActive?'Showing all categories':'"'+split.label+'" activated ✓');
+    });
+    const editBtn=document.createElement('button');editBtn.className='split-btn';editBtn.textContent='Edit';
+    editBtn.addEventListener('click',()=>openSplitModal(split.id));
+    const delBtn=document.createElement('button');delBtn.className='split-btn del';delBtn.textContent='Delete';
+    delBtn.addEventListener('click',()=>{
+      if(!confirm('Delete split "'+split.label+'"?'))return;
+      SPLITS=SPLITS.filter(s=>s.id!==split.id);
+      if(activeSplitId===split.id)activeSplitId=null;
+      scheduleSave();renderSplits();buildCatPills();renderPicker();toast('Split deleted');
+    });
+    btns.appendChild(editBtn);btns.appendChild(actBtn);btns.appendChild(delBtn);
+
+    card.appendChild(info);card.appendChild(btns);
+    w.appendChild(card);
+  });
+}
+
+function openSplitModal(id){
+  editSplitId=id||null;
+  const existing=id?SPLITS.find(s=>s.id===id):null;
+  document.getElementById('split-mtitle').textContent=existing?'Edit Split':'New Split';
+  document.getElementById('split-name').value=existing?existing.label:'';
+  splitCats=new Set(existing?existing.catIds:[]);
+  renderSplitCatPills();
+  document.getElementById('modal-split').classList.add('on');
+  setTimeout(()=>document.getElementById('split-name').focus(),220);
+}
+
+function renderSplitCatPills(){
+  const g=document.getElementById('split-catpills');g.innerHTML='';
+  CATS.forEach(cat=>{
+    const on=splitCats.has(cat.id);
+    const b=document.createElement('button');b.className='catpill'+(on?' on':'');b.textContent=cat.label;
+    if(on){b.style.background=cat.color;b.style.borderColor=cat.color;b.style.color='#000';}
+    else{b.style.background='';b.style.borderColor='';}
+    b.addEventListener('click',()=>{
+      if(splitCats.has(cat.id))splitCats.delete(cat.id);else splitCats.add(cat.id);
+      renderSplitCatPills();
+    });
+    g.appendChild(b);
+  });
+}
+
+function saveSplit(){
+  const label=document.getElementById('split-name').value.trim();
+  if(!label){toast('Enter a name');return;}
+  if(!splitCats.size){toast('Pick at least one category');return;}
+  if(editSplitId){
+    const s=SPLITS.find(x=>x.id===editSplitId);
+    if(s){ s.label=label; s.catIds=[...splitCats]; }
+  } else {
+    SPLITS.push({id:'split_'+Date.now(),label,catIds:[...splitCats]});
+  }
+  scheduleSave();
+  closeModal('split');
+  renderSplits();
+  toast('Split saved ✓');
 }
 
 // ── MODALS ───────────────────────────────────────────
