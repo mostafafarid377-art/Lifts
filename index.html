@@ -460,6 +460,13 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .scr{padding-bottom:130px !important}
 .toast{bottom:calc(86px + var(--sfb)) !important}
 
+
+/* BODY MAP */
+.bodymap{margin:0 0 6px}
+.bodymap svg{display:block;width:100%;height:auto;max-height:300px}
+.bm-legend{display:flex;align-items:center;justify-content:flex-end;gap:5px;font-size:.55rem;color:var(--m1);margin:4px 0 8px}
+.bm-sw{width:12px;height:12px;border-radius:3px}
+
 /* MISC */
 .empty{text-align:center;padding:40px 18px;color:var(--m1);font-size:.7rem}
 .divider{height:1px;background:var(--b1);margin:20px 0}
@@ -1527,6 +1534,7 @@ function renderMuscleSets(){
   const card=document.createElement('div');card.className='msets-card';
   const title=document.createElement('div');title.className='msets-title';title.textContent='Sets by Muscle';
   card.appendChild(title);
+  card.appendChild(buildBodyMap(MSETS,max));
 
   list.forEach(m=>{
     const count=MSETS[m.id]||0;
@@ -1581,6 +1589,64 @@ function renderMuscleSets(){
 }
 
 // ── PROGRESS ─────────────────────────────────────────
+// ── BODY MAP ─────────────────────────────────────────
+const BM_COLORS=['#2b2b2b','#3f4d14','#6f8814','#a9c81e','#e8ff47'];
+function bmLevel(count,max){
+  if(!count||count<=0)return 0;
+  return Math.max(1,Math.min(4,Math.ceil(count/max*4)));
+}
+function buildBodyMap(counts,max){
+  const wrap=document.createElement('div');wrap.className='bodymap';
+  try{
+    const lv=id=>BM_COLORS[bmLevel(HIDDEN_MUSCLES.has(id)?0:(counts[id]||0),max)];
+    const BASE='#262626', ST='#141414';
+    // draws a path and its left/right mirror (body is centred on x=100)
+    const sym=(d,id)=>{
+      const a='<path d="'+d+'" fill="'+lv(id)+'" stroke="'+ST+'" stroke-width="1"/>';
+      return a+'<g transform="translate(200 0) scale(-1 1)">'+a+'</g>';
+    };
+    const one=(d,id)=>'<path d="'+d+'" fill="'+lv(id)+'" stroke="'+ST+'" stroke-width="1"/>';
+    const baseShape=d=>'<path d="'+d+'" fill="'+BASE+'" stroke="'+ST+'" stroke-width="1"/>';
+    const baseSym=d=>baseShape(d)+'<g transform="translate(200 0) scale(-1 1)">'+baseShape(d)+'</g>';
+
+    const silhouette=
+      '<circle cx="100" cy="20" r="13" fill="'+BASE+'"/>'+
+      '<rect x="94" y="31" width="12" height="12" fill="'+BASE+'"/>'+
+      baseShape('M70 44 L130 44 L124 120 L76 120 Z')+
+      baseSym('M67 46 L48 54 L38 132 L52 134 L63 72 Z')+
+      baseSym('M76 118 L100 120 L96 168 L80 168 Z')+
+      baseSym('M80 170 L96 170 L94 214 L84 214 Z')+
+      '<circle cx="44" cy="140" r="6" fill="'+BASE+'"/><circle cx="156" cy="140" r="6" fill="'+BASE+'"/>';
+
+    const front=
+      sym('M67 46 L52 52 L50 70 L62 68 L71 52 Z','shoulders')+
+      sym('M72 51 Q86 48 99 53 L99 77 Q84 81 72 73 Z','chest')+
+      sym('M52 72 L62 70 L58 98 L47 96 Z','biceps')+
+      one('M89 80 L111 80 L109 117 L91 117 Z','abs')+
+      sym('M78 122 L99 122 L96 166 L81 166 Z','quads')+
+      sym('M82 172 L95 172 L93 206 L85 206 Z','calves');
+
+    const back=
+      sym('M67 46 L52 52 L50 70 L62 68 L71 52 Z','shoulders')+
+      one('M74 48 Q100 40 126 48 L120 102 L80 102 Z','back')+
+      sym('M52 72 L62 70 L58 98 L47 96 Z','triceps')+
+      sym('M77 104 Q88 100 99 106 L99 130 Q88 134 77 126 Z','glutes')+
+      sym('M78 133 L99 133 L96 166 L81 166 Z','hamstrings')+
+      sym('M82 172 L95 172 L93 206 L85 206 Z','calves');
+
+    let svg='<svg viewBox="0 0 400 222" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Muscle map">';
+    svg+='<g>'+silhouette+front+'</g>';
+    svg+='<g transform="translate(200 0)">'+silhouette+back+'</g>';
+    svg+='</svg>';
+
+    let legend='<div class="bm-legend"><span>Less</span>';
+    BM_COLORS.forEach(c=>{legend+='<span class="bm-sw" style="background:'+c+'"></span>';});
+    legend+='<span>More</span></div>';
+    wrap.innerHTML=svg+legend;
+  }catch(e){ console.error('buildBodyMap failed:',e); }
+  return wrap;
+}
+
 function buildProgSel(){
   const sel=document.getElementById('progex');if(!sel)return;
   const prev=sel.value;
