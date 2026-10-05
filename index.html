@@ -441,16 +441,17 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 
 
 /* ── BOTTOM TAB BAR ── */
-.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:150;background:rgba(20,20,20,.97);backdrop-filter:blur(14px);border-top:1px solid var(--b1);display:grid;grid-template-columns:1fr 1fr 84px 1fr 1fr;align-items:end;padding:6px 6px calc(8px + var(--sfb));height:calc(64px + var(--sfb))}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:150;background:rgba(20,20,20,.97);backdrop-filter:blur(14px);border-top:1px solid var(--b1);display:none;grid-template-columns:1fr 1fr 84px 1fr 1fr;align-items:end;padding:6px 6px calc(8px + var(--sfb));height:calc(64px + var(--sfb))}
 .tbtn{background:none;border:none;color:var(--m1);display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;font-size:.58rem;letter-spacing:.04em;transition:transform .09s ease,color .15s}
 .tbtn svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .tbtn:active{transform:scale(.9)}
 .tbtn.on{color:var(--ac)}
-.tcenter{display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;color:var(--m1);font-size:.58rem;letter-spacing:.04em;margin-top:-30px}
-.tcenter .tcircle{width:64px;height:64px;border-radius:50%;background:var(--ac);color:#000;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 5px var(--bg),0 6px 18px rgba(232,255,71,.28);transition:transform .09s ease}
-.tcenter svg{width:30px;height:30px;stroke:#000;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.tcenter:active .tcircle{transform:scale(.92)}
-.tcenter.on{color:var(--ac)}
+.lbtn{-webkit-appearance:none;appearance:none;background:transparent !important;border:0;box-shadow:none;padding:0;display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:-30px;color:var(--m1);font-size:.58rem;letter-spacing:.04em;line-height:1}
+.lbtn .lcirc{width:64px;height:64px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 5px var(--bg),0 6px 18px rgba(232,255,71,.28);transition:transform .09s ease}
+.lbtn .lcirc svg{width:30px;height:30px;stroke:#000;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.lbtn .llbl{display:block;background:transparent;color:var(--m1);padding:0}
+.lbtn.on .llbl{color:var(--ac);background:transparent}
+.lbtn:active .lcirc{transform:scale(.92)}
 .nav-prof{background:var(--s2);border:1px solid var(--b2);color:var(--m2);width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .nav-prof svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .nav-prof.on{border-color:var(--ac);color:var(--ac)}
@@ -1068,6 +1069,7 @@ auth.onAuthStateChanged(user=>{
     currentUser=user;
     document.getElementById('auth-screen').style.display='none';
     document.getElementById('app').style.display='block';
+    document.getElementById('tabbar').style.display='grid';
     const name=(user.displayName||user.email||'').split('@')[0].slice(0,8);
     const ub=document.getElementById('user-btn');if(ub)ub.textContent=name||'Out';
     loadUserData(user.uid);
@@ -1075,6 +1077,7 @@ auth.onAuthStateChanged(user=>{
     currentUser=null;
     document.getElementById('auth-screen').style.display='flex';
     document.getElementById('app').style.display='none';
+    document.getElementById('tabbar').style.display='none';
   }
 });
 
@@ -2908,7 +2911,7 @@ function saveEditEx(){
 <div class="tabbar" id="tabbar">
   <button class="tbtn" data-tab="history" onclick="go('history')"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>History</button>
   <button class="tbtn" data-tab="progress" onclick="go('progress')"><svg viewBox="0 0 24 24"><path d="M6 20V11M12 20V4M18 20v-6"/></svg>Progress</button>
-  <button class="tcenter on" data-tab="log" onclick="go('log')"><span class="tcircle"><svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg></span>Log</button>
+  <button class="lbtn on" data-tab="log" onclick="go('log')"><span class="lcirc"><svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg></span><span class="llbl">Log</span></button>
   <button class="tbtn" data-tab="streak" onclick="go('streak')"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Streak</button>
   <button class="tbtn" data-tab="manage" onclick="go('manage')"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Manage</button>
 </div>
