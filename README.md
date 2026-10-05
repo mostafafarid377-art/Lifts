@@ -22,13 +22,6 @@ LIFTS is a web-based workout tracking application that helps users log their wor
 * Firebase Firestore
 * Chart.js
 
-🌐 Live Demo
-
-Open LIFTS
-
-📸 Screenshots
-
-Add screenshots of the application here.
 
 🎯 Purpose
 
@@ -38,4 +31,4 @@ I built LIFTS to create a simple and practical way to record gym workouts and mo
 
 Mostafa Farid
 
-GitHub: @YOUR-GITHUB-USERNAME
+GitHub: mostafafarid377
