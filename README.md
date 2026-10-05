@@ -31,4 +31,4 @@ I built LIFTS to create a simple and practical way to record gym workouts and mo
 
 Mostafa Farid
 
-GitHub: mostafafarid377
+GitHub: mostafafarid377-art
