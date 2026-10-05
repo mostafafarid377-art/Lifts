@@ -967,7 +967,7 @@ const SEED={
 
 // ── Muscles ───────────────────────────────────────────
 const MUSCLES=[
-  {id:'chest',label:'Chest'},{id:'back',label:'Back'},{id:'shoulders',label:'Shoulders'},
+  {id:'chest',label:'Chest'},{id:'traps',label:'Traps'},{id:'lats',label:'Lats'},{id:'lowerback',label:'Lower Back'},{id:'frontdelts',label:'Front Delts'},{id:'sidedelts',label:'Side Delts'},{id:'reardelts',label:'Rear Delts'},
   {id:'biceps',label:'Biceps'},{id:'triceps',label:'Triceps'},{id:'quads',label:'Quads'},
   {id:'hamstrings',label:'Hamstrings'},{id:'glutes',label:'Glutes'},{id:'calves',label:'Calves'},{id:'abs',label:'Abs'}
 ];
@@ -1026,6 +1026,7 @@ async function loadUserData(uid){
       HIDDEN_MUSCLES = new Set(d.hiddenMuscles || []);
       SPLITS = d.splits ? JSON.parse(JSON.stringify(d.splits)) : [];
       activeSplitId = d.activeSplitId || null;
+      if(MSETS.back!==undefined){ if(MSETS.lats===undefined)MSETS.lats=MSETS.back; delete MSETS.back; }
       migrateDataShape();
     } else {
       // Brand new user — completely blank, no categories, no exercises
@@ -1620,7 +1621,8 @@ function buildBodyMap(counts,max){
       '<circle cx="44" cy="140" r="6" fill="'+BASE+'"/><circle cx="156" cy="140" r="6" fill="'+BASE+'"/>';
 
     const front=
-      sym('M67 46 L52 52 L50 70 L62 68 L71 52 Z','shoulders')+
+      sym('M67 46 L60 49 L58 69 L62 68 L71 52 Z','frontdelts')+
+      sym('M60 49 L52 52 L50 70 L58 69 Z','sidedelts')+
       sym('M72 51 Q86 48 99 53 L99 77 Q84 81 72 73 Z','chest')+
       sym('M52 72 L62 70 L58 98 L47 96 Z','biceps')+
       one('M89 80 L111 80 L109 117 L91 117 Z','abs')+
@@ -1628,11 +1630,14 @@ function buildBodyMap(counts,max){
       sym('M82 172 L95 172 L93 206 L85 206 Z','calves');
 
     const back=
-      sym('M67 46 L52 52 L50 70 L62 68 L71 52 Z','shoulders')+
-      one('M74 48 Q100 40 126 48 L120 102 L80 102 Z','back')+
+      sym('M67 46 L60 49 L58 69 L62 68 L71 52 Z','reardelts')+
+      sym('M60 49 L52 52 L50 70 L58 69 Z','sidedelts')+
+      sym('M73 54 L91 64 L99 84 L99 100 L81 100 Z','lats')+
+      one('M72 47 Q100 40 128 47 L108 62 L100 82 L92 62 Z','traps')+
+      one('M88 100 L112 100 L110 116 L90 116 Z','lowerback')+
       sym('M52 72 L62 70 L58 98 L47 96 Z','triceps')+
-      sym('M77 104 Q88 100 99 106 L99 130 Q88 134 77 126 Z','glutes')+
-      sym('M78 133 L99 133 L96 166 L81 166 Z','hamstrings')+
+      sym('M77 117 Q88 113 99 119 L99 139 Q88 143 77 135 Z','glutes')+
+      sym('M78 142 L99 142 L96 166 L81 166 Z','hamstrings')+
       sym('M82 172 L95 172 L93 206 L85 206 Z','calves');
 
     let svg='<svg viewBox="0 0 400 222" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Muscle map">';
