@@ -458,7 +458,8 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .nav-prof:active{transform:scale(.92)}
 .timer-bar{bottom:calc(64px + var(--sfb)) !important;padding-bottom:12px !important}
 .scr{padding-bottom:130px !important}
-.toast{bottom:calc(86px + var(--sfb)) !important}
+.toast{bottom:calc(86px + var(--sfb)) !important;opacity:0;visibility:hidden;transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .2s,visibility .2s}
+.toast.on{opacity:1;visibility:visible}
 
 
 /* BODY MAP */
@@ -520,7 +521,7 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 <div id="app">
   <nav class="nav">
     <div class="logo">LIFTS</div>
-    <button class="nav-prof" data-tab="profile" onclick="go('profile')" aria-label="Profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></button>
+    
   </nav>
   <div class="sync-bar" id="sync-bar">Syncing...</div>
   <div class="streak-banner" id="streak-banner">
@@ -2975,11 +2976,12 @@ function saveEditEx(){
 </script>
 <!-- BOTTOM TAB BAR -->
 <div class="tabbar" id="tabbar">
-  <button class="tbtn" data-tab="history" onclick="go('history')"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>History</button>
+  <button class="tbtn" data-tab="streak" onclick="go('streak')"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Streak</button>
   <button class="tbtn" data-tab="progress" onclick="go('progress')"><svg viewBox="0 0 24 24"><path d="M6 20V11M12 20V4M18 20v-6"/></svg>Progress</button>
   <button class="lbtn on" data-tab="log" onclick="go('log')"><span class="lcirc"><svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg></span><span class="llbl">Log</span></button>
-  <button class="tbtn" data-tab="streak" onclick="go('streak')"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Streak</button>
+  
   <button class="tbtn" data-tab="manage" onclick="go('manage')"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Manage</button>
+  <button class="tbtn" data-tab="profile" onclick="go('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Profile</button>
 </div>
 
 <!-- REST TIMER BAR -->
