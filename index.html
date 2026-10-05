@@ -439,6 +439,26 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .cal-day.rest-ok .cal-day-inner{background:var(--s2);color:var(--m1)}
 .cal-day.empty{opacity:0}
 
+
+/* ── BOTTOM TAB BAR ── */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:150;background:rgba(20,20,20,.97);backdrop-filter:blur(14px);border-top:1px solid var(--b1);display:grid;grid-template-columns:1fr 1fr 84px 1fr 1fr;align-items:end;padding:6px 6px calc(8px + var(--sfb));height:calc(64px + var(--sfb))}
+.tbtn{background:none;border:none;color:var(--m1);display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;font-size:.58rem;letter-spacing:.04em;transition:transform .09s ease,color .15s}
+.tbtn svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tbtn:active{transform:scale(.9)}
+.tbtn.on{color:var(--ac)}
+.tcenter{display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;color:var(--m1);font-size:.58rem;letter-spacing:.04em;margin-top:-30px}
+.tcenter .tcircle{width:64px;height:64px;border-radius:50%;background:var(--ac);color:#000;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 5px var(--bg),0 6px 18px rgba(232,255,71,.28);transition:transform .09s ease}
+.tcenter svg{width:30px;height:30px;stroke:#000;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tcenter:active .tcircle{transform:scale(.92)}
+.tcenter.on{color:var(--ac)}
+.nav-prof{background:var(--s2);border:1px solid var(--b2);color:var(--m2);width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.nav-prof svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav-prof.on{border-color:var(--ac);color:var(--ac)}
+.nav-prof:active{transform:scale(.92)}
+.timer-bar{bottom:calc(64px + var(--sfb)) !important;padding-bottom:12px !important}
+.scr{padding-bottom:130px !important}
+.toast{bottom:calc(86px + var(--sfb)) !important}
+
 /* MISC */
 .empty{text-align:center;padding:40px 18px;color:var(--m1);font-size:.7rem}
 .divider{height:1px;background:var(--b1);margin:20px 0}
@@ -492,14 +512,7 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 <div id="app">
   <nav class="nav">
     <div class="logo">LIFTS</div>
-    <div class="ntabs">
-      <button class="ntab on" onclick="go('log')">Log</button>
-      <button class="ntab" onclick="go('history')">History</button>
-      <button class="ntab" onclick="go('progress')">Progress</button>
-      <button class="ntab" onclick="go('streak')">Streak</button>
-      <button class="ntab" onclick="go('manage')">Manage</button>
-      <button class="ntab" onclick="go('profile')">Profile</button>
-    </div>
+    <button class="nav-prof" data-tab="profile" onclick="go('profile')" aria-label="Profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></button>
   </nav>
   <div class="sync-bar" id="sync-bar">Syncing...</div>
   <div class="streak-banner" id="streak-banner">
@@ -2170,9 +2183,9 @@ function downloadFile(filename,content,type){
 // ── NAV ──────────────────────────────────────────────
 function go(id){
   document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
-  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('[data-tab]').forEach(t=>t.classList.toggle('on',t.dataset.tab===id));
   document.getElementById('s-'+id).classList.add('on');
-  document.querySelector('.ntab[onclick="go(\''+id+'\')"]').classList.add('on');
+  window.scrollTo(0,0);
   if(id==='log'){buildCatPills();renderPicker();renderOnboarding();}
   if(id==='history')renderHistory();
   if(id==='progress'){buildProgSel();renderProgress();renderMuscleSets();}
@@ -2891,6 +2904,15 @@ function saveEditEx(){
   });
 })();
 </script>
+<!-- BOTTOM TAB BAR -->
+<div class="tabbar" id="tabbar">
+  <button class="tbtn" data-tab="history" onclick="go('history')"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>History</button>
+  <button class="tbtn" data-tab="progress" onclick="go('progress')"><svg viewBox="0 0 24 24"><path d="M6 20V11M12 20V4M18 20v-6"/></svg>Progress</button>
+  <button class="tcenter on" data-tab="log" onclick="go('log')"><span class="tcircle"><svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg></span>Log</button>
+  <button class="tbtn" data-tab="streak" onclick="go('streak')"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Streak</button>
+  <button class="tbtn" data-tab="manage" onclick="go('manage')"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Manage</button>
+</div>
+
 <!-- REST TIMER BAR -->
 <div class="timer-bar" id="timer-bar">
   <div class="timer-circle">
