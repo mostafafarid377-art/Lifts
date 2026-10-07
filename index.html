@@ -1873,7 +1873,7 @@ function renderSplits(){
   const row=document.createElement('div');row.className='m-chips';
   const activate=(id,label)=>{
     activeSplitId=id;
-    scheduleSave();renderSplits();buildCatPills();renderPicker();
+    scheduleSave();renderManage();buildCatPills();renderPicker();
     toast(id?'"'+label+'" activated ✓':'Showing all categories');
   };
   const mk=(label,on,fn,extra)=>{
@@ -1895,7 +1895,7 @@ function renderSplits(){
     db.addEventListener('click',()=>{
       if(!confirm('Delete split "'+active.label+'"?'))return;
       SPLITS=SPLITS.filter(x=>x.id!==active.id);activeSplitId=null;
-      scheduleSave();renderSplits();buildCatPills();renderPicker();toast('Split deleted');
+      scheduleSave();renderManage();buildCatPills();renderPicker();toast('Split deleted');
     });
     info.appendChild(t);info.appendChild(eb);info.appendChild(db);
     w.appendChild(info);
@@ -1944,7 +1944,8 @@ function saveSplit(){
   }
   scheduleSave();
   closeModal('split');
-  renderSplits();
+  renderManage();
+  buildCatPills();renderPicker();
   toast('Split saved ✓');
 }
 
