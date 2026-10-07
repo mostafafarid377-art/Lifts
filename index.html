@@ -1040,7 +1040,7 @@ let CATS=[...DC], EX=JSON.parse(JSON.stringify(DE)), DATA={};
 let MSETS={}; // manual, user-entered set counts per muscle id, e.g. {chest:10, biceps:6}
 let CUSTOM_MUSCLES=[]; // user-added muscles, e.g. [{id:'custom_forearms',label:'Forearms'}]
 let HIDDEN_MUSCLES=new Set(); // built-in muscle ids the user removed from their list
-const allMuscles=()=>[...MUSCLES.filter(m=>!HIDDEN_MUSCLES.has(m.id)),...CUSTOM_MUSCLES];
+const allMuscles=()=>[...MUSCLES];
 
 // DATA shape: DATA[exerciseName] = [ {date, cat, sets}, ... ]
 // One shared history per exercise (same weight/PR/prefill everywhere), but each
@@ -1348,6 +1348,7 @@ function bootApp(){
   step('buildProgSel',buildProgSel);
   step('renderMuscleSets',renderMuscleSets);
   step('renderOnboarding',renderOnboarding);
+  step('refreshOpenScreen',()=>{ const cur=document.querySelector('.scr.on'); if(cur) go(cur.id.replace('s-','')); });
 }
 
 // ── Helpers ──────────────────────────────────────────
@@ -1626,29 +1627,9 @@ function renderMuscleSets(){
       scheduleSave();renderMuscleSets();
     });
 
-    const del=document.createElement('button');del.className='msets-delbtn';del.textContent='✕';
-    del.title='Remove '+m.label;
-    del.addEventListener('click',()=>{
-      if(!confirm('Remove "'+m.label+'" from Sets by Muscle?'))return;
-      delete MSETS[m.id];
-      CUSTOM_MUSCLES=CUSTOM_MUSCLES.filter(cm=>cm.id!==m.id);
-      // built-in muscles (Chest, Back, etc.) can't be permanently deleted from the
-      // preset list, but hiding them is as simple as leaving their count at 0 —
-      // for a clean "remove" we track a hidden set of built-ins too:
-      if(MUSCLES.find(bm=>bm.id===m.id)) HIDDEN_MUSCLES.add(m.id);
-      scheduleSave();renderMuscleSets();
-    });
-
-    row.appendChild(label);row.appendChild(barbg);row.appendChild(minus);row.appendChild(countEl);row.appendChild(plus);row.appendChild(del);
+    row.appendChild(label);row.appendChild(barbg);row.appendChild(minus);row.appendChild(countEl);row.appendChild(plus);
     card.appendChild(row);
   });
-
-  const addBtn=document.createElement('button');addBtn.className='msets-addbtn';addBtn.textContent='+ Add Muscle';
-  addBtn.addEventListener('click',()=>{
-    const id=promptNewMuscle();
-    if(id){renderMuscleSets();}
-  });
-  card.appendChild(addBtn);
 
   wrap.appendChild(card);
 }
@@ -1669,7 +1650,7 @@ function bmLevel(count,max){
 function buildBodyMap(counts,max){
   const wrap=document.createElement('div');wrap.className='bodymap';
   try{
-    const col=id=>BM_COLORS[bmLevel(HIDDEN_MUSCLES.has(id)?0:(counts[id]||0),max)];
+    const col=id=>BM_COLORS[bmLevel(counts[id]||0,max)];
     const INERT='#2a2a2a', ST='#141414';
     let defs='', inert='', muscles='';
     ['f','b'].forEach(view=>{
@@ -1800,13 +1781,14 @@ function moveEx(catId,idx,dir){
 
 let mOpen=null;
 function renderManage(){
+  renderSplits();
   const w=document.getElementById('mlist');w.innerHTML='';
   if(!mOpen)mOpen=new Set(CATS.length?[CATS[0].id]:[]);
   const q=(document.getElementById('msearch')?.value||'').trim().toLowerCase();
   const activeSp=SPLITS.find(x=>x.id===activeSplitId);
   const visible=activeSp?CATS.filter(c=>activeSp.catIds.includes(c.id)):CATS;
-  if(!CATS.length){w.innerHTML='<div class="mempty">No categories yet — tap + New Category.</div>';renderSplits();return;}
-  if(!visible.length){w.innerHTML='<div class="mempty">This split has no categories yet — tap Edit above to add some.</div>';renderSplits();return;}
+  if(!CATS.length){w.innerHTML='<div class="mempty">No categories yet — tap + New Category.</div>';return;}
+  if(!visible.length){w.innerHTML='<div class="mempty">This split has no categories yet — tap Edit above to add some.</div>';return;}
   let shown=0;
   visible.forEach(cat=>{
     const all=EX[cat.id]||[];
@@ -1860,7 +1842,6 @@ function renderManage(){
     card.appendChild(body);w.appendChild(card);
   });
   if(q&&!shown)w.innerHTML='<div class="mempty">No exercises match "'+q.replace(/</g,'&lt;')+'"</div>';
-  renderSplits();
 }
 
 // ── SPLITS ───────────────────────────────────────────
