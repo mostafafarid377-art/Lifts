@@ -932,6 +932,8 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
     <label class="mflbl">Colour</label>
     <input type="color" id="cat-color" value="#a78bfa"
       style="width:100%;height:44px;padding:4px 8px;background:var(--s2);border:1px solid var(--b2);border-radius:2px;cursor:pointer;margin-top:6px">
+    <label class="mflbl" id="cat-splits-lbl">Add to splits</label>
+    <div class="catpills" id="cat-splitpills"></div>
     <div class="brow">
       <button class="btn bacc" onclick="saveCat()">Create</button>
       <button class="btn bgh" onclick="closeModal('cat')">Cancel</button>
@@ -1801,9 +1803,12 @@ function renderManage(){
   const w=document.getElementById('mlist');w.innerHTML='';
   if(!mOpen)mOpen=new Set(CATS.length?[CATS[0].id]:[]);
   const q=(document.getElementById('msearch')?.value||'').trim().toLowerCase();
+  const activeSp=SPLITS.find(x=>x.id===activeSplitId);
+  const visible=activeSp?CATS.filter(c=>activeSp.catIds.includes(c.id)):CATS;
   if(!CATS.length){w.innerHTML='<div class="mempty">No categories yet — tap + New Category.</div>';renderSplits();return;}
+  if(!visible.length){w.innerHTML='<div class="mempty">This split has no categories yet — tap Edit above to add some.</div>';renderSplits();return;}
   let shown=0;
-  CATS.forEach(cat=>{
+  visible.forEach(cat=>{
     const all=EX[cat.id]||[];
     const list=q?all.filter(n=>n.toLowerCase().includes(q)):all;
     if(q&&!list.length)return;
@@ -1944,10 +1949,30 @@ function saveSplit(){
 }
 
 // ── MODALS ───────────────────────────────────────────
+let newCatSplits=new Set();
+function renderNewCatSplitPills(){
+  const lbl=document.getElementById('cat-splits-lbl'),g=document.getElementById('cat-splitpills');
+  if(!lbl||!g)return;
+  g.innerHTML='';
+  const has=SPLITS.length>0;
+  lbl.style.display=has?'block':'none';g.style.display=has?'flex':'none';
+  SPLITS.forEach(sp=>{
+    const on=newCatSplits.has(sp.id);
+    const b=document.createElement('button');b.className='catpill'+(on?' on':'');b.textContent=sp.label;
+    if(on){b.style.background='var(--ac)';b.style.borderColor='var(--ac)';b.style.color='#000';}
+    b.addEventListener('click',()=>{
+      if(newCatSplits.has(sp.id))newCatSplits.delete(sp.id);else newCatSplits.add(sp.id);
+      renderNewCatSplitPills();
+    });
+    g.appendChild(b);
+  });
+}
 function openModal(type){
   if(type==='newcat'){
     document.getElementById('cat-name').value='';
     document.getElementById('cat-color').value='#a78bfa';
+    newCatSplits=new Set(activeSplitId?[activeSplitId]:[]);
+    renderNewCatSplitPills();
     document.getElementById('modal-cat').classList.add('on');
     setTimeout(()=>document.getElementById('cat-name').focus(),220);
   }
@@ -1987,6 +2012,8 @@ function saveCat(){
   const color=document.getElementById('cat-color').value;
   const id='cat_'+Date.now();
   CATS.push({id,label,color});EX[id]=[];
+  newCatSplits.forEach(sid=>{const sp=SPLITS.find(x=>x.id===sid);if(sp&&!sp.catIds.includes(id))sp.catIds.push(id);});
+  if(mOpen)mOpen.add(id);
   scheduleSave();closeModal('cat');renderManage();buildCatPills();renderPicker();renderOnboarding();
   toast('"'+label+'" created ✓');
 }
