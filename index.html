@@ -468,6 +468,87 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .bm-legend{display:flex;align-items:center;justify-content:flex-end;gap:5px;font-size:.55rem;color:var(--m1);margin:4px 0 8px}
 .bm-sw{width:12px;height:12px;border-radius:3px}
 
+
+/* PROGRESS: compact Sets by Muscle */
+.msets-card{padding:14px;border-radius:14px;margin-bottom:14px}
+.msets-title{font-size:.85rem;margin-bottom:6px}
+.msets-row{gap:6px;padding:5px 0}
+.msets-label{width:78px;font-size:.66rem}
+.msets-barbg{height:6px;border-radius:3px}
+.msets-barfill{border-radius:3px}
+.msets-count{min-width:46px;font-size:.66rem}
+.msets-stepbtn{width:20px;height:20px;border-radius:6px;font-size:.8rem;box-shadow:0 2px 0 #000}
+.msets-stepbtn:active{transform:translateY(2px);box-shadow:0 0 0 #000}
+.msets-delbtn{font-size:.6rem;padding:2px 3px}
+.msets-addbtn{margin-top:8px;padding:7px;font-size:.55rem;border-radius:8px;box-shadow:0 2px 0 #000}
+.bodymap svg{max-height:300px}
+
+/* MANAGE */
+.m-slabel{font-size:.55rem;color:var(--m1);letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px}
+.m-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.m-chips::-webkit-scrollbar{display:none}
+.m-chip{flex-shrink:0;min-height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--b2);background:var(--sf);color:var(--m2);font-size:.66rem;letter-spacing:.06em;text-transform:uppercase;transition:transform .09s ease}
+.m-chip:active{transform:scale(.95)}
+.m-chip.on{background:var(--ac);color:#000;border-color:var(--ac);font-weight:600}
+.m-chip.add{border-style:dashed;color:var(--ac)}
+.m-splitinfo{display:flex;align-items:center;gap:8px;background:var(--sf);border:1px solid var(--b1);border-radius:14px;padding:8px 8px 8px 14px;margin-bottom:14px}
+.m-splitinfo .t{flex:1;font-size:.58rem;color:var(--m2);letter-spacing:.04em;line-height:1.4}
+.m-sbtn{min-height:36px;padding:0 14px;border-radius:18px;border:1px solid var(--b2);background:var(--s2);color:var(--m2);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase}
+.m-sbtn.del{color:var(--rd)}
+.m-sbtn:active{transform:scale(.95)}
+.m-search{border-radius:14px;min-height:44px;margin-bottom:12px}
+.mcard{background:var(--sf);border:1px solid var(--b1);border-radius:16px;margin-bottom:10px;overflow:hidden}
+.mchead{width:100%;display:flex;align-items:center;gap:12px;min-height:58px;padding:0 16px 0 0;background:none;border:none;color:var(--tx);text-align:left}
+.mstrip{width:6px;align-self:stretch;flex-shrink:0}
+.mcname{flex:1;font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:.08em}
+.mccount{font-size:.6rem;color:var(--m1)}
+.mchev{font-size:.62rem;color:var(--m1);transition:transform .15s}
+.mcard.open .mchev{transform:rotate(180deg)}
+.mcbody{display:none;padding:0 12px 12px 18px;border-top:1px solid var(--b1)}
+.mcard.open .mcbody{display:block}
+.mrow2{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;background:none;border:none;border-bottom:1px solid var(--b1);color:var(--tx);text-align:left;font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;padding:0 4px}
+.mrow2 .nm{flex:1}
+.mrow2 .pen{color:var(--m1);font-size:.8rem}
+.mrow2:active{background:var(--s2)}
+.maddrow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}
+.maddbtn{flex:1;min-height:44px;border-radius:12px;border:1px dashed var(--b2);background:none;color:var(--ac);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase}
+.mdelcat{min-height:44px;padding:0 12px;background:none;border:none;color:var(--m1);font-size:.56rem;letter-spacing:.08em;text-transform:uppercase}
+.mempty{text-align:center;color:var(--m1);font-size:.68rem;padding:26px 10px}
+
+/* PROFILE: weight card */
+.wcard{background:var(--sf);border:1px solid var(--b1);border-radius:18px;padding:16px}
+.wc-top{display:flex;align-items:center;gap:14px}
+.wc-title{flex:1;font-size:.78rem;color:var(--m2)}
+.wc-goal{font-size:.78rem;color:#ff9d3d}
+.wc-log{background:none;border:none;color:var(--ac);font-size:.8rem;min-height:40px;padding:0 4px}
+.wc-main{display:flex;align-items:baseline;gap:8px;margin-top:6px}
+.wc-val{font-family:'Bebas Neue',sans-serif;font-size:3.2rem;letter-spacing:.02em;line-height:1}
+.wc-unit{font-size:.8rem;color:var(--m2)}
+.wc-delta{font-size:.78rem;font-weight:600}
+.wc-date{margin-left:auto;font-size:.66rem;color:var(--m1)}
+.wc-goalline{font-size:.7rem;color:#ff9d3d;margin-top:6px}
+.wc-chart{display:block;width:100%;height:auto;margin-top:10px}
+.wc-ax{fill:var(--m1);font-size:9px;font-family:'IBM Plex Mono',monospace}
+.wc-all{display:block;margin:6px 0 0 auto;background:none;border:none;color:var(--ac);font-size:.72rem;min-height:40px;padding:0 4px}
+.wc-empty{text-align:center;color:var(--m1);font-size:.7rem;padding:18px 6px}
+/* PROFILE: log weight sheet */
+.wl-date{font-size:.7rem;color:var(--m2);margin-bottom:12px}
+.wl-main{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:12px}
+.wl-round{width:56px;height:56px;border-radius:50%;background:var(--s2);border:1px solid var(--b2);color:var(--tx);font-size:1.5rem;display:flex;align-items:center;justify-content:center}
+.wl-round:active{transform:scale(.92)}
+.wl-val{font-family:'Bebas Neue',sans-serif;font-size:4rem;line-height:1;min-width:120px;text-align:center}
+.wl-u{font-family:'IBM Plex Mono',monospace;font-size:.8rem;color:var(--m2);margin-left:4px}
+.wl-chips{display:flex;justify-content:center;gap:8px;margin-bottom:14px}
+.wl-chip{min-height:40px;padding:0 14px;border-radius:20px;background:var(--s2);border:1px solid var(--b2);color:var(--tx);font-size:.72rem}
+.wl-chip:active{transform:scale(.93)}
+.wl-range{width:100%;margin:2px 0 10px;accent-color:var(--ac)}
+.wl-rt{font-size:.62rem;color:var(--m1);letter-spacing:.14em;text-transform:uppercase;margin:18px 0 6px}
+.wl-row{display:flex;align-items:center;gap:10px;min-height:52px;border-bottom:1px solid var(--b1)}
+.wl-row .d{flex:1;font-size:.72rem;color:var(--m2)}
+.wl-row .v{font-family:'Bebas Neue',sans-serif;font-size:1.3rem}
+.wl-row .x{width:40px;height:40px;border-radius:10px;background:var(--s2);border:1px solid var(--b2);color:var(--rd);font-size:.8rem}
+.wl-all{display:block;margin:8px 0 0 auto;background:none;border:none;color:var(--ac);font-size:.72rem;min-height:40px}
+
 /* MISC */
 .empty{text-align:center;padding:40px 18px;color:var(--m1);font-size:.7rem}
 .divider{height:1px;background:var(--b1);margin:20px 0}
@@ -658,40 +739,9 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
     </div>
 
     <div class="prof-section">
-      <div class="prof-section-title">Body Stats</div>
-
-      <div class="body-stats-grid">
-        <div class="bstat-card">
-          <button class="bstat-edit" onclick="openBodyModal('weight')">Edit</button>
-          <div class="bstat-num" id="bstat-weight">—</div>
-          <div class="bstat-lbl">Body Weight</div>
-          <div class="bstat-sub" id="bstat-weight-unit">kg</div>
-        </div>
-        <div class="bstat-card">
-          <button class="bstat-edit" onclick="openBodyModal('bf')">Edit</button>
-          <div class="bstat-num" id="bstat-bf">—</div>
-          <div class="bstat-lbl">Body Fat %</div>
-          <div class="bstat-sub" id="bstat-bf-date"></div>
-        </div>
-      </div>
-
-      <!-- Weight goal bar -->
-      <div class="body-goal-bar" id="weight-goal-bar" style="display:none">
-        <div class="body-goal-row">
-          <span class="body-goal-label">Weight Goal</span>
-          <span class="body-goal-pct" id="weight-goal-pct">0%</span>
-        </div>
-        <div class="bgoal-track"><div class="bgoal-fill" id="weight-goal-fill" style="width:0%"></div></div>
-        <div class="bgoal-meta">
-          <span id="weight-goal-current">—</span>
-          <span id="weight-goal-target">Goal: —</span>
-        </div>
-      </div>
-
-      <button class="btn bgh" onclick="openWeightGoalModal()" style="width:100%;margin-top:10px">🎯 Set Weight Goal</button>
-
-      <!-- Recent log -->
-      <div id="body-log-list" style="margin-top:8px"></div>
+      <div class="prof-section-title">Body Weight</div>
+      <div class="wcard" id="wcard"></div>
+      <button class="btn bgh" onclick="openWeightGoalModal()" style="width:100%;margin-top:10px;min-height:46px">🎯 Set Weight Goal</button>
     </div>
 
     <div class="prof-section">
@@ -734,15 +784,12 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
   <!-- MANAGE -->
   <div class="scr" id="s-manage">
     <div class="ptitle">Manage</div>
-    <div class="psub">Add · delete · reorder</div>
+    <div class="psub">Exercises · categories · splits</div>
+    <div class="m-slabel">Split — filters the Log tab</div>
+    <div id="m-splits"></div>
+    <input class="field m-search" id="msearch" placeholder="Search exercises..." oninput="renderManage()">
     <div id="mlist"></div>
-    <div class="divider"></div>
-    <button class="btn bgh" style="width:100%" onclick="openModal('newcat')">+ New Category</button>
-
-    <div class="divider"></div>
-    <div class="psub" style="margin-bottom:10px">Splits — group categories, activate to filter Log</div>
-    <div id="splits-list"></div>
-    <button class="btn bgh" style="width:100%;margin-top:8px" onclick="openSplitModal()">+ New Split</button>
+    <button class="btn bgh" style="width:100%;min-height:46px;margin-top:4px" onclick="openModal('newcat')">+ New Category</button>
   </div>
 </div>
 
@@ -759,6 +806,13 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
     <label class="mflbl">Categories (select all that apply)</label>
     <div class="catpills" id="editex-catpills" style="margin-top:6px"></div>
 
+    <label class="mflbl">Order &amp; delete (in <span id="editex-fromcat">this category</span>)</label>
+    <div class="brow" style="margin-top:6px">
+      <button class="btn bgh" onclick="moveInEdit(-1)">▲ Up</button>
+      <button class="btn bgh" onclick="moveInEdit(1)">▼ Down</button>
+      <button class="btn brd" onclick="deleteFromEdit()">Delete</button>
+    </div>
+
     <div class="brow">
       <button class="btn bacc" onclick="saveEditEx()">Save</button>
       <button class="btn bgh" onclick="closeModal('editex')">Cancel</button>
@@ -766,24 +820,31 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
   </div>
 </div>
 
-<!-- BODY STATS MODAL -->
+<!-- LOG BODY WEIGHT SHEET -->
 <div class="moverlay" id="modal-body" onclick="if(event.target===this)closeModal('body')">
   <div class="mpanel">
-    <div class="mtitle" id="body-modal-title">Log Weight</div>
-
-    <label class="mflbl" style="margin-top:0">Today's Value</label>
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
-      <input class="field" id="body-val" type="number" step="0.1" min="0" placeholder="e.g. 80" style="margin-bottom:0;flex:1">
-      <div id="body-unit-toggle" style="display:flex;gap:4px">
-        <button class="ubtn on" id="body-ukg" onclick="setBodyUnit('kg')">kg</button>
-        <button class="ubtn" id="body-ulb" onclick="setBodyUnit('lb')">lb</button>
-      </div>
+    <div class="mtitle">Log body weight</div>
+    <div class="wl-date" id="wl-date"></div>
+    <div class="wl-main">
+      <button class="wl-round" onclick="wlStep(-0.1)">−</button>
+      <div class="wl-val"><span id="wl-num">0.0</span><span class="wl-u" id="wl-unit">kg</span></div>
+      <button class="wl-round" onclick="wlStep(0.1)">+</button>
     </div>
-
-    <div class="brow">
-      <button class="btn bacc" onclick="saveBodyStat()">Save</button>
-      <button class="btn bgh" onclick="closeModal('body')">Cancel</button>
+    <div class="wl-chips">
+      <button class="wl-chip" onclick="wlStep(-1)">−1</button>
+      <button class="wl-chip" onclick="wlStep(-0.5)">−0.5</button>
+      <button class="wl-chip" onclick="wlStep(0.5)">+0.5</button>
+      <button class="wl-chip" onclick="wlStep(1)">+1</button>
     </div>
+    <input type="range" class="wl-range" id="wl-range" min="30" max="200" step="0.1" oninput="wlSet(parseFloat(this.value),true)">
+    <div style="display:flex;gap:4px;justify-content:center;margin:6px 0 14px">
+      <button class="ubtn on" id="body-ukg" onclick="setBodyUnit('kg')">kg</button>
+      <button class="ubtn" id="body-ulb" onclick="setBodyUnit('lb')">lb</button>
+    </div>
+    <button class="btn bacc" style="width:100%;min-height:50px;font-size:.75rem" onclick="saveBodyStat()">Save</button>
+    <div class="wl-rt">Recent weigh-ins</div>
+    <div id="wl-recent"></div>
+    <button class="wl-all" id="wl-allbtn" onclick="wlToggleAll()">All weigh-ins ›</button>
   </div>
 </div>
 
@@ -1735,51 +1796,46 @@ function moveEx(catId,idx,dir){
   scheduleSave();renderManage();renderPicker();
 }
 
+let mOpen=null;
 function renderManage(){
   const w=document.getElementById('mlist');w.innerHTML='';
+  if(!mOpen)mOpen=new Set(CATS.length?[CATS[0].id]:[]);
+  const q=(document.getElementById('msearch')?.value||'').trim().toLowerCase();
+  if(!CATS.length){w.innerHTML='<div class="mempty">No categories yet — tap + New Category.</div>';renderSplits();return;}
+  let shown=0;
   CATS.forEach(cat=>{
-    const list=EX[cat.id]||[];
-    const sec=document.createElement('div');sec.className='mcat';
-    const hdr=document.createElement('div');hdr.className='mcathdr';
-    const dot=document.createElement('span');dot.className='dot';dot.style.background=cat.color;
-    const lbl=document.createElement('span');lbl.className='mcatlbl';lbl.style.color=cat.color;lbl.textContent=cat.label;
-    const cnt=document.createElement('span');cnt.className='mcatcnt';cnt.textContent=list.length+' exercise'+(list.length!==1?'s':'');
-    const dcb=document.createElement('button');dcb.className='delcatbtn';dcb.textContent='Delete';
-    dcb.addEventListener('click',()=>{
-      if(!confirm('Delete category "'+cat.label+'"?'))return;
-      CATS=CATS.filter(c=>c.id!==cat.id);delete EX[cat.id];
-      SPLITS.forEach(s=>{s.catIds=s.catIds.filter(id=>id!==cat.id);});
-      scheduleSave();renderManage();buildCatPills();renderPicker();toast('Category deleted');
+    const all=EX[cat.id]||[];
+    const list=q?all.filter(n=>n.toLowerCase().includes(q)):all;
+    if(q&&!list.length)return;
+    shown++;
+    const open=q?true:mOpen.has(cat.id);
+    const card=document.createElement('div');card.className='mcard'+(open?' open':'');
+
+    const head=document.createElement('button');head.className='mchead';
+    const strip=document.createElement('span');strip.className='mstrip';strip.style.background=cat.color;
+    const nm=document.createElement('span');nm.className='mcname';nm.textContent=cat.label;nm.style.color=cat.color;
+    const cnt=document.createElement('span');cnt.className='mccount';cnt.textContent=all.length+' exercise'+(all.length!==1?'s':'');
+    const chev=document.createElement('span');chev.className='mchev';chev.textContent='▼';
+    head.appendChild(strip);head.appendChild(nm);head.appendChild(cnt);head.appendChild(chev);
+    head.addEventListener('click',()=>{
+      if(q)return;
+      if(mOpen.has(cat.id))mOpen.delete(cat.id);else mOpen.add(cat.id);
+      card.classList.toggle('open',mOpen.has(cat.id));
     });
-    hdr.appendChild(dot);hdr.appendChild(lbl);hdr.appendChild(cnt);hdr.appendChild(dcb);
-    sec.appendChild(hdr);
-    const rows=document.createElement('div');
-    list.forEach((name,idx)=>{
-      const r=document.createElement('div');r.className='mrow';
-      const ud=document.createElement('div');ud.className='mupdown';
-      const ub=document.createElement('button');ub.className='mud';ub.textContent='▲';ub.disabled=(idx===0);
-      ub.addEventListener('click',e=>{e.stopPropagation();moveEx(cat.id,idx,-1);});
-      const db2=document.createElement('button');db2.className='mud';db2.textContent='▼';db2.disabled=(idx===list.length-1);
-      db2.addEventListener('click',e=>{e.stopPropagation();moveEx(cat.id,idx,1);});
-      ud.appendChild(ub);ud.appendChild(db2);
-      const nm=document.createElement('span');nm.className='mname';nm.textContent=name;
-      // Edit button (rename + add to category)
-      const eb=document.createElement('button');eb.className='ex-edit-btn';eb.textContent='✎';eb.title='Rename / Add to category';
-      eb.addEventListener('click',e=>{
-        e.stopPropagation();
-        openEditExModal(name,cat.id);
-      });
-      const db=document.createElement('button');db.className='mdel';db.textContent='✕';
-      db.addEventListener('click',e=>{
-        e.stopPropagation();e.preventDefault();
-        if(!confirm('Remove "'+name+'" from '+cat.label+'?'))return;
-        EX[cat.id]=(EX[cat.id]||[]).filter(n=>n!==name);
-        scheduleSave();renderManage();renderPicker();toast('Removed');
-      });
-      r.appendChild(ud);r.appendChild(nm);r.appendChild(eb);r.appendChild(db);rows.appendChild(r);
+    card.appendChild(head);
+
+    const body=document.createElement('div');body.className='mcbody';
+    list.forEach(name=>{
+      const r=document.createElement('button');r.className='mrow2';
+      const n=document.createElement('span');n.className='nm';n.textContent=name;
+      const pen=document.createElement('span');pen.className='pen';pen.textContent='✎';
+      r.appendChild(n);r.appendChild(pen);
+      r.addEventListener('click',()=>openEditExModal(name,cat.id));
+      body.appendChild(r);
     });
-    const ab=document.createElement('button');ab.className='addbtn';
-    ab.innerHTML='<span style="font-size:.9rem;line-height:1">+</span> Add exercise';
+    if(!list.length){const e=document.createElement('div');e.className='mempty';e.style.padding='14px 6px';e.textContent='No exercises yet';body.appendChild(e);}
+    const foot=document.createElement('div');foot.className='maddrow';
+    const ab=document.createElement('button');ab.className='maddbtn';ab.textContent='+ Add exercise';
     ab.addEventListener('click',()=>{
       document.getElementById('ex-mtitle').textContent='Add to '+cat.label;
       modalCats=new Set([cat.id]);
@@ -1788,8 +1844,17 @@ function renderManage(){
       document.getElementById('modal-ex').classList.add('on');
       setTimeout(()=>document.getElementById('ex-name').focus(),220);
     });
-    rows.appendChild(ab);sec.appendChild(rows);w.appendChild(sec);
+    const dc=document.createElement('button');dc.className='mdelcat';dc.textContent='Delete category';
+    dc.addEventListener('click',()=>{
+      if(!confirm('Delete category "'+cat.label+'"?'))return;
+      CATS=CATS.filter(c=>c.id!==cat.id);delete EX[cat.id];
+      SPLITS.forEach(sp=>{sp.catIds=sp.catIds.filter(id=>id!==cat.id);});
+      scheduleSave();renderManage();buildCatPills();renderPicker();toast('Category deleted');
+    });
+    foot.appendChild(ab);foot.appendChild(dc);body.appendChild(foot);
+    card.appendChild(body);w.appendChild(card);
   });
+  if(q&&!shown)w.innerHTML='<div class="mempty">No exercises match "'+q.replace(/</g,'&lt;')+'"</div>';
   renderSplits();
 }
 
@@ -1798,49 +1863,42 @@ let editSplitId=null;
 let splitCats=new Set();
 
 function renderSplits(){
-  const w=document.getElementById('splits-list');if(!w)return;
+  const w=document.getElementById('m-splits');if(!w)return;
   w.innerHTML='';
-  if(!SPLITS.length){
-    w.innerHTML='<div class="empty">No splits yet — group your categories into named splits like "Upper Body" or "Push Day".</div>';
-    return;
-  }
-  SPLITS.forEach(split=>{
-    const isActive=split.id===activeSplitId;
-    const card=document.createElement('div');card.className='split-card'+(isActive?' active':'');
-
-    const info=document.createElement('div');info.className='split-info';
-    const name=document.createElement('div');name.className='split-name';name.textContent=split.label;
-    const catsTxt=split.catIds.map(id=>{const c=CATS.find(x=>x.id===id);return c?c.label:null;}).filter(Boolean).join(' · ')||'No categories';
-    const cats=document.createElement('div');cats.className='split-cats';cats.textContent=catsTxt;
-    info.appendChild(name);info.appendChild(cats);
-
-    const btns=document.createElement('div');btns.className='split-btns';
-
-    if(isActive){
-      const badge=document.createElement('span');badge.className='split-active-badge';badge.textContent='ACTIVE';
-      btns.appendChild(badge);
-    }
-    const actBtn=document.createElement('button');actBtn.className='split-btn activate';
-    actBtn.textContent=isActive?'Deactivate':'Activate';
-    actBtn.addEventListener('click',()=>{
-      activeSplitId=isActive?null:split.id;
-      scheduleSave();renderSplits();buildCatPills();renderPicker();
-      toast(isActive?'Showing all categories':'"'+split.label+'" activated ✓');
-    });
-    const editBtn=document.createElement('button');editBtn.className='split-btn';editBtn.textContent='Edit';
-    editBtn.addEventListener('click',()=>openSplitModal(split.id));
-    const delBtn=document.createElement('button');delBtn.className='split-btn del';delBtn.textContent='Delete';
-    delBtn.addEventListener('click',()=>{
-      if(!confirm('Delete split "'+split.label+'"?'))return;
-      SPLITS=SPLITS.filter(s=>s.id!==split.id);
-      if(activeSplitId===split.id)activeSplitId=null;
+  const row=document.createElement('div');row.className='m-chips';
+  const activate=(id,label)=>{
+    activeSplitId=id;
+    scheduleSave();renderSplits();buildCatPills();renderPicker();
+    toast(id?'"'+label+'" activated ✓':'Showing all categories');
+  };
+  const mk=(label,on,fn,extra)=>{
+    const b=document.createElement('button');b.className='m-chip'+(on?' on':'')+(extra?' '+extra:'');
+    b.textContent=label;b.addEventListener('click',fn);row.appendChild(b);
+  };
+  mk('All',!activeSplitId,()=>activate(null));
+  SPLITS.forEach(sp=>mk(sp.label,sp.id===activeSplitId,()=>activate(sp.id===activeSplitId?null:sp.id,sp.label)));
+  mk('+ Split',false,()=>openSplitModal(),'add');
+  w.appendChild(row);
+  const active=SPLITS.find(x=>x.id===activeSplitId);
+  if(active){
+    const info=document.createElement('div');info.className='m-splitinfo';
+    const t=document.createElement('div');t.className='t';
+    t.textContent=active.catIds.map(id=>{const c=CATS.find(x=>x.id===id);return c?c.label:null;}).filter(Boolean).join(' · ')||'No categories';
+    const eb=document.createElement('button');eb.className='m-sbtn';eb.textContent='Edit';
+    eb.addEventListener('click',()=>openSplitModal(active.id));
+    const db=document.createElement('button');db.className='m-sbtn del';db.textContent='Delete';
+    db.addEventListener('click',()=>{
+      if(!confirm('Delete split "'+active.label+'"?'))return;
+      SPLITS=SPLITS.filter(x=>x.id!==active.id);activeSplitId=null;
       scheduleSave();renderSplits();buildCatPills();renderPicker();toast('Split deleted');
     });
-    btns.appendChild(editBtn);btns.appendChild(actBtn);btns.appendChild(delBtn);
-
-    card.appendChild(info);card.appendChild(btns);
-    w.appendChild(card);
-  });
+    info.appendChild(t);info.appendChild(eb);info.appendChild(db);
+    w.appendChild(info);
+  } else if(!SPLITS.length){
+    const hint=document.createElement('div');hint.className='mempty';hint.style.padding='4px 6px 12px';
+    hint.textContent='Group categories into splits like "Upper Body" to filter your Log.';
+    w.appendChild(hint);
+  }
 }
 
 function openSplitModal(id){
@@ -2551,33 +2609,66 @@ function deleteGoal(){
 let bodyStatType = 'weight'; // 'weight' or 'bf'
 let bodyUnit = 'kg';
 
-function openBodyModal(type){
-  bodyStatType = type;
-  const isBF = type === 'bf';
-  document.getElementById('body-modal-title').textContent = isBF ? 'Log Body Fat %' : 'Log Body Weight';
-  document.getElementById('body-unit-toggle').style.display = isBF ? 'none' : 'flex';
-  document.getElementById('body-val').value = '';
-  document.getElementById('body-val').placeholder = isBF ? 'e.g. 18.5' : 'e.g. 80';
-
-  if(!isBF){
-    const goal = DATA._weightGoal;
-    bodyUnit = goal ? goal.unit : 'kg';
-    setBodyUnit(bodyUnit);
-    // pre-fill latest weight
-    const logs = DATA._bodyWeight || [];
-    if(logs.length) document.getElementById('body-val').value = logs[logs.length-1].value;
-  }
-
-  document.getElementById('modal-body').classList.add('on');
-  setTimeout(()=>document.getElementById('body-val').focus(), 220);
+let wlValue=70, wlShowAll=false;
+const KG_LB=2.20462;
+const conv=(v,from,to)=>from===to?v:(to==='lb'?v*KG_LB:v/KG_LB);
+function fmtDay(d){
+  const x=new Date(d+'T00:00:00');
+  return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][x.getDay()]+' '+x.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][x.getMonth()];
 }
+function openBodyModal(type,showAll){
+  const logs=(DATA._bodyWeight||[]);
+  const latest=logs.slice(-1)[0];
+  const goal=DATA._weightGoal;
+  bodyUnit=latest?(latest.unit||'kg'):(goal?goal.unit:'kg');
+  wlValue=latest?latest.value:(bodyUnit==='kg'?70:154);
+  wlShowAll=!!showAll;
+  document.getElementById('wl-date').textContent='Today, '+fmtDay(new Date().toISOString().slice(0,10));
+  setBodyUnit(bodyUnit,true);
+  wlRenderRecent();
+  document.getElementById('modal-body').classList.add('on');
+}
+function wlSet(v,fromSlider){
+  if(isNaN(v))return;
+  const lo=bodyUnit==='kg'?20:44, hi=bodyUnit==='kg'?300:660;
+  wlValue=Math.round(Math.max(lo,Math.min(hi,v))*10)/10;
+  document.getElementById('wl-num').textContent=wlValue.toFixed(1);
+  if(!fromSlider)document.getElementById('wl-range').value=wlValue;
+}
+function wlStep(d){ wlSet(wlValue+d); }
+function wlRenderRecent(){
+  const wrap=document.getElementById('wl-recent');if(!wrap)return;
+  wrap.innerHTML='';
+  const logs=(DATA._bodyWeight||[]).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  const list=wlShowAll?logs:logs.slice(0,3);
+  if(!logs.length){wrap.innerHTML='<div class="wc-empty">No weigh-ins yet</div>';}
+  list.forEach(e=>{
+    const row=document.createElement('div');row.className='wl-row';
+    const d=document.createElement('span');d.className='d';d.textContent=fmtDay(e.date);
+    const v=document.createElement('span');v.className='v';v.textContent=e.value+' '+(e.unit||'kg');
+    const x=document.createElement('button');x.className='x';x.textContent='✕';
+    x.addEventListener('click',()=>{
+      DATA._bodyWeight=(DATA._bodyWeight||[]).filter(z=>z.date!==e.date);
+      scheduleSave();renderBodyStats();wlRenderRecent();toast('Removed');
+    });
+    row.appendChild(d);row.appendChild(v);row.appendChild(x);wrap.appendChild(row);
+  });
+  const btn=document.getElementById('wl-allbtn');
+  if(btn){btn.style.display=logs.length>3?'block':'none';btn.textContent=wlShowAll?'Show recent ‹':'All weigh-ins ›';}
+}
+function wlToggleAll(){ wlShowAll=!wlShowAll; wlRenderRecent(); }
 
-function setBodyUnit(u){
-  bodyUnit = u;
-  const kg = document.getElementById('body-ukg');
-  const lb = document.getElementById('body-ulb');
-  if(kg) kg.classList.toggle('on', u==='kg');
-  if(lb) lb.classList.toggle('on', u==='lb');
+function setBodyUnit(u,initial){
+  const prev=bodyUnit;
+  bodyUnit=u;
+  const kg=document.getElementById('body-ukg'),lb=document.getElementById('body-ulb');
+  if(kg)kg.classList.toggle('on',u==='kg');
+  if(lb)lb.classList.toggle('on',u==='lb');
+  const rng=document.getElementById('wl-range');
+  if(rng){rng.min=u==='kg'?30:66;rng.max=u==='kg'?200:440;}
+  const unitEl=document.getElementById('wl-unit');if(unitEl)unitEl.textContent=u;
+  if(!initial&&prev!==u)wlValue=Math.round(conv(wlValue,prev,u)*10)/10;
+  wlSet(wlValue);
 }
 
 // ── WEIGHT GOAL (ruler picker) ─────────────────────────
@@ -2691,26 +2782,14 @@ function saveWeightGoal(){
 }
 
 function saveBodyStat(){
-  const val = parseFloat(document.getElementById('body-val').value);
-  if(!val || val <= 0){ toast('Enter a value'); return; }
-
-  const today = new Date().toISOString().slice(0,10);
-
-  if(bodyStatType === 'bf'){
-    if(!DATA._bodyFat) DATA._bodyFat = [];
-    // replace if same date
-    const idx = DATA._bodyFat.findIndex(e=>e.date===today);
-    const entry = {date:today, value:val};
-    if(idx>=0) DATA._bodyFat[idx]=entry; else DATA._bodyFat.push(entry);
-    DATA._bodyFat.sort((a,b)=>a.date.localeCompare(b.date));
-  } else {
-    if(!DATA._bodyWeight) DATA._bodyWeight = [];
-    const idx = DATA._bodyWeight.findIndex(e=>e.date===today);
-    const entry = {date:today, value:val, unit:bodyUnit};
-    if(idx>=0) DATA._bodyWeight[idx]=entry; else DATA._bodyWeight.push(entry);
-    DATA._bodyWeight.sort((a,b)=>a.date.localeCompare(b.date));
-  }
-
+  const val=wlValue;
+  if(!val||val<=0){toast('Enter a weight');return;}
+  const today=new Date().toISOString().slice(0,10);
+  if(!DATA._bodyWeight)DATA._bodyWeight=[];
+  const idx=DATA._bodyWeight.findIndex(e=>e.date===today);
+  const entry={date:today,value:val,unit:bodyUnit};
+  if(idx>=0)DATA._bodyWeight[idx]=entry; else DATA._bodyWeight.push(entry);
+  DATA._bodyWeight.sort((a,b)=>a.date.localeCompare(b.date));
   scheduleSave();
   closeModal('body');
   renderBodyStats();
@@ -2757,97 +2836,97 @@ function checkExerciseGoalCelebration(name){
   showCelebration('GOAL REACHED!', name+' — '+goal.weight+(goal.unit||'kg')+'×'+goal.reps);
 }
 
-function renderBodyStats(){
-  // Weight
-  const wLogs = DATA._bodyWeight || [];
-  const latest = wLogs.slice(-1)[0];
-  const wEl = document.getElementById('bstat-weight');
-  const wUnitEl = document.getElementById('bstat-weight-unit');
-  if(wEl) wEl.textContent = latest ? latest.value : '—';
-  if(wUnitEl) wUnitEl.textContent = latest ? latest.unit : 'kg';
-
-  // BF
-  const bfLogs = DATA._bodyFat || [];
-  const latestBF = bfLogs.slice(-1)[0];
-  const bfEl = document.getElementById('bstat-bf');
-  const bfDateEl = document.getElementById('bstat-bf-date');
-  if(bfEl) bfEl.textContent = latestBF ? latestBF.value+'%' : '—';
-  if(bfDateEl) bfDateEl.textContent = latestBF ? fmtDate(latestBF.date) : '';
-
-  // Weight goal bar
-  const goal = DATA._weightGoal;
-  const goalBar = document.getElementById('weight-goal-bar');
-  if(goalBar){
-    if(goal && latest){
-      goalBar.style.display = 'block';
-      const start = wLogs[0]?.value || latest.value;
-      const current = latest.value;
-      const target = goal.value;
-      // progress toward goal (works for both gain and loss)
-      const totalChange = Math.abs(target - start);
-      const currentChange = Math.abs(current - start);
-      const pct = totalChange > 0 ? Math.min(100, Math.round(currentChange/totalChange*100)) : 100;
-      const done = (target <= start && current <= target) || (target >= start && current >= target);
-
-      const fill = document.getElementById('weight-goal-fill');
-      const pctEl = document.getElementById('weight-goal-pct');
-      const curEl = document.getElementById('weight-goal-current');
-      const tgtEl = document.getElementById('weight-goal-target');
-
-      if(fill){ fill.style.width = pct+'%'; fill.className = 'bgoal-fill'+(done?' done':''); }
-      if(pctEl) pctEl.textContent = pct+'%';
-      if(curEl) curEl.textContent = 'Current: '+current+' '+(latest.unit||'kg');
-      if(tgtEl) tgtEl.textContent = 'Goal: '+target+' '+(goal.unit||'kg');
-    } else {
-      goalBar.style.display = 'none';
+function weightChartSVG(logs,goal,unit){
+  const W=340,H=160,pl=34,pr=12,pt=10,pb=24;
+  const pts=logs.map(l=>({date:l.date,v:Math.round(conv(l.value,l.unit||'kg',unit)*10)/10}));
+  const gv=goal?Math.round(conv(goal.value,goal.unit||'kg',unit)*10)/10:null;
+  const vals=pts.map(p=>p.v);if(gv!==null)vals.push(gv);
+  let mn=Math.min(...vals),mx=Math.max(...vals);
+  if(mx-mn<1){mn-=.5;mx+=.5;}
+  const raw=(mx-mn)/3;
+  const step=[0.5,1,2,5,10,20,50].find(x=>x>=raw)||50;
+  const lo=Math.floor(mn/step)*step, hi=Math.ceil(mx/step)*step;
+  const t0=new Date(pts[0].date).getTime(), t1=new Date(pts[pts.length-1].date).getTime();
+  const span=t1-t0;
+  const X=d=>span>0?pl+((new Date(d).getTime()-t0)/span)*(W-pl-pr):(pl+(W-pl-pr)/2);
+  const Y=v=>pt+(hi-v)/(hi-lo)*(H-pt-pb);
+  const fmt=v=>Number.isInteger(v)?String(v):v.toFixed(1);
+  let g='';
+  for(let v=lo;v<=hi+1e-9;v+=step){
+    g+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="#2a2a2a" stroke-width="1" stroke-dasharray="3 3"/>'
+      +'<text class="wc-ax" x="'+(pl-6)+'" y="'+(Y(v)+3)+'" text-anchor="end">'+fmt(v)+'</text>';
+  }
+  const mons=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let labeled=0;
+  if(span>0){
+    const start=new Date(pts[0].date);
+    let c=new Date(start.getFullYear(),start.getMonth()+1,1);
+    while(c.getTime()<=t1){
+      const x=X(c.toISOString().slice(0,10));
+      g+='<text class="wc-ax" x="'+x+'" y="'+(H-6)+'" text-anchor="middle">'+mons[c.getMonth()]+'</text>';
+      labeled++;
+      c=new Date(c.getFullYear(),c.getMonth()+1,1);
     }
   }
+  if(!labeled){
+    const lm=new Date(pts[pts.length-1].date);
+    g+='<text class="wc-ax" x="'+X(pts[pts.length-1].date)+'" y="'+(H-6)+'" text-anchor="middle">'+mons[lm.getMonth()]+'</text>';
+  }
+  let goalSvg='';
+  if(gv!==null){
+    goalSvg+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+Y(gv)+'" y2="'+Y(gv)+'" stroke="#ff9d3d" stroke-width="1.5" stroke-dasharray="6 4"/>'
+      +'<text class="wc-ax" style="fill:#ff9d3d" x="'+(W-pr-2)+'" y="'+(Y(gv)-4)+'" text-anchor="end">'+fmt(gv)+'</text>';
+  }
+  const line=pts.map((p,i)=>(i?'L':'M')+X(p.date).toFixed(1)+' '+Y(p.v).toFixed(1)).join(' ');
+  const last=pts[pts.length-1];
+  const area=pts.length>1?line+' L'+X(last.date).toFixed(1)+' '+(H-pb)+' L'+X(pts[0].date).toFixed(1)+' '+(H-pb)+' Z':'';
+  return '<svg class="wc-chart" viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">'
+    +'<defs><linearGradient id="wcgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e8ff47" stop-opacity=".28"/><stop offset="1" stop-color="#e8ff47" stop-opacity="0"/></linearGradient></defs>'
+    +g
+    +(area?'<path d="'+area+'" fill="url(#wcgrad)"/>':'')
+    +(pts.length>1?'<path d="'+line+'" fill="none" stroke="#e8ff47" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>':'')
+    +goalSvg
+    +'<circle cx="'+X(last.date)+'" cy="'+Y(last.v)+'" r="4.5" fill="#e8ff47"/>'
+    +'</svg>';
+}
 
-  // Recent log (last 5 entries combined)
-  const logList = document.getElementById('body-log-list');
-  if(!logList) return;
-  logList.innerHTML = '';
-
-  // merge weight + bf logs sorted by date descending
-  const allLogs = [
-    ...wLogs.map(e=>({...e, type:'weight'})),
-    ...bfLogs.map(e=>({...e, type:'bf'}))
-  ].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8);
-
-  if(!allLogs.length) return;
-
-  const wrap = document.createElement('div');
-  wrap.className = 'body-log-list';
-  allLogs.forEach(entry=>{
-    const row = document.createElement('div');
-    row.className = 'body-log-row';
-    const left = document.createElement('div');
-    const dateEl = document.createElement('div');
-    dateEl.className = 'body-log-date';
-    dateEl.textContent = fmtDate(entry.date)+' · '+(entry.type==='weight'?'Weight':'Body Fat');
-    const valEl = document.createElement('div');
-    valEl.className = 'body-log-val';
-    valEl.textContent = entry.type==='weight'
-      ? entry.value+' '+(entry.unit||'kg')
-      : entry.value+'%';
-    left.appendChild(dateEl);
-    left.appendChild(valEl);
-    const del = document.createElement('button');
-    del.className = 'body-log-del';
-    del.textContent = '✕';
-    del.addEventListener('click',()=>{
-      if(entry.type==='weight'){
-        DATA._bodyWeight=(DATA._bodyWeight||[]).filter(e=>e.date!==entry.date);
-      } else {
-        DATA._bodyFat=(DATA._bodyFat||[]).filter(e=>e.date!==entry.date);
-      }
-      scheduleSave();renderBodyStats();toast('Removed');
-    });
-    row.appendChild(left);
-    row.appendChild(del);
-    wrap.appendChild(row);
-  });
-  logList.appendChild(wrap);
+function renderBodyStats(){
+  const card=document.getElementById('wcard');if(!card)return;
+  const logs=(DATA._bodyWeight||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const goal=DATA._weightGoal;
+  if(!logs.length){
+    card.innerHTML='<div class="wc-top"><span class="wc-title">Body weight</span>'
+      +(goal?'<span class="wc-goal">◎ '+goal.value+'</span>':'')
+      +'<button class="wc-log" onclick="openBodyModal(\'weight\')">+ Log</button></div>'
+      +'<div class="wc-empty">No weigh-ins yet — tap + Log to add your first one.</div>';
+    return;
+  }
+  const latest=logs[logs.length-1];
+  const unit=latest.unit||'kg';
+  const prev=logs.length>1?logs[logs.length-2]:null;
+  const gv=goal?Math.round(conv(goal.value,goal.unit||'kg',unit)*10)/10:null;
+  let html='<div class="wc-top"><span class="wc-title">Body weight</span>'
+    +(gv!==null?'<span class="wc-goal">◎ '+gv+'</span>':'')
+    +'<button class="wc-log" onclick="openBodyModal(\'weight\')">+ Log</button></div>';
+  let delta='';
+  if(prev){
+    const d=Math.round((latest.value-conv(prev.value,prev.unit||'kg',unit))*10)/10;
+    if(d!==0){
+      const away=gv!==null?(Math.abs(latest.value-gv)>Math.abs(latest.value-d-gv)):false;
+      const clr=gv===null?'var(--m2)':(away?'var(--rd)':'var(--ac)');
+      delta='<span class="wc-delta" style="color:'+clr+'">'+(d>0?'↑':'↓')+' '+Math.abs(d)+'</span>';
+    }
+  }
+  html+='<div class="wc-main"><span class="wc-val">'+latest.value+'</span><span class="wc-unit">'+unit+'</span>'+delta
+    +'<span class="wc-date">'+fmtDay(latest.date)+'</span></div>';
+  if(gv!==null){
+    const diff=Math.round((latest.value-gv)*10)/10;
+    const txt=diff>0?Math.abs(diff)+' '+unit+' to lose':diff<0?Math.abs(diff)+' '+unit+' to gain':'goal reached 🎉';
+    html+='<div class="wc-goalline">◎ Goal '+gv+' '+unit+' · '+txt+'</div>';
+  }
+  html+=weightChartSVG(logs,goal,unit);
+  html+='<button class="wc-all" onclick="openBodyModal(\'weight\',true)">All weigh-ins ›</button>';
+  card.innerHTML=html;
 }
 
 
@@ -2855,17 +2934,34 @@ function renderBodyStats(){
 let editExOrigName = '';
 let editExCats = new Set();
 
+let editExFromCat=null;
 function openEditExModal(name, fromCatId){
   editExOrigName = name;
-  // find all cats this exercise is currently in
+  editExFromCat = fromCatId||null;
   editExCats = new Set();
   CATS.forEach(cat=>{
     if((EX[cat.id]||[]).includes(name)) editExCats.add(cat.id);
   });
   document.getElementById('editex-name').value = name;
+  const fc=document.getElementById('editex-fromcat');
+  if(fc)fc.textContent=catLabel(fromCatId)||'this category';
   renderEditExCatPills();
   document.getElementById('modal-editex').classList.add('on');
-  setTimeout(()=>document.getElementById('editex-name').focus(), 220);
+}
+function moveInEdit(dir){
+  const list=EX[editExFromCat]||[];
+  const idx=list.indexOf(editExOrigName);
+  if(idx<0)return;
+  if(idx+dir<0||idx+dir>=list.length){toast(dir<0?'Already first':'Already last');return;}
+  moveEx(editExFromCat,idx,dir);
+  toast(dir<0?'Moved up':'Moved down');
+}
+function deleteFromEdit(){
+  const cat=catById(editExFromCat);
+  if(!cat)return;
+  if(!confirm('Remove "'+editExOrigName+'" from '+cat.label+'?'))return;
+  EX[cat.id]=(EX[cat.id]||[]).filter(n=>n!==editExOrigName);
+  scheduleSave();closeModal('editex');renderManage();renderPicker();toast('Removed');
 }
 
 // Prompts for a new custom muscle name, adds it to CUSTOM_MUSCLES if new, returns its id (or null if cancelled)
@@ -2919,14 +3015,16 @@ function saveEditEx(){
     }
   }
 
-  // Update EX: remove old name from all cats, add new name to selected cats
+  // Update EX in place so the exercise keeps its position in each category
   CATS.forEach(cat=>{
-    // remove old name
-    EX[cat.id] = (EX[cat.id]||[]).filter(n=>n!==oldName);
-    // add new name if selected
+    const list=EX[cat.id]||[];
+    const idx=list.indexOf(oldName);
     if(editExCats.has(cat.id)){
-      EX[cat.id].push(newName);
+      if(idx>=0)list[idx]=newName; else list.push(newName);
+    } else if(idx>=0){
+      list.splice(idx,1);
     }
+    EX[cat.id]=list;
   });
 
   // Rename workout DATA if name changed
