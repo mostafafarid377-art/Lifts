@@ -1358,8 +1358,42 @@ const catLabel = id=>catById(id)?.label||id;
 const primCat  = name=>{for(const c of CATS)if((EX[c.id]||[]).includes(name))return c.id;return CATS[0]?.id||'other';};
 const allNames = ()=>[...new Set(CATS.flatMap(c=>EX[c.id]||[]))].sort();
 const fmtDate  = d=>{if(!d)return'';const[,m,dy]=d.split('-');return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+ +dy;};
-const getPR    = sessions=>{let pr=null;sessions.forEach(s=>(s.sets||[]).forEach(set=>{if(!pr||set.weight>pr.weight||(set.weight===pr.weight&&set.reps>pr.reps))pr={...set,date:s.date};}));return pr;};
-const bestSet  = sess=>(sess.sets&&sess.sets.length)?sess.sets.reduce((b,s)=>s.weight>b.weight?s:b,sess.sets[0]):{weight:0,reps:0,unit:'kg'};
+// ── UNIT NORMALIZATION (BEGIN) ───────────────────────
+// Stored weights are NEVER converted. Everything that compares / sorts / divides
+// weights goes through these helpers so kg and lb are always compared in kg.
+// Missing / unknown unit => 'kg' (the app's historical default).
+const KG_PER_LB=0.45359237;
+const WEIGHT_EPS_KG=0.01; // 10 g — absorbs rounding like 66.14 lb vs 30 kg, far below any real plate increment
+const unitOf=u=>(typeof u==='string'&&/^lbs?$/i.test(u.trim()))?'lb':'kg';
+function toKg(weight,unit='kg'){
+  const w=Number(weight);
+  if(!isFinite(w))return 0;
+  return unitOf(unit)==='lb'?w*KG_PER_LB:w;
+}
+function fromKg(weight,unit='kg'){
+  const w=Number(weight);
+  if(!isFinite(w))return 0;
+  return unitOf(unit)==='lb'?w/KG_PER_LB:w;
+}
+// Convert between units; returns the value untouched when units already match (no float noise).
+function convertWeight(w,from,to){
+  return unitOf(from)===unitOf(to)?Number(w):fromKg(toKg(w,from),to);
+}
+// -1 / 0 / 1 : is weight A lighter / equal / heavier than weight B (unit-safe, tolerance-aware)
+function compareWeights(aW,aU,bW,bU){
+  const d=toKg(aW,aU)-toKg(bW,bU);
+  return Math.abs(d)<=WEIGHT_EPS_KG?0:(d>0?1:-1);
+}
+// -1 / 0 / 1 : is set A worse / equal / better than set B (weight first, reps as tie-breaker)
+function compareSets(a,b){
+  const c=compareWeights(a.weight,a.unit,b.weight,b.unit);
+  if(c!==0)return c;
+  const ra=Number(a.reps)||0, rb=Number(b.reps)||0;
+  return ra===rb?0:(ra>rb?1:-1);
+}
+// ── UNIT NORMALIZATION (END) ─────────────────────────
+const getPR    = sessions=>{let pr=null;sessions.forEach(s=>(s.sets||[]).forEach(set=>{if(!pr||compareSets(set,pr)>0)pr={...set,unit:unitOf(set.unit),date:s.date};}));return pr;};
+const bestSet  = sess=>(sess.sets&&sess.sets.length)?sess.sets.reduce((b,s)=>compareSets(s,b)>0?s:b,sess.sets[0]):{weight:0,reps:0,unit:'kg'};
 
 let toastTimer=null;
 function toast(msg){
@@ -1479,7 +1513,7 @@ function selectEx(name,catId){
     // so weight/reps are always consistent no matter which tab you logged from.
     const last=sessionsFor(name).slice(-1)[0];
     if(last){
-      last.sets.forEach(s=>sets.push({w:String(s.weight),r:String(s.reps),u:s.unit||unit}));
+      last.sets.forEach(s=>sets.push({w:String(s.weight),r:String(s.reps),u:unitOf(s.unit)}));
       if(last.sets[0])setUnit(last.sets[0].unit||'kg');
     }else sets.push({w:'',r:'',u:unit});
     renderSets();
@@ -1572,7 +1606,7 @@ function renderHistory(){
     sessions.slice().reverse().forEach(s=>{
       const blk=document.createElement('div');blk.className='sblk';
       const chips=s.sets.map(set=>{
-        const isPR=pr&&set.weight===pr.weight&&set.reps===pr.reps&&s.date===pr.date;
+        const isPR=pr&&s.date===pr.date&&set.reps===pr.reps&&compareWeights(set.weight,set.unit,pr.weight,pr.unit)===0;
         return'<span class="chip">'+set.weight+(set.unit||'kg')+' × '+set.reps+(isPR?'<span class="prbadge">PR</span>':'')+'</span>';
       }).join('');
       blk.innerHTML='<div class="sdate">'+fmtDate(s.date)+' <span style="color:var(--m1);font-size:.55rem">· '+catLabel(s.cat)+'</span></div><div class="schips">'+chips+'</div>';
@@ -1702,7 +1736,8 @@ function renderProgress(){
   const pr=getPR(sessions);
   const latest=bestSet(sessions[sessions.length-1]);
   const first=bestSet(sessions[0]);
-  const imp=sessions.length>1?((latest.weight-first.weight)/first.weight*100).toFixed(1):null;
+  const latestKg=toKg(latest.weight,latest.unit), firstKg=toKg(first.weight,first.unit);
+  const imp=(sessions.length>1&&firstKg>0)?((latestKg-firstKg)/firstKg*100).toFixed(1):null;
   renderGoal(name);
   ps.innerHTML='<div class="sgrid">'
     +'<div class="sbox"><div class="slbl">PR Weight</div><div class="sval">'+(pr?pr.weight:'—')+'</div><div class="sunit">'+(pr?pr.unit:'')+'</div></div>'
@@ -1711,8 +1746,10 @@ function renderProgress(){
     +'<div class="sval" style="font-size:'+(imp!==null?'1.3rem':'1.5rem')+';color:'+(imp===null?'inherit':+imp>=0?'var(--ac)':'var(--rd)')+'">'+
     (imp!==null?Math.abs(imp)+'%':'—')+'</div><div class="sunit">best set wt</div></div></div>';
   if(sessions.length>=2){
-    const pts=sessions.map(s=>({date:s.date,w:bestSet(s).weight}));
-    pc.innerHTML='<div class="cbox"><div class="ctitle">Best Set Weight Per Session</div><div id="cwrap" style="position:relative;height:140px"></div></div>';
+    // chart every session in ONE unit (the unit of the most recent best set) so mixed kg/lb points are comparable
+    const chartUnit=unitOf(latest.unit);
+    const pts=sessions.map(s=>{const b=bestSet(s);return{date:s.date,w:Math.round(convertWeight(b.weight,b.unit,chartUnit)*100)/100};});
+    pc.innerHTML='<div class="cbox"><div class="ctitle">Best Set Weight Per Session ('+chartUnit+')</div><div id="cwrap" style="position:relative;height:140px"></div></div>';
     drawChart(pts);
   }else pc.innerHTML='<div class="empty" style="padding:14px">Log 2+ sessions to see chart</div>';
   const sd=document.createElement('div');sd.className='cbox';
@@ -1729,7 +1766,7 @@ function renderProgress(){
       if(!DATA[name].length)delete DATA[name];
       scheduleSave();renderProgress();renderHistory();buildProgSel();renderMuscleSets();toast('Removed');
     });
-    const isPR=pr&&bestSet(s).weight===pr.weight&&s.date===pr.date;
+    const isPR=pr&&s.date===pr.date&&(()=>{const b=bestSet(s);return compareWeights(b.weight,b.unit,pr.weight,pr.unit)===0;})();
     row.appendChild(dt);row.appendChild(catTag);row.appendChild(chips);
     if(isPR){const pb=document.createElement('span');pb.className='prbadge';pb.style.flexShrink='0';pb.textContent='PR';row.appendChild(pb);}
     row.appendChild(db);sd.appendChild(row);
@@ -2546,9 +2583,11 @@ function renderGoal(name){
     box.appendChild(target);
 
     // Progress bar based on weight
-    const currentW = pr ? pr.weight : 0;
-    const pct = Math.min(100, Math.round((currentW / goal.weight) * 100));
-    const done = pct >= 100;
+    // compare in kg so a 30 kg goal vs a 70 lb PR (and vice-versa) is correct
+    const goalKg = toKg(goal.weight, goal.unit);
+    const currentKg = pr ? toKg(pr.weight, pr.unit) : 0;
+    const done = goalKg > 0 && currentKg >= goalKg - WEIGHT_EPS_KG;
+    const pct = done ? 100 : (goalKg > 0 ? Math.min(99, Math.round((currentKg / goalKg) * 100)) : 0);
 
     const barWrap = document.createElement('div');
     barWrap.className = 'goal-bar-wrap';
@@ -2620,7 +2659,7 @@ let bodyUnit = 'kg';
 
 let wlValue=70, wlShowAll=false;
 const KG_LB=2.20462;
-const conv=(v,from,to)=>from===to?v:(to==='lb'?v*KG_LB:v/KG_LB);
+const conv=(v,from,to)=>convertWeight(v,from,to); // delegates to the central kg/lb converter (exact 0.45359237 factor)
 function fmtDay(d){
   const x=new Date(d+'T00:00:00');
   return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][x.getDay()]+' '+x.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][x.getMonth()];
@@ -2723,8 +2762,8 @@ function openWeightGoalModal(){
     const pad=track.parentElement.offsetWidth/2 - wgTickW/2;
     track.style.paddingLeft=pad+'px';
     track.style.paddingRight=pad+'px';
-    const startVal=existing?existing.value:wgCurrentWeight;
-    const startIdx=Math.round((startVal-wgMin)/wgStep);
+    const startVal=existing?convertWeight(existing.value,existing.unit,wgUnit):wgCurrentWeight;
+    const startIdx=Math.max(0,Math.min(count,Math.round((startVal-wgMin)/wgStep)));
     track.scrollLeft=startIdx*wgTickW;
     wgUpdate(wgMin+startIdx*wgStep,startIdx);
   });
@@ -2837,7 +2876,7 @@ function checkExerciseGoalCelebration(name){
   const goal=getGoal(name);
   if(!goal||goal.celebrated)return;
   const sessions=sessionsFor(name);
-  const hit=sessions.some(s=>(s.sets||[]).some(set=>set.weight>=goal.weight&&set.reps>=goal.reps));
+  const hit=sessions.some(s=>(s.sets||[]).some(set=>compareWeights(set.weight,set.unit,goal.weight,goal.unit)>=0&&set.reps>=goal.reps));
   if(!hit)return;
 
   goal.celebrated=true;
