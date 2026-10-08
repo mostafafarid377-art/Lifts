@@ -441,8 +441,8 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 
 
 /* ── BOTTOM TAB BAR ── */
-.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:150;background:rgba(20,20,20,.97);backdrop-filter:blur(14px);border-top:1px solid var(--b1);display:none;grid-template-columns:1fr 1fr 84px 1fr 1fr;align-items:end;padding:6px 6px calc(8px + var(--sfb));height:calc(64px + var(--sfb))}
-.tbtn{background:none;border:none;color:var(--m1);display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;font-size:.58rem;letter-spacing:.04em;transition:transform .09s ease,color .15s}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:150;background:rgba(20,20,20,.97);backdrop-filter:blur(14px);border-top:1px solid var(--b1);display:none;grid-template-columns:1fr 1fr 1fr 84px 1fr 1fr 1fr;align-items:end;padding:6px 6px calc(8px + var(--sfb));height:calc(64px + var(--sfb))}
+.tbtn{background:none;border:none;color:var(--m1);display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;font-size:.54rem;letter-spacing:0;min-width:0;transition:transform .09s ease,color .15s}
 .tbtn svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .tbtn:active{transform:scale(.9)}
 .tbtn.on{color:var(--ac)}
@@ -554,6 +554,93 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .divider{height:1px;background:var(--b1);margin:20px 0}
 .toast{position:fixed;bottom:calc(22px + var(--sfb));left:50%;transform:translateX(-50%) translateY(80px);background:var(--ac);color:#000;font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;padding:9px 20px;border-radius:2px;z-index:999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;pointer-events:none;font-weight:600}
 .toast.on{transform:translateX(-50%) translateY(0)}
+
+/* ══ PHASE 1: START · PLAN · ACTIVE WORKOUT ══ */
+.wk-banner{display:none;position:sticky;top:calc(54px + var(--sft));z-index:99;align-items:center;gap:10px;padding:9px 14px;background:#1a1f00;border-bottom:1px solid var(--ac);cursor:pointer}
+.wk-banner.show{display:flex}
+.wk-dot{width:8px;height:8px;border-radius:50%;background:var(--ac);flex-shrink:0;animation:wkpulse 1.4s ease-in-out infinite}
+@keyframes wkpulse{50%{opacity:.25}}
+.wk-bn{flex:1;min-width:0;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wk-banner .wk-clock{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:.06em;color:var(--ac)}
+.wk-open{font-size:.55rem;color:var(--m2);letter-spacing:.1em;text-transform:uppercase}
+
+.st-card{background:var(--sf);border:1px solid var(--b1);border-radius:16px;padding:18px;margin-bottom:12px}
+.st-card.active{border-color:var(--ac);background:#14180a}
+.st-lbl{font-size:.55rem;color:var(--m1);letter-spacing:.22em;text-transform:uppercase;margin-bottom:6px}
+.st-name{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.05em;line-height:1.05}
+.st-meta{font-size:.66rem;color:var(--m2);margin:4px 0 14px;line-height:1.5}
+.st-prev{font-size:.58rem;color:var(--m1);margin:-8px 0 14px;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-clock{font-family:'Bebas Neue',sans-serif;font-size:3.2rem;color:var(--ac);letter-spacing:.04em;line-height:1;margin:8px 0 4px}
+.st-big{width:100%;min-height:52px;font-size:.78rem;letter-spacing:.16em}
+.st-sec{width:100%;min-height:44px;margin-top:10px}
+.st-hint{font-size:.62rem;color:var(--m1);text-align:center;margin-top:14px;line-height:1.6}
+
+.pl-day{background:var(--sf);border:1px solid var(--b1);border-radius:14px;padding:12px 14px;margin-bottom:8px}
+.pl-day.today{border-color:var(--ac)}
+.pl-dhead{display:flex;align-items:center;gap:8px;min-height:34px}
+.pl-dname{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;letter-spacing:.07em}
+.pl-today{font-size:.48rem;background:var(--ac);color:#000;padding:2px 6px;border-radius:2px;font-weight:700;letter-spacing:.1em}
+.pl-sp{flex:1}
+.pl-dcount{font-size:.6rem;color:var(--m1);letter-spacing:.04em}
+.pl-rest{font-size:.58rem;color:var(--m2);background:var(--s2);border:1px solid var(--b2);padding:3px 9px;border-radius:20px;letter-spacing:.08em;text-transform:uppercase}
+.pl-add{background:var(--s2);border:1px solid var(--b2);color:var(--ac);width:32px;height:32px;border-radius:50%;font-size:1.1rem;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0}
+.pl-add:active{transform:scale(.9)}
+.pl-rt{display:flex;align-items:center;gap:10px;background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:10px;margin-top:8px}
+.pl-ico{width:34px;height:34px;border-radius:9px;background:var(--ac);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pl-ico svg{width:18px;height:18px;stroke:#000;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.pl-rtinfo{flex:1;min-width:0;cursor:pointer}
+.pl-rtname{font-size:.74rem;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-rtsub{font-size:.58rem;color:var(--m1);margin-top:2px}
+.pl-ib{background:none;border:1px solid var(--b2);color:var(--m2);width:30px;height:30px;border-radius:6px;font-size:.78rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0}
+.pl-ib:active{border-color:var(--ac);color:var(--ac)}
+.pl-ib.x:active{border-color:var(--rd);color:var(--rd)}
+.pl-rcard{display:flex;align-items:center;gap:10px;background:var(--sf);border:1px solid var(--b1);border-radius:12px;padding:12px;margin-bottom:6px}
+.pl-rcard .pl-rtinfo{cursor:default}
+
+.rt-ex{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--s2);border:1px solid var(--b1);border-radius:8px;margin-bottom:4px}
+.rt-exname{flex:1;min-width:0;font-size:.7rem;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rt-empty{font-size:.64rem;color:var(--m1);padding:10px 2px}
+.rt-days{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.rt-day{font-size:.6rem;letter-spacing:.06em;text-transform:uppercase;padding:8px 0;width:calc((100% - 30px)/7);border:1px solid var(--b2);background:var(--sf);color:var(--m2);border-radius:6px;text-align:center}
+.rt-day.on{background:var(--ac);border-color:var(--ac);color:#000;font-weight:700}
+.xp-cat{font-family:'Bebas Neue',sans-serif;letter-spacing:.1em;font-size:1rem;margin:14px 0 6px}
+.xp-item{display:flex;align-items:center;justify-content:space-between;width:100%;padding:11px 12px;background:var(--sf);border:1px solid var(--b1);border-radius:6px;margin-bottom:3px;color:var(--tx);font-size:.7rem;letter-spacing:.04em;text-transform:uppercase;text-align:left}
+.xp-item:active{background:var(--s2)}
+.xp-item.has{opacity:.45}
+.xp-st{color:var(--ac);font-size:.62rem}
+.dp-item{display:flex;align-items:center;justify-content:space-between;width:100%;padding:13px 12px;background:var(--sf);border:1px solid var(--b1);border-radius:8px;margin-bottom:4px;color:var(--tx);font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;text-align:left}
+.dp-item:active{background:var(--s2)}
+.dp-item.has{opacity:.4}
+.dp-sub{font-size:.55rem;color:var(--m1);margin-top:2px;text-transform:none;letter-spacing:.02em}
+.fin-text{font-size:.74rem;color:var(--m2);line-height:1.6;margin-bottom:6px}
+
+.wk-top{text-align:left;margin-bottom:14px}
+.wk-clock-big{font-family:'Bebas Neue',sans-serif;font-size:3.4rem;color:var(--ac);letter-spacing:.04em;line-height:1;margin:2px 0 4px}
+.wk-ex{background:var(--sf);border:1px solid var(--b1);border-radius:14px;padding:12px 14px;margin-bottom:8px}
+.wk-exhead{display:flex;align-items:center;gap:9px;cursor:pointer;min-height:30px}
+.wk-exname{flex:1;min-width:0;font-size:.76rem;letter-spacing:.05em;text-transform:uppercase}
+.wk-excount{font-size:.58rem;color:var(--m1)}
+.wk-set{display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid var(--b1);font-size:.8rem}
+.wk-set:first-of-type{margin-top:8px}
+.wk-setn{width:18px;text-align:center;font-size:.6rem;color:var(--m1)}
+.wk-addset{width:100%;margin-top:10px;padding:10px;background:var(--s2);border:1px dashed var(--b2);border-radius:8px;color:var(--ac);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase}
+.wk-addset:active{transform:scale(.98)}
+.wk-finish{width:100%;min-height:54px;margin-top:16px;font-size:.8rem;letter-spacing:.18em}
+
+.wk-summary{display:none;position:fixed;inset:0;z-index:400;background:var(--bg);align-items:center;justify-content:center;padding:24px}
+.wk-summary.on{display:flex}
+.wk-sum-inner{width:100%;max-width:380px;text-align:center}
+.wk-sum-flag{font-size:.62rem;letter-spacing:.3em;color:var(--ac);margin-bottom:12px}
+.wk-sum-name{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;letter-spacing:.06em}
+.wk-sum-dur{font-family:'Bebas Neue',sans-serif;font-size:4.2rem;color:var(--ac);letter-spacing:.04em;line-height:1;margin:6px 0 20px}
+.wk-sum-stats{display:flex;gap:2px;margin-bottom:24px}
+.wk-sum-stats>div{flex:1;background:var(--sf);border:1px solid var(--b1);padding:14px 8px}
+.wk-sum-stats b{display:block;font-family:'Bebas Neue',sans-serif;font-size:2rem;font-weight:400;letter-spacing:.04em}
+.wk-sum-stats span{font-size:.52rem;color:var(--m1);letter-spacing:.2em;text-transform:uppercase}
+.wk-sum-inner .btn{width:100%;min-height:50px;margin-bottom:10px}
+
+.hw-dur{display:flex;justify-content:space-between;font-size:.66rem;color:var(--m2);padding:2px 0 10px;border-bottom:1px solid var(--b1);margin-bottom:10px}
+.hw-dur b{color:var(--ac);font-weight:500}
 </style>
 </head>
 <body ontouchstart="">
@@ -605,6 +692,9 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
     
   </nav>
   <div class="sync-bar" id="sync-bar">Syncing...</div>
+  <div class="wk-banner" id="wk-banner" onclick="go('workout')">
+    <span class="wk-dot"></span><span class="wk-bn" id="wk-bn">Workout</span><span class="wk-clock">00:00:00</span><span class="wk-open">Open ›</span>
+  </div>
   <div class="streak-banner" id="streak-banner">
     <div class="streak-fire" id="streak-fire">🔥</div>
     <div class="streak-info">
@@ -622,8 +712,39 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
     <div class="sstat"><div class="sstat-val" id="stat-rest">0</div><div class="sstat-lbl">Rest Days</div></div>
   </div>
 
+  <!-- START (home) -->
+  <div class="scr on" id="s-start">
+    <div class="ptitle">Start</div>
+    <div class="psub" id="st-sub">Today</div>
+    <div id="st-body"></div>
+  </div>
+
+  <!-- PLAN (weekly schedule + routines) -->
+  <div class="scr" id="s-plan">
+    <div class="ptitle">Plan</div>
+    <div class="psub">Weekly schedule · routines</div>
+    <div class="m-slabel">Week schedule</div>
+    <div id="pl-week"></div>
+    <div class="divider"></div>
+    <div class="m-slabel">Routines</div>
+    <div id="pl-routines"></div>
+    <button class="btn bgh" style="width:100%;min-height:46px;margin-top:4px" onclick="rtOpen()">+ New Routine</button>
+  </div>
+
+  <!-- ACTIVE WORKOUT -->
+  <div class="scr" id="s-workout">
+    <div class="wk-top">
+      <div class="ptitle" id="wk-title">Workout</div>
+      <div class="wk-clock-big wk-clock">00:00:00</div>
+      <div class="psub" id="wk-sub" style="margin-bottom:0"></div>
+    </div>
+    <div id="wk-list"></div>
+    <button class="btn bgh" style="width:100%;min-height:46px;margin-top:8px" onclick="wkAddExercise()">+ Add Exercise</button>
+    <button class="btn bacc wk-finish" onclick="wkAskFinish()">Finish Workout</button>
+  </div>
+
   <!-- LOG -->
-  <div class="scr on" id="s-log">
+  <div class="scr" id="s-log">
     <div class="ptitle">Log Set</div>
     <div class="psub">Pick · sets · save</div>
     <div id="onboard-wrap"></div>
@@ -956,6 +1077,71 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
   </div>
 </div>
 
+<!-- MODAL: Routine editor -->
+<div class="moverlay" id="modal-routine" onclick="if(event.target===this)closeModal('routine')">
+  <div class="mpanel">
+    <div class="mtitle" id="rt-mtitle">New Routine</div>
+    <label class="mflbl" style="margin-top:0">Name</label>
+    <input class="field" id="rt-name" placeholder="e.g. Push Day" autocomplete="off">
+    <label class="mflbl">Exercises</label>
+    <div id="rt-exlist"></div>
+    <button class="addbtn" onclick="rtAddEx()"><span style="font-size:.9rem;line-height:1">+</span> Add exercise</button>
+    <label class="mflbl">Days</label>
+    <div class="rt-days" id="rt-days"></div>
+    <div class="brow">
+      <button class="btn bacc" onclick="rtSave()">Save</button>
+      <button class="btn bgh" onclick="closeModal('routine')">Cancel</button>
+    </div>
+    <div class="brow" id="rt-extra" style="display:none">
+      <button class="btn bgh" onclick="rtDuplicate()">Duplicate</button>
+      <button class="btn brd" onclick="rtDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Exercise picker (routine editor + active workout) -->
+<div class="moverlay" id="modal-expick" onclick="if(event.target===this)closeModal('expick')">
+  <div class="mpanel">
+    <div class="mtitle">Add Exercise</div>
+    <input class="field" id="xp-search" placeholder="Search exercise..." oninput="renderXp()" style="margin-bottom:4px">
+    <div id="xp-list"></div>
+    <div class="brow"><button class="btn bacc" style="flex:1" onclick="closeModal('expick')">Done</button></div>
+  </div>
+</div>
+
+<!-- MODAL: Pick routine for a day -->
+<div class="moverlay" id="modal-daypick" onclick="if(event.target===this)closeModal('daypick')">
+  <div class="mpanel">
+    <div class="mtitle" id="dp-title">Add Routine</div>
+    <div id="dp-list"></div>
+    <div class="brow"><button class="btn bgh" style="flex:1" onclick="closeModal('daypick')">Cancel</button></div>
+  </div>
+</div>
+
+<!-- MODAL: Finish workout -->
+<div class="moverlay" id="modal-finish" onclick="if(event.target===this)closeModal('finish')">
+  <div class="mpanel">
+    <div class="mtitle" id="fin-title">Finish workout?</div>
+    <div class="fin-text" id="fin-text"></div>
+    <div class="brow">
+      <button class="btn bgh" id="fin-cancel" onclick="closeModal('finish')">Cancel</button>
+      <button class="btn bacc" id="fin-ok" onclick="wkConfirmFinish()">Finish</button>
+    </div>
+  </div>
+</div>
+
+<!-- WORKOUT COMPLETE summary -->
+<div class="wk-summary" id="wk-summary">
+  <div class="wk-sum-inner">
+    <div class="wk-sum-flag">WORKOUT COMPLETE</div>
+    <div class="wk-sum-name" id="ws-name"></div>
+    <div class="wk-sum-dur" id="ws-dur"></div>
+    <div class="wk-sum-stats"><div><b id="ws-ex">0</b><span>Exercises</span></div><div><b id="ws-sets">0</b><span>Sets</span></div></div>
+    <button class="btn bacc" onclick="wkSummaryView()">View Workout</button>
+    <button class="btn bgh" onclick="wkSummaryDone()">Done</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1072,6 +1258,18 @@ let modalCats=new Set();
 let saveTimer=null;
 let authMode='login';
 
+// ── PHASE 1 state (kept separate from CATS/EX/DATA/SPLITS) ──
+// ROUTINES:       [{id,name,exercises:[{name,cat}]}]
+// SCHEDULE:       {sunday:[routineId],...,saturday:[]}
+// WORKOUTS:       completed workouts (snapshot incl. duration) — [{id,routineId,name,date,startedAt,finishedAt,durationSec,exercises:[{name,cat,sets:[{weight,reps,unit}]}]}]
+// ACTIVE_WORKOUT: the in-progress workout or null — {id,routineId,routineName,startedAt,date,exercises:[{name,cat}],logged:{[name]:{cat,sets}},updatedAt}
+const DAYS=[{k:'sunday',l:'Sunday',s:'Sun'},{k:'monday',l:'Monday',s:'Mon'},{k:'tuesday',l:'Tuesday',s:'Tue'},{k:'wednesday',l:'Wednesday',s:'Wed'},{k:'thursday',l:'Thursday',s:'Thu'},{k:'friday',l:'Friday',s:'Fri'},{k:'saturday',l:'Saturday',s:'Sat'}];
+function emptySchedule(){const s={};DAYS.forEach(d=>{s[d.k]=[];});return s;}
+let ROUTINES=[], SCHEDULE=emptySchedule(), WORKOUTS=[], ACTIVE_WORKOUT=null, AW_UPDATED=0;
+let wkReturn=false;        // true while the existing log form was opened from the active workout
+let dataLoadedUid=null;    // uid whose cloud data is loaded in memory — saves are only allowed for this uid
+let saveTimerUid=null, saveRetryTimer=null;
+
 // ── Firestore ─────────────────────────────────────────
 function userRef(uid){ return db.collection('users').doc(uid); }
 
@@ -1079,6 +1277,7 @@ async function loadUserData(uid){
   showSync(true);
   try{
     const snap = await userRef(uid).get();
+    if(!currentUser||currentUser.uid!==uid){showSync(false);return;} // user changed while loading — discard
     if(snap.exists){
       const d=snap.data();
       CATS = d.cats ? JSON.parse(JSON.stringify(d.cats)) : JSON.parse(JSON.stringify(DC));
@@ -1091,6 +1290,8 @@ async function loadUserData(uid){
       activeSplitId = d.activeSplitId || null;
       if(MSETS.back!==undefined){ if(MSETS.lats===undefined)MSETS.lats=MSETS.back; delete MSETS.back; }
       migrateDataShape();
+      p1LoadFrom(d,uid);
+      dataLoadedUid=uid;
     } else {
       // Brand new user — completely blank, no categories, no exercises
       CATS=[];
@@ -1101,11 +1302,15 @@ async function loadUserData(uid){
       HIDDEN_MUSCLES=new Set();
       SPLITS=[];
       activeSplitId=null;
-      try{ await userRef(uid).set({cats:CATS,ex:EX,data:DATA,msets:MSETS,customMuscles:CUSTOM_MUSCLES,hiddenMuscles:[],splits:[],activeSplitId:null}); }
+      p1Reset();dataLoadedUid=uid;
+      try{ await userRef(uid).set(buildPayload()); }
       catch(e2){ console.warn('Could not save new user:',e2.message); }
     }
   }catch(e){
     console.error('Load error',e.message);
+    if(!currentUser||currentUser.uid!==uid){showSync(false);return;}
+    dataLoadedUid=null; // load failed: keep the app usable but NEVER overwrite the cloud copy with blanks
+    toast('Could not load your data — changes will not be saved until you reload');
     // Fall back to defaults so app still works
     CATS=JSON.parse(JSON.stringify(DC));
     EX=JSON.parse(JSON.stringify(DE));
@@ -1115,20 +1320,53 @@ async function loadUserData(uid){
     HIDDEN_MUSCLES=new Set();
     SPLITS=[];
     activeSplitId=null;
+    p1Reset();
   }
   showSync(false);
   bootApp();
 }
 
-function scheduleSave(){
-  clearTimeout(saveTimer);
-  saveTimer=setTimeout(async()=>{
-    if(!currentUser)return;
-    showSync(true);
-    try{ await userRef(currentUser.uid).set({cats:CATS,ex:EX,data:DATA,msets:MSETS,customMuscles:CUSTOM_MUSCLES,hiddenMuscles:[...HIDDEN_MUSCLES],splits:SPLITS,activeSplitId:activeSplitId}); }
-    catch(e){ console.error('Save error',e); }
+// ── Save layer ───────────────────────────────────────
+// Safety rules:
+//  • a pending save is bound to the uid that scheduled it and is dropped if a different user is signed in
+//  • nothing is written until that user's cloud data was loaded successfully (no overwriting real data with blanks)
+//  • sign-out flushes the pending save to the OLD user's document before auth changes
+function buildPayload(){
+  return {cats:CATS,ex:EX,data:DATA,msets:MSETS,customMuscles:CUSTOM_MUSCLES,hiddenMuscles:[...HIDDEN_MUSCLES],splits:SPLITS,activeSplitId:activeSplitId,
+          routines:ROUTINES,schedule:SCHEDULE,workouts:WORKOUTS,activeWorkout:ACTIVE_WORKOUT||null,awUpdatedAt:AW_UPDATED};
+}
+async function commitSave(uid){
+  if(!uid||!currentUser||currentUser.uid!==uid||dataLoadedUid!==uid)return false;
+  const savedIds=new Set(WORKOUTS.map(w=>w.id));
+  showSync(true);
+  try{
+    await userRef(uid).set(buildPayload());
+    pendingPrune(uid,savedIds);
+    clearTimeout(saveRetryTimer);saveRetryTimer=null;
     showSync(false);
-  },900);
+    return true;
+  }catch(e){
+    console.error('Save error',e);
+    showSync(false);
+    if(currentUser&&currentUser.uid===uid){
+      toast('Cloud save failed — retrying…');
+      clearTimeout(saveRetryTimer);
+      saveRetryTimer=setTimeout(()=>commitSave(uid),10000);
+    }
+    return false;
+  }
+}
+function scheduleSave(){
+  if(!currentUser)return;
+  clearTimeout(saveTimer);
+  const uid=currentUser.uid;
+  saveTimerUid=uid;
+  saveTimer=setTimeout(()=>{saveTimer=null;commitSave(uid);},900);
+}
+function flushSave(){
+  if(!saveTimer)return Promise.resolve(false);
+  clearTimeout(saveTimer);saveTimer=null;
+  return commitSave(saveTimerUid);
 }
 
 function showSync(on){
@@ -1138,6 +1376,8 @@ function showSync(on){
 // ── Auth state ────────────────────────────────────────
 auth.onAuthStateChanged(user=>{
   if(user){
+    const prevUid=currentUser&&currentUser.uid;
+    if(prevUid!==user.uid)p1SwitchUser(); // different account → wipe every trace of the previous one first
     currentUser=user;
     document.getElementById('auth-screen').style.display='none';
     document.getElementById('app').style.display='block';
@@ -1147,6 +1387,7 @@ auth.onAuthStateChanged(user=>{
     loadUserData(user.uid);
   } else {
     currentUser=null;
+    p1SwitchUser();
     document.getElementById('auth-screen').style.display='flex';
     document.getElementById('app').style.display='none';
     document.getElementById('tabbar').style.display='none';
@@ -1239,6 +1480,8 @@ async function doGoogle(){
 
 async function doSignOut(){
   if(!confirm('Sign out?'))return;
+  // push any pending save to THIS user's document before the account changes (4s cap so offline can't hang sign-out)
+  try{ if(currentUser){ clearTimeout(saveTimer);saveTimer=null; await Promise.race([commitSave(currentUser.uid),new Promise(r=>setTimeout(r,4000))]); } }catch(e){}
   await auth.signOut();
   // Reset app state
   CATS=[];EX={};DATA={};
@@ -1342,12 +1585,13 @@ function renderOnboarding(){
 
 function bootApp(){
   const step=(name,fn)=>{ try{ fn(); }catch(e){ console.error(name+' failed:',e); } };
-  step('set logdate',()=>{ document.getElementById('logdate').value=new Date().toISOString().slice(0,10); });
+  step('set logdate',()=>{ document.getElementById('logdate').value=localISO(); });
   step('buildCatPills',buildCatPills);
   step('renderPicker',renderPicker);
   step('buildProgSel',buildProgSel);
   step('renderMuscleSets',renderMuscleSets);
   step('renderOnboarding',renderOnboarding);
+  step('p1Boot',p1Boot);
   step('refreshOpenScreen',()=>{ const cur=document.querySelector('.scr.on'); if(cur) go(cur.id.replace('s-','')); });
 }
 
@@ -1530,6 +1774,7 @@ function cancelLog(){
   document.getElementById('exsearch').style.display='block';
   document.getElementById('catpills').style.display='flex';
   renderPicker();
+  if(wkReturn){wkReturn=false;go('workout');} // opened from the active workout → go back to it
 }
 
 function setUnit(u){
@@ -1576,6 +1821,7 @@ function saveLog(){
     if(idx>=0)arr[idx]=entry;else arr.push(entry);
     arr.sort((a,b)=>a.date.localeCompare(b.date));
     scheduleSave();toast('Saved ✓');
+    wkRecordLogged(exName,catId,entry);
     startTimer(exName);
     cancelLog();buildProgSel();renderMuscleSets();renderOnboarding();
     checkExerciseGoalCelebration(exName);
@@ -1589,9 +1835,11 @@ function saveLog(){
 function renderHistory(){
   const q=document.getElementById('hsearch').value.toLowerCase();
   const w=document.getElementById('hlist');w.innerHTML='';
+  const nW=renderWorkoutHistory(w,q);
   let names=Object.keys(DATA).filter(n=>!n.startsWith('_')&&sessionsFor(n).length);
   if(q)names=names.filter(n=>n.toLowerCase().includes(q));
-  if(!names.length){w.innerHTML='<div class="empty">Nothing logged yet</div>';return;}
+  if(!names.length&&!nW){w.innerHTML='<div class="empty">Nothing logged yet</div>';return;}
+  if(nW&&names.length)w.appendChild(mk('div','m-slabel','By exercise'));
   names.sort().forEach(name=>{
     const sessions=sessionsFor(name);if(!sessions.length)return;
     const pr=getPR(sessions);
@@ -2346,8 +2594,11 @@ function downloadFile(filename,content,type){
 
 // ── NAV ──────────────────────────────────────────────
 function go(id){
+  if(id==='workout'&&!ACTIVE_WORKOUT)id='start';
+  if(id!=='log')wkReturn=false;
   document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
-  document.querySelectorAll('[data-tab]').forEach(t=>t.classList.toggle('on',t.dataset.tab===id));
+  const tabId=(id==='log'||id==='workout')?'start':id;
+  document.querySelectorAll('[data-tab]').forEach(t=>t.classList.toggle('on',t.dataset.tab===tabId));
   document.getElementById('s-'+id).classList.add('on');
   window.scrollTo(0,0);
   if(id==='log'){buildCatPills();renderPicker();renderOnboarding();}
@@ -2356,6 +2607,10 @@ function go(id){
   if(id==='streak')renderStreak();
   if(id==='manage')renderManage();
   if(id==='profile')renderProfile();
+  if(id==='start')renderStart();
+  if(id==='plan')renderPlan();
+  if(id==='workout')renderWorkout();
+  wkRenderBanner();
 }
 
 
@@ -3087,6 +3342,7 @@ function saveEditEx(){
     delete DATA._goals[oldName];
   }
 
+  if(renamed)p1OnExerciseRenamed(oldName,newName);
   scheduleSave();
   closeModal('editex');
   renderManage();
@@ -3109,14 +3365,556 @@ function saveEditEx(){
     },50);
   });
 })();
+
+// ══════════════════════════════════════════════════════
+// PHASE 1 — ROUTINES · WEEKLY SCHEDULE · ACTIVE WORKOUT
+// ══════════════════════════════════════════════════════
+const gid=id=>document.getElementById(id);
+function mk(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
+const pad2=n=>String(n).padStart(2,'0');
+const localISO=d=>{d=d||new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());};
+const newId=p=>p+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const plural=(n,w)=>n+' '+w+(n===1?'':'s');
+const routineById=id=>ROUTINES.find(r=>r.id===id);
+const rtExCat=e=>catById(e.cat)?e.cat:primCat(e.name);
+const todayDay=()=>DAYS[new Date().getDay()];
+function normSchedule(raw){
+  const s=emptySchedule();
+  if(raw&&typeof raw==='object')DAYS.forEach(d=>{if(Array.isArray(raw[d.k]))s[d.k]=raw[d.k].filter(x=>typeof x==='string');});
+  return s;
+}
+function fmtClock(ms){const t=Math.max(0,Math.floor(ms/1000));return pad2(Math.floor(t/3600))+':'+pad2(Math.floor(t%3600/60))+':'+pad2(t%60);}
+function fmtDur(sec){sec=Math.max(0,Math.round(sec));const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60);if(h>0)return h+'h '+pad2(m)+'m';if(m>0)return m+'m';return sec+'s';}
+const clockTime=ms=>new Date(ms).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+
+// ── user switching / reset ───────────────────────────
+function p1Reset(){ROUTINES=[];SCHEDULE=emptySchedule();WORKOUTS=[];ACTIVE_WORKOUT=null;AW_UPDATED=0;}
+// Wipes ALL in-memory per-user state + pending timers so nothing from user A can reach user B.
+function p1SwitchUser(){
+  clearTimeout(saveTimer);saveTimer=null;clearTimeout(saveRetryTimer);saveRetryTimer=null;
+  dataLoadedUid=null;wkStopTicker();wkReturn=false;
+  CATS=[];EX={};DATA={};MSETS={};CUSTOM_MUSCLES=[];HIDDEN_MUSCLES=new Set();SPLITS=[];activeSplitId=null;
+  p1Reset();
+  ['st-body','pl-week','pl-routines','wk-list','hlist'].forEach(id=>{const e=gid(id);if(e)e.innerHTML='';});
+  const b=gid('wk-banner');if(b)b.classList.remove('show');
+  const s=gid('wk-summary');if(s)s.classList.remove('on');
+  ['routine','expick','daypick','finish'].forEach(t=>{const m=gid('modal-'+t);if(m)m.classList.remove('on');});
+}
+
+// ── local backups (survive refresh + temporary Firebase failure) ──
+const awKey=uid=>'lifts_aw_'+uid, pwKey=uid=>'lifts_pw_'+uid;
+function pendingRead(uid){try{const a=JSON.parse(localStorage.getItem(pwKey(uid))||'[]');return Array.isArray(a)?a:[];}catch(e){return [];}}
+function pendingWrite(uid,arr){try{if(arr.length)localStorage.setItem(pwKey(uid),JSON.stringify(arr));else localStorage.removeItem(pwKey(uid));}catch(e){}}
+function pendingAdd(uid,rec){const a=pendingRead(uid).filter(x=>x.id!==rec.id);a.push(rec);pendingWrite(uid,a);}
+function pendingPrune(uid,savedIds){pendingWrite(uid,pendingRead(uid).filter(x=>!savedIds.has(x.id)));}
+
+// Make sure per-exercise history (DATA) contains the sets of a workout. Never overwrites existing entries.
+function ensureSessions(date,exs){
+  let added=false;
+  (exs||[]).forEach(ex=>{
+    if(!ex||!ex.name||!Array.isArray(ex.sets)||!ex.sets.length)return;
+    const cat=ex.cat||primCat(ex.name);
+    const arr=sessionsFor(ex.name);
+    DATA[ex.name]=arr;
+    if(arr.findIndex(e=>e.date===date&&e.cat===cat)<0){
+      arr.push({date,cat,sets:ex.sets.map(s=>({weight:s.weight,reps:s.reps,unit:unitOf(s.unit)}))});
+      arr.sort((a,b)=>a.date.localeCompare(b.date));
+      added=true;
+    }
+  });
+  return added;
+}
+
+// ── load from Firestore doc ──────────────────────────
+function p1LoadFrom(d,uid){
+  const clone=v=>JSON.parse(JSON.stringify(v));
+  ROUTINES=Array.isArray(d.routines)?clone(d.routines).filter(r=>r&&r.id&&typeof r.name==='string').map(r=>({
+    id:r.id,name:r.name,
+    exercises:(Array.isArray(r.exercises)?r.exercises:[]).map(e=>typeof e==='string'?{name:e,cat:primCat(e)}:e).filter(e=>e&&typeof e.name==='string').map(e=>({name:e.name,cat:e.cat||primCat(e.name)}))
+  })):[];
+  SCHEDULE=normSchedule(d.schedule);
+  WORKOUTS=Array.isArray(d.workouts)?clone(d.workouts).filter(w=>w&&w.id&&Array.isArray(w.exercises)):[];
+  wkResolveRestore(uid,d);
+  p1MergePending(uid);
+}
+function wkResolveRestore(uid,d){
+  const fsAw=(d&&d.activeWorkout&&typeof d.activeWorkout==='object')?JSON.parse(JSON.stringify(d.activeWorkout)):null;
+  const fsT=Number(d&&d.awUpdatedAt)||(fsAw&&Number(fsAw.updatedAt))||0;
+  let loc=null;try{loc=JSON.parse(localStorage.getItem(awKey(uid))||'null');}catch(e){}
+  const locT=(loc&&Number(loc.updatedAt))||0;
+  let aw,t;
+  if(loc&&locT>fsT){aw=loc.aw||null;t=locT;} else {aw=fsAw;t=fsT;}
+  const valid=aw&&isFinite(Number(aw.startedAt))&&Array.isArray(aw.exercises);
+  if(!valid){ACTIVE_WORKOUT=null;AW_UPDATED=t;return;}
+  aw.startedAt=Number(aw.startedAt);
+  aw.logged=(aw.logged&&typeof aw.logged==='object')?aw.logged:{};
+  aw.date=aw.date||localISO(new Date(aw.startedAt));
+  aw.routineName=aw.routineName||'Workout';
+  aw.exercises=aw.exercises.filter(e=>e&&typeof e.name==='string');
+  ACTIVE_WORKOUT=aw;AW_UPDATED=t;
+  // if Firebase had failed earlier, re-apply sets logged in this workout to the exercise history
+  const exs=Object.keys(aw.logged).map(n=>({name:n,cat:aw.logged[n].cat,sets:aw.logged[n].sets}));
+  if(ensureSessions(aw.date,exs))scheduleSave();
+  if(loc&&locT>fsT)scheduleSave(); // local copy was newer than cloud — push it up
+}
+// A workout finished while Firebase was failing is kept in localStorage until a save succeeds.
+function p1MergePending(uid){
+  const pend=pendingRead(uid);if(!pend.length)return;
+  const have=new Set(WORKOUTS.map(w=>w.id));
+  let changed=false;
+  pend.forEach(w=>{
+    if(w&&w.id&&Array.isArray(w.exercises)&&!have.has(w.id)){WORKOUTS.push(w);ensureSessions(w.date,w.exercises);changed=true;}
+  });
+  pendingWrite(uid,pend.filter(w=>w&&!have.has(w.id)));
+  if(changed)scheduleSave();
+}
+function p1Boot(){
+  if(ACTIVE_WORKOUT){gid('logdate').value=ACTIVE_WORKOUT.date;wkStartTicker();}else wkStopTicker();
+  wkRenderBanner();renderStart();renderPlan();
+}
+function p1Refresh(){const cur=document.querySelector('.scr.on');if(cur&&cur.id==='s-start')renderStart();wkTick();}
+
+// ── active workout persistence ───────────────────────
+function wkPersist(){
+  if(!currentUser)return;
+  AW_UPDATED=Date.now();
+  if(ACTIVE_WORKOUT)ACTIVE_WORKOUT.updatedAt=AW_UPDATED;
+  try{localStorage.setItem(awKey(currentUser.uid),JSON.stringify({aw:ACTIVE_WORKOUT,updatedAt:AW_UPDATED}));}catch(e){}
+  scheduleSave();
+}
+
+// ── timer: ALWAYS derived from timestamps; setInterval only repaints ──
+let wkTimer=null;
+const wkElapsedMs=()=>ACTIVE_WORKOUT?Math.max(0,Date.now()-ACTIVE_WORKOUT.startedAt):0;
+function wkTick(){
+  if(!ACTIVE_WORKOUT)return;
+  const t=fmtClock(wkElapsedMs());
+  document.querySelectorAll('.wk-clock').forEach(e=>{if(e.textContent!==t)e.textContent=t;});
+}
+function wkStartTicker(){clearInterval(wkTimer);wkTimer=null;if(!ACTIVE_WORKOUT)return;wkTick();wkTimer=setInterval(wkTick,1000);}
+function wkStopTicker(){clearInterval(wkTimer);wkTimer=null;}
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){flushSave().catch(()=>{});}   // push any pending save before the tab is suspended
+  else p1Refresh();                                   // resync clock + day rollover when coming back
+});
+window.addEventListener('pageshow',p1Refresh);
+window.addEventListener('focus',p1Refresh);
+window.addEventListener('pagehide',()=>{flushSave().catch(()=>{});});
+
+function wkRenderBanner(){
+  const b=gid('wk-banner');if(!b)return;
+  const cur=document.querySelector('.scr.on');
+  const onWk=cur&&cur.id==='s-workout';
+  if(ACTIVE_WORKOUT&&!onWk){b.classList.add('show');gid('wk-bn').textContent=ACTIVE_WORKOUT.routineName;wkTick();}
+  else b.classList.remove('show');
+}
+const wkSetCount=a=>Object.keys(a.logged||{}).reduce((n,k)=>n+(((a.logged[k]||{}).sets)||[]).length,0);
+const wkExCount=a=>Object.keys(a.logged||{}).filter(k=>(((a.logged[k]||{}).sets)||[]).length).length;
+
+// ── START tab ────────────────────────────────────────
+const DUMBBELL='<svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg>';
+function renderStart(){
+  const body=gid('st-body');if(!body)return;
+  body.innerHTML='';
+  const now=new Date(),day=todayDay();
+  gid('st-sub').textContent=day.l+' · '+fmtDate(localISO(now));
+  if(ACTIVE_WORKOUT){
+    const a=ACTIVE_WORKOUT,card=mk('div','st-card active');
+    card.append(mk('div','st-lbl','Workout in progress'),mk('div','st-name',a.routineName),mk('div','st-clock wk-clock',fmtClock(wkElapsedMs())),
+      mk('div','st-meta',plural(a.exercises.length,'exercise')+' · '+plural(wkSetCount(a),'set')+' logged'));
+    const b=mk('button','btn bacc st-big','Continue Workout');b.onclick=()=>go('workout');
+    card.appendChild(b);body.appendChild(card);
+    return;
+  }
+  const todays=(SCHEDULE[day.k]||[]).map(routineById).filter(Boolean);
+  if(todays.length){
+    todays.forEach((r,i)=>{
+      const card=mk('div','st-card');
+      card.appendChild(mk('div','st-lbl',i===0?(todays.length>1?"Today's Workout · "+todays.length+' routines':"Today's Workout"):'Also today'));
+      card.appendChild(mk('div','st-name',r.name));
+      card.appendChild(mk('div','st-meta',plural(r.exercises.length,'exercise')));
+      if(r.exercises.length)card.appendChild(mk('div','st-prev',r.exercises.map(e=>e.name).join(' · ')));
+      const b=mk('button','btn bacc st-big','Start Workout');b.onclick=()=>wkStart(r.id);
+      card.appendChild(b);body.appendChild(card);
+    });
+    const e=mk('button','btn bgh st-sec','Start empty workout');e.onclick=()=>wkStart(null);body.appendChild(e);
+  } else {
+    const card=mk('div','st-card');
+    card.append(mk('div','st-lbl',"Today's Plan"),mk('div','st-name','Rest Day'),mk('div','st-meta','No workout scheduled today'));
+    const b=mk('button','btn bacc st-big','Start Empty Workout');b.onclick=()=>wkStart(null);
+    card.appendChild(b);body.appendChild(card);
+    if(!ROUTINES.length){
+      const h=mk('div','st-hint','Build your week in the Plan tab — create routines and assign them to days.');body.appendChild(h);
+    }
+  }
+  const q=mk('button','btn bgh st-sec','Quick log (no workout)');q.onclick=()=>go('log');body.appendChild(q);
+}
+
+// ── PLAN tab: week schedule + routines ───────────────
+function renderPlan(){
+  const wk=gid('pl-week'),rl=gid('pl-routines');if(!wk||!rl)return;
+  wk.innerHTML='';rl.innerHTML='';
+  const today=todayDay().k;
+  DAYS.forEach(d=>{
+    const rts=(SCHEDULE[d.k]||[]).map(routineById).filter(Boolean);
+    const card=mk('div','pl-day'+(d.k===today?' today':''));
+    const head=mk('div','pl-dhead');
+    head.appendChild(mk('span','pl-dname',d.l));
+    if(d.k===today)head.appendChild(mk('span','pl-today','TODAY'));
+    head.appendChild(mk('span','pl-sp'));
+    head.appendChild(rts.length?mk('span','pl-dcount',plural(rts.length,'routine')):mk('span','pl-rest','Rest'));
+    const add=mk('button','pl-add','+');add.title='Add routine';add.onclick=()=>dpOpen(d.k,'add');
+    head.appendChild(add);card.appendChild(head);
+    rts.forEach(r=>{
+      const row=mk('div','pl-rt');
+      const ico=mk('div','pl-ico');ico.innerHTML=DUMBBELL;
+      const info=mk('div','pl-rtinfo');info.append(mk('div','pl-rtname',r.name),mk('div','pl-rtsub',plural(r.exercises.length,'exercise')));
+      info.onclick=()=>rtOpen(r.id);
+      const sw=mk('button','pl-ib','⇄');sw.title='Change routine';sw.onclick=()=>dpOpen(d.k,'swap',r.id);
+      const x=mk('button','pl-ib x','✕');x.title='Remove from day';x.onclick=()=>planRemove(d.k,r.id);
+      row.append(ico,info,sw,x);card.appendChild(row);
+    });
+    wk.appendChild(card);
+  });
+  if(!ROUTINES.length){rl.appendChild(mk('div','empty','No routines yet — create one, then assign it to days.'));return;}
+  ROUTINES.forEach(r=>{
+    const days=DAYS.filter(d=>(SCHEDULE[d.k]||[]).includes(r.id)).map(d=>d.s).join(' · ');
+    const row=mk('div','pl-rcard');
+    const ico=mk('div','pl-ico');ico.innerHTML=DUMBBELL;
+    const info=mk('div','pl-rtinfo');info.append(mk('div','pl-rtname',r.name),mk('div','pl-rtsub',plural(r.exercises.length,'exercise')+' · '+(days||'not scheduled')));
+    const ed=mk('button','pl-ib','✎');ed.title='Edit';ed.onclick=()=>rtOpen(r.id);
+    const du=mk('button','pl-ib','⧉');du.title='Duplicate';du.onclick=()=>rtDuplicate(r.id);
+    row.append(ico,info,ed,du);rl.appendChild(row);
+  });
+}
+function planRemove(dayKey,id){
+  SCHEDULE[dayKey]=(SCHEDULE[dayKey]||[]).filter(x=>x!==id);
+  scheduleSave();renderPlan();renderStart();toast('Removed from '+DAYS.find(d=>d.k===dayKey).l);
+}
+
+// day → pick routine (add / swap)
+let dp={day:null,mode:'add',replaceId:null};
+function dpOpen(day,mode,replaceId){
+  dp={day,mode,replaceId:replaceId||null};
+  const label=DAYS.find(d=>d.k===day).l;
+  gid('dp-title').textContent=(mode==='swap'?'Change routine · ':'Add routine · ')+label;
+  renderDp();gid('modal-daypick').classList.add('on');
+}
+function renderDp(){
+  const w=gid('dp-list');w.innerHTML='';
+  const onDay=SCHEDULE[dp.day]||[];
+  ROUTINES.forEach(r=>{
+    const has=onDay.includes(r.id)&&!(dp.mode==='swap'&&r.id===dp.replaceId);
+    const b=mk('button','dp-item'+(has?' has':''));
+    const left=mk('div');left.append(mk('div',null,r.name),mk('div','dp-sub',plural(r.exercises.length,'exercise')));
+    b.append(left,mk('span','xp-st',has?'On this day':(dp.mode==='swap'&&r.id===dp.replaceId?'Current':'')));
+    if(!has)b.onclick=()=>dpPick(r.id);
+    w.appendChild(b);
+  });
+  const nb=mk('button','addbtn','+ New routine');nb.style.marginTop='6px';
+  nb.onclick=()=>{closeModal('daypick');rtOpen(null,dp.day);};
+  w.appendChild(nb);
+}
+function dpPick(id){
+  const arr=SCHEDULE[dp.day]=SCHEDULE[dp.day]||[];
+  if(dp.mode==='swap'){const i=arr.indexOf(dp.replaceId);if(i>=0)arr[i]=id;else arr.push(id);}
+  else if(!arr.includes(id))arr.push(id);
+  SCHEDULE[dp.day]=arr.filter((x,i)=>arr.indexOf(x)===i);
+  scheduleSave();closeModal('daypick');renderPlan();renderStart();toast('Schedule updated ✓');
+}
+
+// ── routine editor ───────────────────────────────────
+let rt=null;
+function rtOpen(id,preDay){
+  const r=id?routineById(id):null;
+  rt={id:r?r.id:null,name:r?r.name:'',exercises:r?r.exercises.map(e=>({name:e.name,cat:rtExCat(e)})):[],days:new Set()};
+  DAYS.forEach(d=>{if(r&&(SCHEDULE[d.k]||[]).includes(r.id))rt.days.add(d.k);});
+  if(!r&&preDay)rt.days.add(preDay);
+  gid('rt-mtitle').textContent=r?'Edit Routine':'New Routine';
+  gid('rt-name').value=rt.name;
+  gid('rt-extra').style.display=r?'flex':'none';
+  renderRtEx();renderRtDays();
+  gid('modal-routine').classList.add('on');
+  if(!r)setTimeout(()=>gid('rt-name').focus(),220);
+}
+function renderRtEx(){
+  const w=gid('rt-exlist');w.innerHTML='';
+  if(!rt.exercises.length){w.appendChild(mk('div','rt-empty','No exercises yet'));return;}
+  rt.exercises.forEach((e,i)=>{
+    const row=mk('div','rt-ex');
+    const ud=mk('div','mupdown');
+    const up=mk('button','mud','▲');up.disabled=i===0;up.onclick=()=>rtMove(i,-1);
+    const dn=mk('button','mud','▼');dn.disabled=i===rt.exercises.length-1;dn.onclick=()=>rtMove(i,1);
+    ud.append(up,dn);
+    const dot=mk('span','dot');dot.style.background=catColor(rtExCat(e));
+    const x=mk('button','mdel','✕');x.onclick=()=>{rt.exercises.splice(i,1);renderRtEx();};
+    row.append(ud,dot,mk('span','rt-exname',e.name),x);w.appendChild(row);
+  });
+}
+function rtMove(i,dir){
+  const j=i+dir;if(j<0||j>=rt.exercises.length)return;
+  [rt.exercises[i],rt.exercises[j]]=[rt.exercises[j],rt.exercises[i]];renderRtEx();
+}
+function renderRtDays(){
+  const w=gid('rt-days');w.innerHTML='';
+  DAYS.forEach(d=>{
+    const b=mk('button','rt-day'+(rt.days.has(d.k)?' on':''),d.s.slice(0,3));
+    b.onclick=()=>{if(rt.days.has(d.k))rt.days.delete(d.k);else rt.days.add(d.k);renderRtDays();};
+    w.appendChild(b);
+  });
+}
+function rtAddEx(){xpOpen('routine');}
+function rtSave(){
+  const name=gid('rt-name').value.trim();
+  if(!name){toast('Enter a name');return;}
+  let r=rt.id?routineById(rt.id):null;
+  if(!r){r={id:newId('rt'),name,exercises:[]};ROUTINES.push(r);}
+  r.name=name;
+  r.exercises=rt.exercises.map(e=>({name:e.name,cat:e.cat}));
+  DAYS.forEach(d=>{
+    const arr=SCHEDULE[d.k]=SCHEDULE[d.k]||[];
+    const has=arr.includes(r.id),want=rt.days.has(d.k);
+    if(want&&!has)arr.push(r.id);
+    if(!want&&has)SCHEDULE[d.k]=arr.filter(x=>x!==r.id);
+  });
+  scheduleSave();closeModal('routine');renderPlan();renderStart();toast('Routine saved ✓');
+}
+function rtDuplicate(id){
+  const src=routineById(id||(rt&&rt.id));if(!src)return;
+  ROUTINES.push({id:newId('rt'),name:src.name+' (copy)',exercises:src.exercises.map(e=>({name:e.name,cat:e.cat}))});
+  scheduleSave();closeModal('routine');renderPlan();toast('Duplicated ✓');
+}
+function rtDelete(){
+  const r=rt&&rt.id?routineById(rt.id):null;if(!r)return;
+  if(!confirm('Delete routine "'+r.name+'"? It will also be removed from your schedule. Past workouts are kept.'))return;
+  ROUTINES=ROUTINES.filter(x=>x.id!==r.id);
+  DAYS.forEach(d=>{SCHEDULE[d.k]=(SCHEDULE[d.k]||[]).filter(x=>x!==r.id);});
+  scheduleSave();closeModal('routine');renderPlan();renderStart();toast('Routine deleted');
+}
+
+// ── exercise picker (references the existing library; never edits it) ──
+let xp={mode:'routine'};
+function xpOpen(mode){xp.mode=mode;gid('xp-search').value='';renderXp();gid('modal-expick').classList.add('on');}
+function xpHas(name){
+  if(xp.mode==='routine')return !!rt&&rt.exercises.some(e=>e.name===name);
+  return !!ACTIVE_WORKOUT&&ACTIVE_WORKOUT.exercises.some(e=>e.name===name);
+}
+function renderXp(){
+  const w=gid('xp-list');w.innerHTML='';
+  const q=gid('xp-search').value.trim().toLowerCase();
+  let any=false;
+  CATS.forEach(cat=>{
+    const names=(EX[cat.id]||[]).filter(n=>!q||n.toLowerCase().includes(q));
+    if(!names.length)return;any=true;
+    const lab=mk('div','xp-cat',cat.label);lab.style.color=cat.color;w.appendChild(lab);
+    names.forEach(n=>{
+      const has=xpHas(n);
+      const b=mk('button','xp-item'+(has?' has':''));
+      b.append(mk('span',null,n),mk('span','xp-st',has?'✓ Added':'+'));
+      if(!has)b.onclick=()=>xpAdd(n,cat.id);
+      w.appendChild(b);
+    });
+  });
+  if(!any)w.appendChild(mk('div','rt-empty',CATS.length?'No exercises found':'Add exercises in Manage first'));
+}
+function xpAdd(name,cat){
+  if(xpHas(name))return;
+  if(xp.mode==='routine'){rt.exercises.push({name,cat});renderRtEx();}
+  else if(ACTIVE_WORKOUT){ACTIVE_WORKOUT.exercises.push({name,cat});wkPersist();renderWorkout();}
+  renderXp();
+}
+
+// ── START / ACTIVE WORKOUT ───────────────────────────
+function wkStart(routineId){
+  if(ACTIVE_WORKOUT){toast('A workout is already in progress');go('workout');return;}
+  if(!currentUser||dataLoadedUid!==currentUser.uid){toast('Still loading your data — try again in a moment');return;}
+  const r=routineId?routineById(routineId):null;
+  const now=Date.now();
+  ACTIVE_WORKOUT={
+    id:newId('w'),routineId:r?r.id:null,routineName:r?r.name:'Workout',
+    startedAt:now,date:localISO(new Date(now)),
+    exercises:r?r.exercises.map(e=>({name:e.name,cat:rtExCat(e)})):[],
+    logged:{},updatedAt:now
+  };
+  gid('logdate').value=ACTIVE_WORKOUT.date;
+  wkPersist();wkStartTicker();go('workout');
+}
+function renderWorkout(){
+  const a=ACTIVE_WORKOUT;if(!a)return;
+  gid('wk-title').textContent=a.routineName;
+  gid('wk-sub').textContent=plural(a.exercises.length,'exercise')+' · '+plural(wkSetCount(a),'set');
+  wkTick();
+  const list=gid('wk-list');list.innerHTML='';
+  if(!a.exercises.length)list.appendChild(mk('div','empty','No exercises yet — tap "+ Add Exercise".'));
+  a.exercises.forEach(ex=>{
+    const cat=catById(ex.cat)?ex.cat:primCat(ex.name);
+    const lg=a.logged[ex.name],sets=(lg&&lg.sets)||[];
+    const card=mk('div','wk-ex');
+    const head=mk('div','wk-exhead');
+    const dot=mk('span','dot');dot.style.background=catColor(cat);
+    head.append(dot,mk('span','wk-exname',ex.name),mk('span','wk-excount',sets.length?plural(sets.length,'set'):'not started'));
+    head.onclick=()=>wkOpenEx(ex.name,cat,false);
+    if(!sets.length){
+      const x=mk('button','pl-ib x','✕');x.title='Remove from workout';
+      x.onclick=e=>{e.stopPropagation();wkRemoveEx(ex.name);};head.appendChild(x);
+    }
+    card.appendChild(head);
+    sets.forEach((s,i)=>{
+      const row=mk('div','wk-set');
+      row.append(mk('span','wk-setn',String(i+1)),mk('span',null,s.weight+' '+(s.unit||'kg')+' × '+s.reps));
+      card.appendChild(row);
+    });
+    const add=mk('button','wk-addset','+ Add Set');add.onclick=()=>wkOpenEx(ex.name,cat,true);
+    card.appendChild(add);list.appendChild(card);
+  });
+}
+// Reuses the EXISTING log form (selectEx → saveLog). saveLog/cancelLog bring the user back here via wkReturn.
+function wkOpenEx(name,cat,addOne){
+  const a=ACTIVE_WORKOUT;if(!a)return;
+  go('log');wkReturn=true;
+  selectEx(name,cat);
+  const lg=a.logged[name];
+  if(lg&&lg.sets&&lg.sets.length){
+    sets=lg.sets.map(s=>({w:String(s.weight),r:String(s.reps),u:unitOf(s.unit)}));
+    setUnit(unitOf(lg.sets[0].unit)); // re-renders the rows
+    if(addOne)addSet();
+  }
+}
+function wkRemoveEx(name){
+  const a=ACTIVE_WORKOUT;if(!a)return;
+  if(a.logged[name]&&a.logged[name].sets&&a.logged[name].sets.length)return;
+  a.exercises=a.exercises.filter(e=>e.name!==name);delete a.logged[name];
+  wkPersist();renderWorkout();
+}
+function wkAddExercise(){if(!ACTIVE_WORKOUT)return;xpOpen('workout');}
+// called from saveLog(): remember what was logged inside the active workout
+function wkRecordLogged(name,cat,entry){
+  const a=ACTIVE_WORKOUT;if(!a||entry.date!==a.date)return;
+  a.logged[name]={cat,sets:entry.sets.map(s=>({weight:s.weight,reps:s.reps,unit:unitOf(s.unit)}))};
+  if(!a.exercises.some(e=>e.name===name))a.exercises.push({name,cat});
+  wkPersist();
+}
+
+// ── finish ───────────────────────────────────────────
+function wkAskFinish(){
+  const a=ACTIVE_WORKOUT;if(!a)return;
+  const n=wkSetCount(a);
+  if(!n){
+    gid('fin-title').textContent='No sets logged';
+    gid('fin-text').textContent='There is nothing to save yet. Discard this workout?';
+    gid('fin-cancel').textContent='Keep going';gid('fin-ok').textContent='Discard';
+  } else {
+    gid('fin-title').textContent='Finish workout?';
+    gid('fin-text').textContent='Your workout will be saved to History. '+fmtDur(wkElapsedMs()/1000)+' · '+plural(wkExCount(a),'exercise')+' · '+plural(n,'set')+'.';
+    gid('fin-cancel').textContent='Cancel';gid('fin-ok').textContent='Finish';
+  }
+  gid('modal-finish').classList.add('on');
+}
+function wkConfirmFinish(){closeModal('finish');wkFinish();}
+let wkLastRecord=null;
+function wkFinish(){
+  const a=ACTIVE_WORKOUT;if(!a||!currentUser)return; // also makes a double-tap harmless
+  const uid=currentUser.uid,finishedAt=Date.now();
+  const exercises=[];
+  a.exercises.forEach(ex=>{
+    const lg=a.logged[ex.name];
+    if(lg&&lg.sets&&lg.sets.length)exercises.push({name:ex.name,cat:lg.cat||ex.cat,sets:lg.sets.map(s=>({weight:s.weight,reps:s.reps,unit:unitOf(s.unit)}))});
+  });
+  let rec=null;
+  if(exercises.length){
+    rec={id:a.id,routineId:a.routineId||null,name:a.routineName,date:a.date,startedAt:a.startedAt,finishedAt,
+         durationSec:Math.max(0,Math.round((finishedAt-a.startedAt)/1000)),exercises};
+    ensureSessions(rec.date,rec.exercises);   // history/PRs/streak read DATA — make sure every set is there
+    WORKOUTS.push(rec);
+    pendingAdd(uid,rec);                       // local safety copy until the cloud save succeeds
+  }
+  ACTIVE_WORKOUT=null;AW_UPDATED=Date.now();
+  try{localStorage.setItem(awKey(uid),JSON.stringify({aw:null,updatedAt:AW_UPDATED}));}catch(e){}
+  wkStopTicker();wkReturn=false;
+  scheduleSave();flushSave();
+  wkRenderBanner();
+  if(rec){
+    wkLastRecord=rec;
+    gid('ws-name').textContent=rec.name;
+    gid('ws-dur').textContent=fmtDur(rec.durationSec);
+    gid('ws-ex').textContent=rec.exercises.length;
+    gid('ws-sets').textContent=rec.exercises.reduce((n,e)=>n+e.sets.length,0);
+    gid('wk-summary').classList.add('on');
+    buildProgSel();renderMuscleSets();
+  } else {toast('Workout discarded');go('start');}
+}
+function wkSummaryDone(){gid('wk-summary').classList.remove('on');go('start');}
+function wkSummaryView(){
+  gid('wk-summary').classList.remove('on');
+  histOpenId=wkLastRecord?wkLastRecord.id:null;
+  go('history');
+}
+
+// ── HISTORY: completed workouts (legacy per-exercise history is rendered by renderHistory as before) ──
+let histOpenId=null;
+function renderWorkoutHistory(w,q){
+  let list=WORKOUTS.slice().sort((a,b)=>(b.finishedAt||0)-(a.finishedAt||0)||String(b.date).localeCompare(String(a.date)));
+  if(q)list=list.filter(x=>String(x.name||'').toLowerCase().includes(q)||x.exercises.some(e=>String(e.name).toLowerCase().includes(q)));
+  if(!list.length)return 0;
+  w.appendChild(mk('div','m-slabel','Workouts'));
+  list.forEach(x=>{
+    const exs=x.exercises||[],nSets=exs.reduce((n,e)=>n+((e.sets||[]).length),0);
+    const hasDur=typeof x.durationSec==='number'&&isFinite(x.durationSec);  // legacy/old records: no duration → just omit
+    const el=mk('div','hent'+(histOpenId===x.id?' op':''));el.id='hw-'+x.id;
+    const hdr=mk('div','hhdr');
+    const dot=mk('span','dot');dot.style.background='var(--ac)';
+    const col=mk('div');col.style.cssText='flex:1;min-width:0';
+    col.append(mk('div','hname',x.name||'Workout'),
+      mk('div','hmeta',fmtDate(x.date)+(hasDur?' · '+fmtDur(x.durationSec):'')+' · '+plural(exs.length,'exercise')+' · '+plural(nSets,'set')));
+    hdr.append(dot,col,mk('span','hchev','▼'));
+    hdr.onclick=()=>el.classList.toggle('op');
+    const body=mk('div','hbody');
+    if(hasDur||x.startedAt){
+      const d=mk('div','hw-dur');
+      d.appendChild(mk('span',null,x.startedAt&&x.finishedAt?clockTime(x.startedAt)+' – '+clockTime(x.finishedAt):fmtDate(x.date)));
+      if(hasDur){const b=mk('b',null,fmtDur(x.durationSec));const s=mk('span',null,'Duration ');s.appendChild(b);d.appendChild(s);}
+      body.appendChild(d);
+    }
+    exs.forEach(e=>{
+      const blk=mk('div','sblk');
+      const sd=mk('div','sdate',e.name);const cl=mk('span',null,' · '+catLabel(e.cat));cl.style.cssText='color:var(--m1);font-size:.55rem';sd.appendChild(cl);
+      const chips=mk('div','schips');
+      (e.sets||[]).forEach(s=>chips.appendChild(mk('span','chip',s.weight+(s.unit||'kg')+' × '+s.reps)));
+      blk.append(sd,chips);body.appendChild(blk);
+    });
+    const del=mk('button','btn brd','Delete workout record');del.style.cssText='font-size:.55rem;padding:6px 11px;margin-top:6px';
+    del.onclick=()=>{
+      if(!confirm('Delete this workout record? The sets stay in each exercise\'s history.'))return;
+      WORKOUTS=WORKOUTS.filter(v=>v.id!==x.id);scheduleSave();renderHistory();toast('Deleted');
+    };
+    body.appendChild(del);el.append(hdr,body);w.appendChild(el);
+  });
+  if(histOpenId){const id=histOpenId;histOpenId=null;setTimeout(()=>{const t=gid('hw-'+id);if(t)t.scrollIntoView({block:'center'});},50);}
+  return list.length;
+}
+
+// exercise renamed in Manage → keep routines / active workout / workout records pointing at it
+function p1OnExerciseRenamed(o,n){
+  ROUTINES.forEach(r=>r.exercises.forEach(e=>{if(e.name===o)e.name=n;}));
+  WORKOUTS.forEach(w=>w.exercises.forEach(e=>{if(e.name===o)e.name=n;}));
+  const a=ACTIVE_WORKOUT;
+  if(a){
+    a.exercises.forEach(e=>{if(e.name===o)e.name=n;});
+    if(a.logged[o]){a.logged[n]=a.logged[o];delete a.logged[o];}
+    wkPersist();
+  }
+}
+
 </script>
 <!-- BOTTOM TAB BAR -->
 <div class="tabbar" id="tabbar">
-  <button class="tbtn" data-tab="profile" onclick="go('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Profile</button>
+  <button class="tbtn" data-tab="plan" onclick="go('plan')"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9zM9 12h6M9 16h4"/></svg>Plan</button>
+  <button class="tbtn" data-tab="history" onclick="go('history')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History</button>
   <button class="tbtn" data-tab="manage" onclick="go('manage')"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Manage</button>
-  <button class="lbtn on" data-tab="log" onclick="go('log')"><span class="lcirc"><svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg></span><span class="llbl">Log</span></button>
+  <button class="lbtn on" data-tab="start" onclick="go('start')"><span class="lcirc"><svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg></span><span class="llbl">Start</span></button>
   <button class="tbtn" data-tab="progress" onclick="go('progress')"><svg viewBox="0 0 24 24"><path d="M6 20V11M12 20V4M18 20v-6"/></svg>Progress</button>
   <button class="tbtn" data-tab="streak" onclick="go('streak')"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Streak</button>
+  <button class="tbtn" data-tab="profile" onclick="go('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Profile</button>
 </div>
 
 <!-- REST TIMER BAR -->
