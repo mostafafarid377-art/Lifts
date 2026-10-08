@@ -641,6 +641,12 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 
 .hw-dur{display:flex;justify-content:space-between;font-size:.66rem;color:var(--m2);padding:2px 0 10px;border-bottom:1px solid var(--b1);margin-bottom:10px}
 .hw-dur b{color:var(--ac);font-weight:500}
+
+.st-pill{background:rgba(232,255,71,.12);border:1px solid rgba(232,255,71,.35);color:var(--ac);font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;padding:9px 16px;border-radius:8px;flex-shrink:0;font-weight:600}
+.st-pill:active{transform:scale(.94)}
+.st-free{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:none;border:none;color:var(--ac);font-size:.74rem;letter-spacing:.04em;padding:18px 8px 8px}
+.st-free svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.st-free:active{opacity:.6}
 </style>
 </head>
 <body ontouchstart="">
@@ -3529,26 +3535,34 @@ function renderStart(){
     return;
   }
   const todays=(SCHEDULE[day.k]||[]).map(routineById).filter(Boolean);
-  if(todays.length){
-    todays.forEach((r,i)=>{
-      const card=mk('div','st-card');
-      card.appendChild(mk('div','st-lbl',i===0?(todays.length>1?"Today's Workout · "+todays.length+' routines':"Today's Workout"):'Also today'));
-      card.appendChild(mk('div','st-name',r.name));
-      card.appendChild(mk('div','st-meta',plural(r.exercises.length,'exercise')));
-      if(r.exercises.length)card.appendChild(mk('div','st-prev',r.exercises.map(e=>e.name).join(' · ')));
-      const b=mk('button','btn bacc st-big','Start Workout');b.onclick=()=>wkStart(r.id);
-      card.appendChild(b);body.appendChild(card);
-    });
-    const e=mk('button','btn bgh st-sec','Start empty workout');e.onclick=()=>wkStart(null);body.appendChild(e);
-  } else {
+  const todayIds=new Set(todays.map(r=>r.id));
+  // Rest day → friendly subtitle (no big card); scheduled day → big "Today's Workout" card(s) as before
+  if(!todays.length)gid('st-sub').textContent=day.l+" — rest day, but no one's stopping you";
+  todays.forEach((r,i)=>{
     const card=mk('div','st-card');
-    card.append(mk('div','st-lbl',"Today's Plan"),mk('div','st-name','Rest Day'),mk('div','st-meta','No workout scheduled today'));
-    const b=mk('button','btn bacc st-big','Start Empty Workout');b.onclick=()=>wkStart(null);
+    card.appendChild(mk('div','st-lbl',i===0?(todays.length>1?"Today's Workout · "+todays.length+' routines':"Today's Workout"):'Also today'));
+    card.appendChild(mk('div','st-name',r.name));
+    card.appendChild(mk('div','st-meta',plural(r.exercises.length,'exercise')));
+    if(r.exercises.length)card.appendChild(mk('div','st-prev',r.exercises.map(e=>e.name).join(' · ')));
+    const b=mk('button','btn bacc st-big','Start Workout');b.onclick=()=>wkStart(r.id);
     card.appendChild(b);body.appendChild(card);
-    if(!ROUTINES.length){
-      const h=mk('div','st-hint','Build your week with the Plan button below — create routines and assign them to days.');body.appendChild(h);
-    }
+  });
+  // Any other routine can be started today (e.g. Pull on a Push day) — it is simply what you chose to do
+  const others=ROUTINES.filter(r=>!todayIds.has(r.id));
+  if(others.length){
+    body.appendChild(mk('div','m-slabel','Other routines'));
+    others.forEach(r=>{
+      const row=mk('div','pl-rcard');
+      const ico=mk('div','pl-ico');ico.innerHTML=DUMBBELL;
+      const info=mk('div','pl-rtinfo');info.append(mk('div','pl-rtname',r.name),mk('div','pl-rtsub',plural(r.exercises.length,'exercise')));
+      const go2=mk('button','st-pill','Start');go2.onclick=()=>wkStart(r.id);
+      row.append(ico,info,go2);body.appendChild(row);
+    });
+  } else if(!ROUTINES.length){
+    body.appendChild(mk('div','st-hint','Build your week with the Plan button below — create routines and assign them to days.'));
   }
+  const fr=mk('button','st-free','');fr.innerHTML='<svg viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>Freestyle workout (pick as you go)';
+  fr.onclick=()=>wkStart(null);body.appendChild(fr);
   const q=mk('button','btn bgh st-sec','Quick log (no workout)');q.onclick=()=>go('log');body.appendChild(q);
   stPlanBtn(body);
 }
