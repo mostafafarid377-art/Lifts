@@ -441,8 +441,8 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 
 
 /* ── BOTTOM TAB BAR ── */
-.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:150;background:rgba(20,20,20,.97);backdrop-filter:blur(14px);border-top:1px solid var(--b1);display:none;grid-template-columns:1fr 1fr 1fr 84px 1fr 1fr 1fr;align-items:end;padding:6px 6px calc(8px + var(--sfb));height:calc(64px + var(--sfb))}
-.tbtn{background:none;border:none;color:var(--m1);display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;font-size:.54rem;letter-spacing:0;min-width:0;transition:transform .09s ease,color .15s}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:150;background:rgba(20,20,20,.97);backdrop-filter:blur(14px);border-top:1px solid var(--b1);display:none;grid-template-columns:1fr 1fr 84px 1fr 1fr;align-items:end;padding:6px 6px calc(8px + var(--sfb));height:calc(64px + var(--sfb))}
+.tbtn{background:none;border:none;color:var(--m1);display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;font-size:.58rem;letter-spacing:.04em;transition:transform .09s ease,color .15s}
 .tbtn svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .tbtn:active{transform:scale(.9)}
 .tbtn.on{color:var(--ac)}
@@ -721,6 +721,7 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 
   <!-- PLAN (weekly schedule + routines) -->
   <div class="scr" id="s-plan">
+    <button class="btn bgh" style="margin-bottom:14px;padding:8px 14px" onclick="go('start')">‹ Start</button>
     <div class="ptitle">Plan</div>
     <div class="psub">Weekly schedule · routines</div>
     <div class="m-slabel">Week schedule</div>
@@ -2597,7 +2598,7 @@ function go(id){
   if(id==='workout'&&!ACTIVE_WORKOUT)id='start';
   if(id!=='log')wkReturn=false;
   document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
-  const tabId=(id==='log'||id==='workout')?'start':id;
+  const tabId=(id==='log'||id==='workout'||id==='plan')?'start':id;
   document.querySelectorAll('[data-tab]').forEach(t=>t.classList.toggle('on',t.dataset.tab===tabId));
   document.getElementById('s-'+id).classList.add('on');
   window.scrollTo(0,0);
@@ -3524,6 +3525,7 @@ function renderStart(){
       mk('div','st-meta',plural(a.exercises.length,'exercise')+' · '+plural(wkSetCount(a),'set')+' logged'));
     const b=mk('button','btn bacc st-big','Continue Workout');b.onclick=()=>go('workout');
     card.appendChild(b);body.appendChild(card);
+    stPlanBtn(body);
     return;
   }
   const todays=(SCHEDULE[day.k]||[]).map(routineById).filter(Boolean);
@@ -3544,10 +3546,14 @@ function renderStart(){
     const b=mk('button','btn bacc st-big','Start Empty Workout');b.onclick=()=>wkStart(null);
     card.appendChild(b);body.appendChild(card);
     if(!ROUTINES.length){
-      const h=mk('div','st-hint','Build your week in the Plan tab — create routines and assign them to days.');body.appendChild(h);
+      const h=mk('div','st-hint','Build your week with the Plan button below — create routines and assign them to days.');body.appendChild(h);
     }
   }
   const q=mk('button','btn bgh st-sec','Quick log (no workout)');q.onclick=()=>go('log');body.appendChild(q);
+  stPlanBtn(body);
+}
+function stPlanBtn(body){
+  const p=mk('button','btn bgh st-sec','Plan');p.onclick=()=>go('plan');body.appendChild(p);
 }
 
 // ── PLAN tab: week schedule + routines ───────────────
@@ -3908,13 +3914,11 @@ function p1OnExerciseRenamed(o,n){
 </script>
 <!-- BOTTOM TAB BAR -->
 <div class="tabbar" id="tabbar">
-  <button class="tbtn" data-tab="plan" onclick="go('plan')"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9zM9 12h6M9 16h4"/></svg>Plan</button>
-  <button class="tbtn" data-tab="history" onclick="go('history')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History</button>
+  <button class="tbtn" data-tab="profile" onclick="go('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Profile</button>
   <button class="tbtn" data-tab="manage" onclick="go('manage')"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Manage</button>
   <button class="lbtn on" data-tab="start" onclick="go('start')"><span class="lcirc"><svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg></span><span class="llbl">Start</span></button>
   <button class="tbtn" data-tab="progress" onclick="go('progress')"><svg viewBox="0 0 24 24"><path d="M6 20V11M12 20V4M18 20v-6"/></svg>Progress</button>
   <button class="tbtn" data-tab="streak" onclick="go('streak')"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Streak</button>
-  <button class="tbtn" data-tab="profile" onclick="go('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Profile</button>
 </div>
 
 <!-- REST TIMER BAR -->
