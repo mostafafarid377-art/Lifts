@@ -1262,7 +1262,6 @@ let SPLITS=[], activeSplitId=null;
 let currentUser=null;
 let selDay='all', selEx=null, selCatCtx=null, sets=[], unit='kg';
 let modalCats=new Set();
-let saveTimer=null;
 let authMode='login';
 
 // ── PHASE 1 state (kept separate from CATS/EX/DATA/SPLITS) ──
@@ -1275,18 +1274,21 @@ function emptySchedule(){const s={};DAYS.forEach(d=>{s[d.k]=[];});return s;}
 let ROUTINES=[], SCHEDULE=emptySchedule(), WORKOUTS=[], ACTIVE_WORKOUT=null, AW_UPDATED=0;
 let wkReturn=false;        // true while the existing log form was opened from the active workout
 let dataLoadedUid=null;    // uid whose cloud data is loaded in memory — saves are only allowed for this uid
-let saveTimerUid=null, saveRetryTimer=null;
 
 // ── Firestore ─────────────────────────────────────────
 function userRef(uid){ return db.collection('users').doc(uid); }
 
 async function loadUserData(uid){
+  const tok=++loadSeq;
+  let snapApplied=false;
   showSync(true);
   try{
     const snap = await userRef(uid).get();
-    if(!currentUser||currentUser.uid!==uid){showSync(false);return;} // user changed while loading — discard
-    if(snap.exists){
-      const d=snap.data();
+    if(tok!==loadSeq||!currentUser||currentUser.uid!==uid){showSync(false);return;} // user changed (or a newer load started) while loading — discard
+    let d=snap.exists?snap.data():null;
+    const localSnap=snapPick(uid,d);            // unsaved local changes from a failed/interrupted cloud save
+    if(localSnap){d=localSnap;snapApplied=true;}
+    if(d){
       CATS = d.cats ? JSON.parse(JSON.stringify(d.cats)) : JSON.parse(JSON.stringify(DC));
       EX   = d.ex   ? JSON.parse(JSON.stringify(d.ex))   : JSON.parse(JSON.stringify(DE));
       DATA = d.data  ? JSON.parse(JSON.stringify(d.data)) : {};
@@ -1310,12 +1312,11 @@ async function loadUserData(uid){
       SPLITS=[];
       activeSplitId=null;
       p1Reset();dataLoadedUid=uid;
-      try{ await userRef(uid).set(buildPayload()); }
-      catch(e2){ console.warn('Could not save new user:',e2.message); }
+      scheduleSave(); // create the user's document through the serialized save queue
     }
   }catch(e){
     console.error('Load error',e.message);
-    if(!currentUser||currentUser.uid!==uid){showSync(false);return;}
+    if(tok!==loadSeq||!currentUser||currentUser.uid!==uid){showSync(false);return;}
     dataLoadedUid=null; // load failed: keep the app usable but NEVER overwrite the cloud copy with blanks
     toast('Could not load your data — changes will not be saved until you reload');
     // Fall back to defaults so app still works
@@ -1329,6 +1330,8 @@ async function loadUserData(uid){
     activeSplitId=null;
     p1Reset();
   }
+  // changes queued before the load finished (or a recovered local snapshot) are pushed now that saving is allowed
+  if(dataLoadedUid===uid&&SV&&SV.uid===uid&&(snapApplied||SV.saved<SV.rev))scheduleSave();
   showSync(false);
   bootApp();
 }
@@ -1338,43 +1341,95 @@ async function loadUserData(uid){
 //  • a pending save is bound to the uid that scheduled it and is dropped if a different user is signed in
 //  • nothing is written until that user's cloud data was loaded successfully (no overwriting real data with blanks)
 //  • sign-out flushes the pending save to the OLD user's document before auth changes
-function buildPayload(){
+function buildPayload(ts){
   return {cats:CATS,ex:EX,data:DATA,msets:MSETS,customMuscles:CUSTOM_MUSCLES,hiddenMuscles:[...HIDDEN_MUSCLES],splits:SPLITS,activeSplitId:activeSplitId,
-          routines:ROUTINES,schedule:SCHEDULE,workouts:WORKOUTS,activeWorkout:ACTIVE_WORKOUT||null,awUpdatedAt:AW_UPDATED};
+          routines:ROUTINES,schedule:SCHEDULE,workouts:WORKOUTS,activeWorkout:ACTIVE_WORKOUT||null,awUpdatedAt:AW_UPDATED,savedAt:ts||Date.now()};
 }
-async function commitSave(uid){
-  if(!uid||!currentUser||currentUser.uid!==uid||dataLoadedUid!==uid)return false;
-  const savedIds=new Set(WORKOUTS.map(w=>w.id));
-  showSync(true);
-  try{
-    await userRef(uid).set(buildPayload());
-    pendingPrune(uid,savedIds);
-    clearTimeout(saveRetryTimer);saveRetryTimer=null;
-    showSync(false);
-    return true;
-  }catch(e){
-    console.error('Save error',e);
-    showSync(false);
-    if(currentUser&&currentUser.uid===uid){
-      toast('Cloud save failed — retrying…');
-      clearTimeout(saveRetryTimer);
-      saveRetryTimer=setTimeout(()=>commitSave(uid),10000);
-    }
-    return false;
-  }
+// ── Save queue (one per signed-in user) ──────────────
+// • every change bumps sv.rev; drain() is the ONLY code that writes to Firestore, and runs at most one write at a time per user
+// • each write sends the NEWEST state at the moment it starts, so an older snapshot can never overwrite a newer one
+// • changes made during a write bump sv.rev, so the same drain loop writes again with the newest state right after
+// • every change is mirrored synchronously into a local snapshot (localStorage) that is removed only after a confirmed cloud write
+// • a queue belongs to one uid; it stops (writes nothing) the moment that uid is no longer the signed-in, loaded user
+const SAVE_TIMEOUT_MS=15000, SAVE_MAX_RETRIES=5;
+let SV=null, loadSeq=0;
+function newSV(uid){return {uid,rev:0,saved:0,job:null,timer:null,retry:null,fails:0,lastTs:0};}
+const svLive=sv=>!!sv&&sv===SV&&!!currentUser&&currentUser.uid===sv.uid&&dataLoadedUid===sv.uid;
+const svStamp=sv=>{sv.lastTs=Math.max(Date.now(),sv.lastTs+1);return sv.lastTs;};
+const snapKey=uid=>'lifts_snap_'+uid;
+function snapRead(uid){try{const x=JSON.parse(localStorage.getItem(snapKey(uid))||'null');return(x&&typeof x==='object'&&x.payload&&typeof x.payload==='object')?x:null;}catch(e){return null;}}
+function snapWrite(uid,payload,ts){try{localStorage.setItem(snapKey(uid),JSON.stringify({ts,payload}));return true;}catch(e){return false;}}
+function snapClearIf(uid,ts){try{const x=snapRead(uid);if(x&&x.ts===ts)localStorage.removeItem(snapKey(uid));}catch(e){}}
+// On load: local snapshot wins only if it is at least as new as the cloud copy; otherwise it is parked (never silently deleted).
+function snapPick(uid,cloud){
+  const x=snapRead(uid);if(!x)return null;
+  if(Number(x.ts)>=(Number(cloud&&cloud.savedAt)||0))return x.payload;
+  try{localStorage.setItem('lifts_snapconflict_'+uid,JSON.stringify(x));localStorage.removeItem(snapKey(uid));}catch(e){}
+  toast('Cloud has newer data — older local changes were set aside');
+  return null;
+}
+function withTimeout(p,ms){
+  return new Promise((res,rej)=>{
+    const t=setTimeout(()=>rej(new Error('save timeout')),ms);
+    p.then(v=>{clearTimeout(t);res(v);},e=>{clearTimeout(t);rej(e);});
+  });
+}
+function svFailed(sv,e){
+  console.error('Save error',e);
+  if(sv!==SV)return;
+  const permanent=/^(permission-denied|invalid-argument|unauthenticated|failed-precondition)$/.test(String((e&&e.code)||''));
+  sv.fails++;
+  if(permanent||sv.fails>SAVE_MAX_RETRIES){toast('Cloud save failed — changes kept on this device');return;} // stop auto-retrying; the next change or flush tries again
+  toast('Cloud save failed — retrying…');
+  clearTimeout(sv.retry);
+  sv.retry=setTimeout(()=>{sv.retry=null;if(svLive(sv))drain(sv);},Math.min(60000,5000*Math.pow(2,sv.fails-1)));
+}
+function drain(sv){
+  if(sv.job)return sv.job;
+  let job;
+  job=Promise.resolve().then(async()=>{
+    if(sv===SV)showSync(true);
+    try{
+      while(sv.saved<sv.rev){
+        if(!svLive(sv))return false;                 // signed out / switched / not loaded: write nothing, data stays in the local snapshot
+        const rev=sv.rev, ts=svStamp(sv);
+        const payload=buildPayload(ts);              // newest state, captured synchronously
+        const ids=new Set(WORKOUTS.map(w=>w.id));
+        snapWrite(sv.uid,payload,ts);
+        try{ await withTimeout(userRef(sv.uid).set(payload),SAVE_TIMEOUT_MS); }
+        catch(e){ svFailed(sv,e); return false; }
+        sv.saved=Math.max(sv.saved,rev);sv.fails=0;
+        pendingPrune(sv.uid,ids);                    // completed-workout backups are removed only after a confirmed write
+        snapClearIf(sv.uid,ts);                      // kept if a newer local snapshot was written during the write
+      }
+      return true;
+    }finally{ if(sv.job===job)sv.job=null; if(sv===SV)showSync(false); }
+  });
+  sv.job=job;
+  return job;
 }
 function scheduleSave(){
-  if(!currentUser)return;
-  clearTimeout(saveTimer);
-  const uid=currentUser.uid;
-  saveTimerUid=uid;
-  saveTimer=setTimeout(()=>{saveTimer=null;commitSave(uid);},900);
+  const sv=SV;
+  if(!currentUser||!sv||sv.uid!==currentUser.uid)return;
+  sv.rev++;sv.fails=0;
+  clearTimeout(sv.retry);sv.retry=null;              // a newer change supersedes any waiting retry (the debounce below saves everything)
+  clearTimeout(sv.timer);
+  if(dataLoadedUid===sv.uid){const ts=svStamp(sv);snapWrite(sv.uid,buildPayload(ts),ts);}
+  sv.timer=setTimeout(()=>{sv.timer=null;if(svLive(sv))drain(sv);},900);
 }
+// Resolves true ONLY if every change made so far is confirmed written to the cloud; false otherwise (data stays in the local snapshot).
 function flushSave(){
-  if(!saveTimer)return Promise.resolve(false);
-  clearTimeout(saveTimer);saveTimer=null;
-  return commitSave(saveTimerUid);
+  const sv=SV;
+  if(!sv)return Promise.resolve(true);
+  clearTimeout(sv.timer);sv.timer=null;
+  clearTimeout(sv.retry);sv.retry=null;
+  if(sv.saved>=sv.rev&&!sv.job)return Promise.resolve(true);
+  return drain(sv).then(()=>sv.saved>=sv.rev,()=>false);
 }
+window.addEventListener('online',()=>{
+  const sv=SV;
+  if(svLive(sv)&&sv.saved<sv.rev){sv.fails=0;clearTimeout(sv.retry);sv.retry=null;drain(sv);}
+});
 
 function showSync(on){
   document.getElementById('sync-bar').classList.toggle('show',on);
@@ -1386,6 +1441,8 @@ auth.onAuthStateChanged(user=>{
     const prevUid=currentUser&&currentUser.uid;
     if(prevUid!==user.uid)p1SwitchUser(); // different account → wipe every trace of the previous one first
     currentUser=user;
+    if(prevUid===user.uid&&dataLoadedUid===user.uid&&SV&&SV.uid===user.uid)return; // same account re-announced: never reload over unsaved in-memory state
+    if(!SV||SV.uid!==user.uid)SV=newSV(user.uid);
     document.getElementById('auth-screen').style.display='none';
     document.getElementById('app').style.display='block';
     document.getElementById('tabbar').style.display='grid';
@@ -1487,8 +1544,17 @@ async function doGoogle(){
 
 async function doSignOut(){
   if(!confirm('Sign out?'))return;
-  // push any pending save to THIS user's document before the account changes (4s cap so offline can't hang sign-out)
-  try{ if(currentUser){ clearTimeout(saveTimer);saveTimer=null; await Promise.race([commitSave(currentUser.uid),new Promise(r=>setTimeout(r,4000))]); } }catch(e){}
+  // push pending changes to THIS user's document before the account changes (4s cap so offline can't hang sign-out)
+  if(currentUser){
+    const uid=currentUser.uid;
+    let saved=false;
+    try{ saved=await Promise.race([flushSave(),new Promise(r=>setTimeout(()=>r(false),4000))]); }catch(e){}
+    if(!saved){
+      const kept=!!snapRead(uid);
+      if(!confirm(kept?'Your latest changes are NOT in the cloud yet. A backup is stored on this device and will upload the next time you sign in to this account here. Sign out anyway?'
+                      :'Your latest changes could not be saved. Sign out anyway and lose them?'))return;
+    }
+  }
   await auth.signOut();
   // Reset app state
   CATS=[];EX={};DATA={};
@@ -3411,14 +3477,26 @@ const clockTime=ms=>new Date(ms).toLocaleTimeString([],{hour:'numeric',minute:'2
 function p1Reset(){ROUTINES=[];SCHEDULE=emptySchedule();WORKOUTS=[];ACTIVE_WORKOUT=null;AW_UPDATED=0;}
 // Wipes ALL in-memory per-user state + pending timers so nothing from user A can reach user B.
 function p1SwitchUser(){
-  clearTimeout(saveTimer);saveTimer=null;clearTimeout(saveRetryTimer);saveRetryTimer=null;
+  const sv=SV;
+  // unsaved changes of the account being left are kept in its local snapshot (never wiped, never sent to another account)
+  if(sv&&dataLoadedUid===sv.uid&&sv.saved<sv.rev){const ts=svStamp(sv);snapWrite(sv.uid,buildPayload(ts),ts);}
+  if(sv){clearTimeout(sv.timer);sv.timer=null;clearTimeout(sv.retry);sv.retry=null;}
+  SV=null;loadSeq++;
   dataLoadedUid=null;wkStopTicker();wkReturn=false;
   CATS=[];EX={};DATA={};MSETS={};CUSTOM_MUSCLES=[];HIDDEN_MUSCLES=new Set();SPLITS=[];activeSplitId=null;
   p1Reset();
-  ['st-body','pl-week','pl-routines','wk-list','hlist'].forEach(id=>{const e=gid(id);if(e)e.innerHTML='';});
+  selEx=null;selCatCtx=null;sets=[];selDay='all';mOpen=null;wkLastRecord=null;histOpenId=null;expCats=new Set();
+  try{stopTimer();}catch(e){}
+  ['st-body','pl-week','pl-routines','wk-list','hlist','pstats','pchart','psess','pgoal','msets-wrap','mlist','m-splits','picker','slist','catpills','onboard-wrap','wcard','exp-cats','cal-grid','dp-list','rt-exlist','xp-list','wl-recent'].forEach(id=>{const e=gid(id);if(e)e.innerHTML='';});
+  const pe=gid('progex');if(pe)pe.innerHTML='<option value="">— Pick an exercise —</option>';
+  ['exsearch','hsearch','msearch','xp-search'].forEach(id=>{const e=gid(id);if(e)e.value='';});
+  [['prof-name','—'],['prof-email','—'],['prof-avatar','?']].forEach(([id,t])=>{const e=gid(id);if(e)e.textContent=t;});
+  const lw=gid('logwrap');if(lw)lw.style.display='none';
+  const se=gid('exsearch');if(se)se.style.display='block';
+  const cp=gid('catpills');if(cp)cp.style.display='flex';
   const b=gid('wk-banner');if(b)b.classList.remove('show');
   const s=gid('wk-summary');if(s)s.classList.remove('on');
-  ['routine','expick','daypick','finish'].forEach(t=>{const m=gid('modal-'+t);if(m)m.classList.remove('on');});
+  document.querySelectorAll('.moverlay.on').forEach(m=>m.classList.remove('on'));
 }
 
 // ── local backups (survive refresh + temporary Firebase failure) ──
@@ -3453,7 +3531,8 @@ function p1LoadFrom(d,uid){
     exercises:(Array.isArray(r.exercises)?r.exercises:[]).map(e=>typeof e==='string'?{name:e,cat:primCat(e)}:e).filter(e=>e&&typeof e.name==='string').map(e=>({name:e.name,cat:e.cat||primCat(e.name)}))
   })):[];
   SCHEDULE=normSchedule(d.schedule);
-  WORKOUTS=Array.isArray(d.workouts)?clone(d.workouts).filter(w=>w&&w.id&&Array.isArray(w.exercises)):[];
+  {const seen=new Set();   // one record per workout id (heals duplicates created by the old recovery bug)
+   WORKOUTS=(Array.isArray(d.workouts)?clone(d.workouts):[]).filter(w=>{if(!w||!w.id||!Array.isArray(w.exercises)||seen.has(w.id))return false;seen.add(w.id);return true;});}
   wkResolveRestore(uid,d);
   p1MergePending(uid);
 }
@@ -3481,11 +3560,16 @@ function wkResolveRestore(uid,d){
 function p1MergePending(uid){
   const pend=pendingRead(uid);if(!pend.length)return;
   const have=new Set(WORKOUTS.map(w=>w.id));
-  let changed=false;
+  const keep=[];let changed=false;
   pend.forEach(w=>{
-    if(w&&w.id&&Array.isArray(w.exercises)&&!have.has(w.id)){WORKOUTS.push(w);ensureSessions(w.date,w.exercises);changed=true;}
+    const ok=w&&typeof w==='object'&&w.id&&Array.isArray(w.exercises);
+    if(!ok){ if(w&&typeof w==='object')keep.push(w); return; }  // unreadable record: never merged, never deleted
+    if(have.has(w.id))return;      // already present (cloud copy, or an earlier entry of this queue) → duplicate, drop
+    have.add(w.id);                // accepted: later duplicates are rejected immediately
+    WORKOUTS.push(w);ensureSessions(w.date,w.exercises);changed=true;
+    keep.push(w);                  // stays queued until a cloud save is confirmed (pendingPrune)
   });
-  pendingWrite(uid,pend.filter(w=>w&&!have.has(w.id)));
+  pendingWrite(uid,keep);
   if(changed)scheduleSave();
 }
 function p1Boot(){
@@ -3886,13 +3970,14 @@ function wkFinish(){
     rec={id:a.id,routineId:a.routineId||null,name:a.routineName,date:a.date,startedAt:a.startedAt,finishedAt,
          durationSec:Math.max(0,Math.round((finishedAt-a.startedAt)/1000)),exercises};
     ensureSessions(rec.date,rec.exercises);   // history/PRs/streak read DATA — make sure every set is there
-    WORKOUTS.push(rec);
+    if(!WORKOUTS.some(w=>w.id===rec.id))WORKOUTS.push(rec);
     pendingAdd(uid,rec);                       // local safety copy until the cloud save succeeds
   }
   ACTIVE_WORKOUT=null;AW_UPDATED=Date.now();
   try{localStorage.setItem(awKey(uid),JSON.stringify({aw:null,updatedAt:AW_UPDATED}));}catch(e){}
   wkStopTicker();wkReturn=false;
-  scheduleSave();flushSave();
+  scheduleSave();
+  flushSave().then(ok=>{if(!ok&&currentUser&&currentUser.uid===uid)toast('Saved on this device — cloud sync pending');});
   wkRenderBanner();
   if(rec){
     wkLastRecord=rec;
@@ -3946,7 +4031,9 @@ function renderWorkoutHistory(w,q){
     const del=mk('button','btn brd','Delete workout record');del.style.cssText='font-size:.55rem;padding:6px 11px;margin-top:6px';
     del.onclick=()=>{
       if(!confirm('Delete this workout record? The sets stay in each exercise\'s history.'))return;
-      WORKOUTS=WORKOUTS.filter(v=>v.id!==x.id);scheduleSave();renderHistory();toast('Deleted');
+      WORKOUTS=WORKOUTS.filter(v=>v.id!==x.id);
+      if(currentUser)pendingWrite(currentUser.uid,pendingRead(currentUser.uid).filter(q=>!q||q.id!==x.id)); // don't let the local backup resurrect it
+      scheduleSave();renderHistory();toast('Deleted');
     };
     body.appendChild(del);el.append(hdr,body);w.appendChild(el);
   });
