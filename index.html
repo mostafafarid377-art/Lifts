@@ -3574,9 +3574,11 @@ function renderStart(){
   } else if(!ROUTINES.length){
     body.appendChild(mk('div','st-hint','Build your week with the Plan button below — create routines and assign them to days.'));
   }
-  const otherCats=CATS.filter(c=>!todayRefs.has(CATREF+c.id)&&(EX[c.id]||[]).length);
+  // only the ACTIVE split's categories are offered here (no active split → all categories, same as the Log filter)
+  const activeSp=SPLITS.find(x=>x.id===activeSplitId);
+  const otherCats=CATS.filter(c=>(!activeSp||activeSp.catIds.includes(c.id))&&!todayRefs.has(CATREF+c.id)&&(EX[c.id]||[]).length);
   if(otherCats.length){
-    body.appendChild(mk('div','m-slabel','Categories'));
+    body.appendChild(mk('div','m-slabel',activeSp?'Categories · '+activeSp.label:'Categories'));
     otherCats.forEach(c=>{
       const row=mk('div','pl-rcard');
       const ico=mk('div','pl-ico');ico.innerHTML=DUMBBELL;ico.style.background=c.color;
