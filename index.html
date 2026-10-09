@@ -2128,6 +2128,7 @@ function renderManage(){
       if(!confirm('Delete category "'+cat.label+'"?'))return;
       CATS=CATS.filter(c=>c.id!==cat.id);delete EX[cat.id];
       SPLITS.forEach(sp=>{sp.catIds=sp.catIds.filter(id=>id!==cat.id);});
+      DAYS.forEach(dd=>{SCHEDULE[dd.k]=(SCHEDULE[dd.k]||[]).filter(x=>x!==CATREF+cat.id);});
       scheduleSave();renderManage();buildCatPills();renderPicker();toast('Category deleted');
     });
     foot.appendChild(ab);foot.appendChild(dc);body.appendChild(foot);
@@ -3383,6 +3384,18 @@ const localISO=d=>{d=d||new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+
 const newId=p=>p+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const plural=(n,w)=>n+' '+w+(n===1?'':'s');
 const routineById=id=>ROUTINES.find(r=>r.id===id);
+// A schedule entry is either a routine id or 'cat:<categoryId>'. Categories are resolved LIVE from CATS/EX,
+// so a category scheduled on a day always reflects its current exercises. Missing/deleted → null (ignored).
+const CATREF='cat:';
+function resolveSched(ref){
+  if(typeof ref!=='string')return null;
+  if(ref.startsWith(CATREF)){
+    const c=catById(ref.slice(CATREF.length));if(!c)return null;
+    return {ref,kind:'category',id:null,name:c.label,color:c.color,exercises:(EX[c.id]||[]).map(n=>({name:n,cat:c.id}))};
+  }
+  const r=routineById(ref);
+  return r?{ref,kind:'routine',id:r.id,name:r.name,color:null,exercises:r.exercises}:null;
+}
 const rtExCat=e=>catById(e.cat)?e.cat:primCat(e.name);
 const todayDay=()=>DAYS[new Date().getDay()];
 function normSchedule(raw){
@@ -3534,8 +3547,8 @@ function renderStart(){
     stPlanBtn(body);
     return;
   }
-  const todays=(SCHEDULE[day.k]||[]).map(routineById).filter(Boolean);
-  const todayIds=new Set(todays.map(r=>r.id));
+  const todays=(SCHEDULE[day.k]||[]).map(resolveSched).filter(Boolean);
+  const todayRefs=new Set(todays.map(r=>r.ref));
   // Rest day → friendly subtitle (no big card); scheduled day → big "Today's Workout" card(s) as before
   if(!todays.length)gid('st-sub').textContent=day.l+" — rest day, but no one's stopping you";
   todays.forEach((r,i)=>{
@@ -3544,11 +3557,11 @@ function renderStart(){
     card.appendChild(mk('div','st-name',r.name));
     card.appendChild(mk('div','st-meta',plural(r.exercises.length,'exercise')));
     if(r.exercises.length)card.appendChild(mk('div','st-prev',r.exercises.map(e=>e.name).join(' · ')));
-    const b=mk('button','btn bacc st-big','Start Workout');b.onclick=()=>wkStart(r.id);
+    const b=mk('button','btn bacc st-big','Start Workout');b.onclick=()=>wkStart(r.ref);
     card.appendChild(b);body.appendChild(card);
   });
   // Any other routine can be started today (e.g. Pull on a Push day) — it is simply what you chose to do
-  const others=ROUTINES.filter(r=>!todayIds.has(r.id));
+  const others=ROUTINES.filter(r=>!todayRefs.has(r.id));
   if(others.length){
     body.appendChild(mk('div','m-slabel','Other routines'));
     others.forEach(r=>{
@@ -3560,6 +3573,17 @@ function renderStart(){
     });
   } else if(!ROUTINES.length){
     body.appendChild(mk('div','st-hint','Build your week with the Plan button below — create routines and assign them to days.'));
+  }
+  const otherCats=CATS.filter(c=>!todayRefs.has(CATREF+c.id)&&(EX[c.id]||[]).length);
+  if(otherCats.length){
+    body.appendChild(mk('div','m-slabel','Categories'));
+    otherCats.forEach(c=>{
+      const row=mk('div','pl-rcard');
+      const ico=mk('div','pl-ico');ico.innerHTML=DUMBBELL;ico.style.background=c.color;
+      const info=mk('div','pl-rtinfo');info.append(mk('div','pl-rtname',c.label),mk('div','pl-rtsub',plural((EX[c.id]||[]).length,'exercise')+' · Category'));
+      const go2=mk('button','st-pill','Start');go2.onclick=()=>wkStart(CATREF+c.id);
+      row.append(ico,info,go2);body.appendChild(row);
+    });
   }
   const fr=mk('button','st-free','');fr.innerHTML='<svg viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>Freestyle workout (pick as you go)';
   fr.onclick=()=>wkStart(null);body.appendChild(fr);
@@ -3576,22 +3600,26 @@ function renderPlan(){
   wk.innerHTML='';rl.innerHTML='';
   const today=todayDay().k;
   DAYS.forEach(d=>{
-    const rts=(SCHEDULE[d.k]||[]).map(routineById).filter(Boolean);
+    const rts=(SCHEDULE[d.k]||[]).map(resolveSched).filter(Boolean);
     const card=mk('div','pl-day'+(d.k===today?' today':''));
     const head=mk('div','pl-dhead');
     head.appendChild(mk('span','pl-dname',d.l));
     if(d.k===today)head.appendChild(mk('span','pl-today','TODAY'));
     head.appendChild(mk('span','pl-sp'));
-    head.appendChild(rts.length?mk('span','pl-dcount',plural(rts.length,'routine')):mk('span','pl-rest','Rest'));
+    const nR=rts.filter(x=>x.kind==='routine').length,nC=rts.length-nR,parts=[];
+    if(nR)parts.push(plural(nR,'routine'));
+    if(nC)parts.push(nC===1?'1 category':nC+' categories');
+    head.appendChild(rts.length?mk('span','pl-dcount',parts.join(' · ')):mk('span','pl-rest','Rest'));
     const add=mk('button','pl-add','+');add.title='Add routine';add.onclick=()=>dpOpen(d.k,'add');
     head.appendChild(add);card.appendChild(head);
     rts.forEach(r=>{
       const row=mk('div','pl-rt');
       const ico=mk('div','pl-ico');ico.innerHTML=DUMBBELL;
-      const info=mk('div','pl-rtinfo');info.append(mk('div','pl-rtname',r.name),mk('div','pl-rtsub',plural(r.exercises.length,'exercise')));
-      info.onclick=()=>rtOpen(r.id);
-      const sw=mk('button','pl-ib','⇄');sw.title='Change routine';sw.onclick=()=>dpOpen(d.k,'swap',r.id);
-      const x=mk('button','pl-ib x','✕');x.title='Remove from day';x.onclick=()=>planRemove(d.k,r.id);
+      if(r.kind==='category')ico.style.background=r.color;
+      const info=mk('div','pl-rtinfo');info.append(mk('div','pl-rtname',r.name),mk('div','pl-rtsub',plural(r.exercises.length,'exercise')+(r.kind==='category'?' · Category':'')));
+      if(r.kind==='routine')info.onclick=()=>rtOpen(r.id);
+      const sw=mk('button','pl-ib','⇄');sw.title='Change';sw.onclick=()=>dpOpen(d.k,'swap',r.ref);
+      const x=mk('button','pl-ib x','✕');x.title='Remove from day';x.onclick=()=>planRemove(d.k,r.ref);
       row.append(ico,info,sw,x);card.appendChild(row);
     });
     wk.appendChild(card);
@@ -3617,21 +3645,32 @@ let dp={day:null,mode:'add',replaceId:null};
 function dpOpen(day,mode,replaceId){
   dp={day,mode,replaceId:replaceId||null};
   const label=DAYS.find(d=>d.k===day).l;
-  gid('dp-title').textContent=(mode==='swap'?'Change routine · ':'Add routine · ')+label;
+  gid('dp-title').textContent=(mode==='swap'?'Change · ':'Add to ')+label;
   renderDp();gid('modal-daypick').classList.add('on');
 }
 function renderDp(){
   const w=gid('dp-list');w.innerHTML='';
   const onDay=SCHEDULE[dp.day]||[];
-  ROUTINES.forEach(r=>{
-    const has=onDay.includes(r.id)&&!(dp.mode==='swap'&&r.id===dp.replaceId);
+  const addRow=(ref,name,sub,color)=>{
+    const cur=dp.mode==='swap'&&ref===dp.replaceId;
+    const has=onDay.includes(ref)&&!cur;
     const b=mk('button','dp-item'+(has?' has':''));
-    const left=mk('div');left.append(mk('div',null,r.name),mk('div','dp-sub',plural(r.exercises.length,'exercise')));
-    b.append(left,mk('span','xp-st',has?'On this day':(dp.mode==='swap'&&r.id===dp.replaceId?'Current':'')));
-    if(!has)b.onclick=()=>dpPick(r.id);
+    const nm=mk('div');
+    if(color){const dt=mk('span','dot');dt.style.background=color;dt.style.marginRight='8px';nm.append(dt,document.createTextNode(name));}else nm.textContent=name;
+    const left=mk('div');left.append(nm,mk('div','dp-sub',sub));
+    b.append(left,mk('span','xp-st',has?'On this day':(cur?'Current':'')));
+    if(!has)b.onclick=()=>dpPick(ref);
     w.appendChild(b);
-  });
-  const nb=mk('button','addbtn','+ New routine');nb.style.marginTop='6px';
+  };
+  if(ROUTINES.length){
+    w.appendChild(mk('div','m-slabel','Routines'));
+    ROUTINES.forEach(r=>addRow(r.id,r.name,plural(r.exercises.length,'exercise')));
+  }
+  if(CATS.length){
+    const l=mk('div','m-slabel','Categories');l.style.marginTop='12px';w.appendChild(l);
+    CATS.forEach(c=>addRow(CATREF+c.id,c.label,plural((EX[c.id]||[]).length,'exercise')+' · all of this category',c.color));
+  }
+  const nb=mk('button','addbtn','+ New routine');nb.style.marginTop='10px';
   nb.onclick=()=>{closeModal('daypick');rtOpen(null,dp.day);};
   w.appendChild(nb);
 }
@@ -3748,7 +3787,7 @@ function xpAdd(name,cat){
 function wkStart(routineId){
   if(ACTIVE_WORKOUT){toast('A workout is already in progress');go('workout');return;}
   if(!currentUser||dataLoadedUid!==currentUser.uid){toast('Still loading your data — try again in a moment');return;}
-  const r=routineId?routineById(routineId):null;
+  const r=routineId?resolveSched(routineId):null;
   const now=Date.now();
   ACTIVE_WORKOUT={
     id:newId('w'),routineId:r?r.id:null,routineName:r?r.name:'Workout',
