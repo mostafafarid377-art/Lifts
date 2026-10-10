@@ -1290,6 +1290,7 @@ async function loadUserData(uid){
     if(localSnap){d=localSnap;snapApplied=true;}
     if(d){
       CATS = d.cats ? JSON.parse(JSON.stringify(d.cats)) : JSON.parse(JSON.stringify(DC));
+      CATS = CATS.map(c=>(c&&typeof c==='object')?{...c,color:safeColor(c.color)}:c);
       EX   = d.ex   ? JSON.parse(JSON.stringify(d.ex))   : JSON.parse(JSON.stringify(DE));
       DATA = d.data  ? JSON.parse(JSON.stringify(d.data)) : {};
       MSETS = d.msets ? JSON.parse(JSON.stringify(d.msets)) : {};
@@ -1694,6 +1695,9 @@ function appendTrustedSvg(parent,svgStr){
   clean(root);
   const node=document.importNode(root,true);parent.appendChild(node);return node;
 }
+// Colours loaded from saved data are applied via CSSOM; accept only plain colour syntax so a tampered value can't be
+// something like url(https://…) that would make the browser fetch an outside address.
+const safeColor=c=>(typeof c==='string'&&/^(#[0-9a-f]{3,8}|(rgb|hsl)a?\([\d\s.,%\/-]+\)|[a-z]{3,20})$/i.test(c.trim()))?c.trim():'#888';
 const fmtDate  = d=>{if(!d)return'';const[,m,dy]=d.split('-');return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+ +dy;};
 // ── UNIT NORMALIZATION (BEGIN) ───────────────────────
 // Stored weights are NEVER converted. Everything that compares / sorts / divides
