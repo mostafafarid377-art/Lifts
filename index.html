@@ -1657,9 +1657,10 @@ function renderOnboarding(){
   wrap.appendChild(card);
 }
 
+let logDateAuto=null; // the auto-filled quick-log date; refreshed after midnight only while the user hasn't picked another date
 function bootApp(){
   const step=(name,fn)=>{ try{ fn(); }catch(e){ console.error(name+' failed:',e); } };
-  step('set logdate',()=>{ document.getElementById('logdate').value=localISO(); });
+  step('set logdate',()=>{ logDateAuto=localISO(); document.getElementById('logdate').value=logDateAuto; });
   step('buildCatPills',buildCatPills);
   step('renderPicker',renderPicker);
   step('buildProgSel',buildProgSel);
@@ -2423,7 +2424,7 @@ function calcStreak(){
   const dates = getWorkoutDates();
   if(!dates.length) return {current:0, best:0, total:dates.length};
 
-  const today = new Date().toISOString().slice(0,10);
+  const today = localISO();
   const allowedGap = restDays + 1; // days between sessions allowed
 
   // Build streak groups
@@ -2470,7 +2471,7 @@ function calPrev(){ calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCal
 function calNext(){ calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCal(); }
 
 function renderCal(){
-  const today = new Date().toISOString().slice(0,10);
+  const today = localISO();
   const workoutDates = new Set(getWorkoutDates());
   const allowedGap = restDays + 1;
 
@@ -2591,8 +2592,8 @@ function initExport(){
     wrap.appendChild(b);
   });
   // set default dates for custom range
-  const today=new Date().toISOString().slice(0,10);
-  const monthAgo=new Date(Date.now()-30*864e5).toISOString().slice(0,10);
+  const today=localISO();
+  const monthAgo=addDaysISO(-30);
   const fromEl=document.getElementById('exp-from');
   const toEl=document.getElementById('exp-to');
   if(fromEl&&!fromEl.value) fromEl.value=monthAgo;
@@ -2618,10 +2619,10 @@ function setExpFormat(f){
 }
 
 function getDateFilter(){
-  const today=new Date().toISOString().slice(0,10);
+  const today=localISO();
   if(expRange==='all') return {from:'2000-01-01',to:today};
   if(expRange==='month'){
-    const from=new Date(Date.now()-30*864e5).toISOString().slice(0,10);
+    const from=addDaysISO(-30);
     return {from,to:today};
   }
   // custom
@@ -2705,7 +2706,11 @@ function go(id){
   document.querySelectorAll('[data-tab]').forEach(t=>t.classList.toggle('on',t.dataset.tab===tabId));
   document.getElementById('s-'+id).classList.add('on');
   window.scrollTo(0,0);
-  if(id==='log'){buildCatPills();renderPicker();renderOnboarding();}
+  if(id==='log'){
+    const ld=document.getElementById('logdate'),t=localISO();
+    if(!ACTIVE_WORKOUT&&ld&&logDateAuto&&ld.value===logDateAuto&&t!==logDateAuto){ld.value=t;logDateAuto=t;}
+    buildCatPills();renderPicker();renderOnboarding();
+  }
   if(id==='history')renderHistory();
   if(id==='progress'){buildProgSel();renderProgress();renderMuscleSets();}
   if(id==='streak')renderStreak();
@@ -3026,7 +3031,7 @@ function openBodyModal(type,showAll){
   bodyUnit=latest?(latest.unit||'kg'):(goal?goal.unit:'kg');
   wlValue=latest?latest.value:(bodyUnit==='kg'?70:154);
   wlShowAll=!!showAll;
-  document.getElementById('wl-date').textContent='Today, '+fmtDay(new Date().toISOString().slice(0,10));
+  document.getElementById('wl-date').textContent='Today, '+fmtDay(localISO());
   setBodyUnit(bodyUnit,true);
   wlRenderRecent();
   document.getElementById('modal-body').classList.add('on');
@@ -3093,7 +3098,7 @@ function openWeightGoalModal(){
 
   // default target date: 12 weeks out, or keep existing goal's date if one exists
   const existing=DATA._weightGoal;
-  const defaultDate=new Date(Date.now()+84*86400000).toISOString().slice(0,10);
+  const defaultDate=addDaysISO(84);
   document.getElementById('wg-date').value=(existing&&existing.targetDate)?existing.targetDate:defaultDate;
 
   const track=document.getElementById('wg-track');
@@ -3146,7 +3151,7 @@ function wgRecalc(weightOverride){
   const weight=typeof weightOverride==='number'?weightOverride:parseFloat(document.getElementById('wg-bignum').textContent);
   const dateVal=document.getElementById('wg-date').value;
   if(!dateVal)return;
-  const days=Math.max(1,Math.round((new Date(dateVal)-new Date(new Date().toISOString().slice(0,10)))/86400000));
+  const days=Math.max(1,Math.round((new Date(dateVal)-new Date(localISO()))/86400000));
   const diff=weight-wgCurrentWeight;
   const weeks=days/7;
   const pace=diff/weeks;
@@ -3178,7 +3183,7 @@ function saveWeightGoal(){
   const weight=parseFloat(document.getElementById('wg-bignum').textContent);
   const dateVal=document.getElementById('wg-date').value;
   if(!weight||!dateVal){ toast('Pick a weight and date'); return; }
-  DATA._weightGoal={value:weight,unit:wgUnit,targetDate:dateVal,setDate:new Date().toISOString().slice(0,10)};
+  DATA._weightGoal={value:weight,unit:wgUnit,targetDate:dateVal,setDate:localISO()};
   scheduleSave();
   closeModal('weightgoal');
   renderBodyStats();
@@ -3188,7 +3193,7 @@ function saveWeightGoal(){
 function saveBodyStat(){
   const val=wlValue;
   if(!val||val<=0){toast('Enter a weight');return;}
-  const today=new Date().toISOString().slice(0,10);
+  const today=localISO();
   if(!DATA._bodyWeight)DATA._bodyWeight=[];
   const idx=DATA._bodyWeight.findIndex(e=>e.date===today);
   const entry={date:today,value:val,unit:bodyUnit};
@@ -3261,17 +3266,17 @@ function weightChartSVG(logs,goal,unit){
   const mons=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   let labeled=0;
   if(span>0){
-    const start=new Date(pts[0].date);
+    const start=parseLocalDate(pts[0].date);
     let c=new Date(start.getFullYear(),start.getMonth()+1,1);
-    while(c.getTime()<=t1){
-      const x=X(c.toISOString().slice(0,10));
+    while(localISO(c)<=pts[pts.length-1].date){
+      const x=X(localISO(c));
       g+='<text class="wc-ax" x="'+x+'" y="'+(H-6)+'" text-anchor="middle">'+mons[c.getMonth()]+'</text>';
       labeled++;
       c=new Date(c.getFullYear(),c.getMonth()+1,1);
     }
   }
   if(!labeled){
-    const lm=new Date(pts[pts.length-1].date);
+    const lm=parseLocalDate(pts[pts.length-1].date);
     g+='<text class="wc-ax" x="'+X(pts[pts.length-1].date)+'" y="'+(H-6)+'" text-anchor="middle">'+mons[lm.getMonth()]+'</text>';
   }
   let goalSvg='';
@@ -3476,6 +3481,12 @@ const gid=id=>document.getElementById(id);
 function mk(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
 const pad2=n=>String(n).padStart(2,'0');
 const localISO=d=>{d=d||new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());};
+// ── Dates ─────────────────────────────────────────────
+// A calendar date ('YYYY-MM-DD') means the user's LOCAL day and is always produced by localISO(); never by toISOString()
+// (that is the UTC day, which differs from the local day for part of every day). Real moments (startedAt, finishedAt,
+// savedAt, exportedAt) stay millisecond timestamps. Stored date strings keep their existing format.
+const addDaysISO=(n,base)=>{const b=base||new Date();return localISO(new Date(b.getFullYear(),b.getMonth(),b.getDate()+n,12));}; // calendar-day maths (DST-safe)
+const parseLocalDate=s=>{const[y,m,d]=String(s).split('-').map(Number);return new Date(y,(m||1)-1,d||1);};                          // local midnight of a stored date
 const newId=p=>p+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const plural=(n,w)=>n+' '+w+(n===1?'':'s');
 const routineById=id=>ROUTINES.find(r=>r.id===id);
