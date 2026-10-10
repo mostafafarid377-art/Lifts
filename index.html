@@ -1734,6 +1734,11 @@ function compareSets(a,b){
   return ra===rb?0:(ra>rb?1:-1);
 }
 // ── UNIT NORMALIZATION (END) ─────────────────────────
+// Unit switches in the entry forms (log rows, goal field, body-weight picker) convert FROM an exact base value each time:
+// the number the user typed, or the stored value the field was filled from. kg→lb→kg therefore returns the original digits
+// instead of re-rounding an already-rounded number, and a switch never just relabels a number as the other unit.
+const fmtW=n=>String(+Number(n).toFixed(2));                                          // up to 2 decimals, no trailing zeros
+const rowFromSet=s=>({w:String(s.weight),r:String(s.reps),u:unitOf(s.unit),o:{w:Number(s.weight),u:unitOf(s.unit),shown:String(s.weight)}});
 const getPR    = sessions=>{let pr=null;sessions.forEach(s=>(s.sets||[]).forEach(set=>{if(!pr||compareSets(set,pr)>0)pr={...set,unit:unitOf(set.unit),date:s.date};}));return pr;};
 const bestSet  = sess=>(sess.sets&&sess.sets.length)?sess.sets.reduce((b,s)=>compareSets(s,b)>0?s:b,sess.sets[0]):{weight:0,reps:0,unit:'kg'};
 
@@ -1854,7 +1859,7 @@ function selectEx(name,catId){
     // so weight/reps are always consistent no matter which tab you logged from.
     const last=sessionsFor(name).slice(-1)[0];
     if(last){
-      last.sets.forEach(s=>sets.push({w:String(s.weight),r:String(s.reps),u:unitOf(s.unit)}));
+      last.sets.forEach(s=>sets.push(rowFromSet(s)));
       if(last.sets[0])setUnit(last.sets[0].unit||'kg');
     }else sets.push({w:'',r:'',u:unit});
     renderSets();
@@ -1875,6 +1880,15 @@ function cancelLog(){
 }
 
 function setUnit(u){
+  u=unitOf(u);
+  sets.forEach(st=>{
+    const o=st.o;
+    if(o&&st.w===o.shown){ // the row still shows its base value → show the same weight in the new unit
+      st.w=(unitOf(o.u)===u)?String(o.w):fmtW(convertWeight(o.w,o.u,u));
+      o.shown=st.w;
+    }
+    st.u=u;
+  });
   unit=u;
   document.getElementById('ukg').classList.toggle('on',u==='kg');
   document.getElementById('ulb').classList.toggle('on',u==='lb');
@@ -1887,7 +1901,7 @@ function renderSets(){
     const row=document.createElement('div');row.className='srow';
     const num=document.createElement('div');num.className='snum';num.textContent=i+1;
     const wi=document.createElement('input');wi.className='sinp';wi.type='number';wi.step='.5';wi.min='0';wi.inputMode='decimal';wi.placeholder='Weight ('+unit+')';wi.value=st.w;
-    wi.addEventListener('input',()=>{sets[i].w=wi.value;sets[i].u=unit;});
+    wi.addEventListener('input',()=>{sets[i].w=wi.value;sets[i].u=unit;const n=parseFloat(wi.value);sets[i].o=isFinite(n)?{w:n,u:unit,shown:wi.value}:null;});
     const ri=document.createElement('input');ri.className='sinp';ri.type='number';ri.min='1';ri.inputMode='numeric';ri.placeholder='Reps';ri.value=st.r;
     ri.addEventListener('input',()=>{sets[i].r=ri.value;});
     const db=document.createElement('button');db.className='dsbtn';db.textContent='✕';
@@ -1899,7 +1913,7 @@ function renderSets(){
 
 function addSet(){
   const last=sets.slice(-1)[0];
-  sets.push({w:last?last.w:'',r:last?last.r:'',u:unit});
+  sets.push({w:last?last.w:'',r:last?last.r:'',u:unit,o:(last&&last.o)?{...last.o}:null});
   renderSets();
 }
 
@@ -2900,6 +2914,7 @@ function hideWarmup(){
 // ── GOALS ─────────────────────────────────────────────
 // Goals stored in DATA._goals = { exerciseName: {weight, reps, unit} }
 let goalUnit = 'kg';
+let goalBase = null; // {w,u,shown}: exact base behind the number shown in the goal weight field
 let goalExName = '';
 
 function getGoal(name){ return (DATA._goals||{})[name]||null; }
@@ -2971,7 +2986,10 @@ function openGoalModal(name){
   goalExName = name;
   const goal = getGoal(name);
   document.getElementById('goal-modal-ex').textContent = name;
-  document.getElementById('goal-weight').value = goal ? goal.weight : '';
+  const gwEl = document.getElementById('goal-weight');
+  gwEl.value = goal ? goal.weight : '';
+  goalBase = goal ? {w:Number(goal.weight), u:unitOf(goal.unit), shown:gwEl.value} : null;
+  gwEl.oninput = ()=>{ const n=parseFloat(gwEl.value); goalBase = isFinite(n) ? {w:n, u:goalUnit, shown:gwEl.value} : null; };
   document.getElementById('goal-reps').value = goal ? goal.reps : '';
   goalUnit = goal ? goal.unit : unit;
   setGoalUnit(goalUnit);
@@ -2981,6 +2999,12 @@ function openGoalModal(name){
 }
 
 function setGoalUnit(u){
+  u = unitOf(u);
+  const gwEl = document.getElementById('goal-weight');
+  if(goalBase && gwEl.value === goalBase.shown){ // field still shows its base value → same weight in the new unit
+    gwEl.value = (goalBase.u === u) ? String(goalBase.w) : fmtW(convertWeight(goalBase.w, goalBase.u, u));
+    goalBase.shown = gwEl.value;
+  }
   goalUnit = u;
   document.getElementById('goal-ukg').classList.toggle('on', u==='kg');
   document.getElementById('goal-ulb').classList.toggle('on', u==='lb');
@@ -3036,12 +3060,14 @@ function openBodyModal(type,showAll){
   wlRenderRecent();
   document.getElementById('modal-body').classList.add('on');
 }
+let wlBase=null, wlInternal=false; // wlBase: exact value (and unit) the picker was last set to by the user / opened with
 function wlSet(v,fromSlider){
   if(isNaN(v))return;
   const lo=bodyUnit==='kg'?20:44, hi=bodyUnit==='kg'?300:660;
   wlValue=Math.round(Math.max(lo,Math.min(hi,v))*10)/10;
   document.getElementById('wl-num').textContent=wlValue.toFixed(1);
   if(!fromSlider)document.getElementById('wl-range').value=wlValue;
+  if(!wlInternal)wlBase={v:wlValue,u:bodyUnit};
 }
 function wlStep(d){ wlSet(wlValue+d); }
 function wlRenderRecent(){
@@ -3075,8 +3101,9 @@ function setBodyUnit(u,initial){
   const rng=document.getElementById('wl-range');
   if(rng){rng.min=u==='kg'?30:66;rng.max=u==='kg'?200:440;}
   const unitEl=document.getElementById('wl-unit');if(unitEl)unitEl.textContent=u;
-  if(!initial&&prev!==u)wlValue=Math.round(conv(wlValue,prev,u)*10)/10;
-  wlSet(wlValue);
+  if(initial||!wlBase)wlBase={v:wlValue,u:u};
+  else if(prev!==u)wlValue=(wlBase.u===u)?wlBase.v:Math.round(conv(wlBase.v,wlBase.u,u)*10)/10; // convert from the base, never from the rounded display
+  wlInternal=true;wlSet(wlValue);wlInternal=false;
 }
 
 // ── WEIGHT GOAL (ruler picker) ─────────────────────────
@@ -3960,7 +3987,7 @@ function wkOpenEx(name,cat,addOne){
   selectEx(name,cat);
   const lg=a.logged[name];
   if(lg&&lg.sets&&lg.sets.length){
-    sets=lg.sets.map(s=>({w:String(s.weight),r:String(s.reps),u:unitOf(s.unit)}));
+    sets=lg.sets.map(rowFromSet);
     setUnit(unitOf(lg.sets[0].unit)); // re-renders the rows
     if(addOne)addSet();
   }
