@@ -1674,6 +1674,26 @@ const catColor = id=>catById(id)?.color||'#888';
 const catLabel = id=>catById(id)?.label||id;
 const primCat  = name=>{for(const c of CATS)if((EX[c.id]||[]).includes(name))return c.id;return CATS[0]?.id||'other';};
 const allNames = ()=>[...new Set(CATS.flatMap(c=>EX[c.id]||[]))].sort();
+// ── Safe rendering ────────────────────────────────────
+// Values that come from the user or Firestore (exercise/category names, dates, weights, units, reps…) are only ever put
+// into the page with textContent / createElement / CSSOM — never concatenated into an HTML string.
+// The only markup still parsed from a string is the weight-chart SVG (numbers + constants); it goes through this strict allowlist.
+const SVG_OK_EL=new Set(['svg','defs','lineargradient','stop','line','text','path','circle','rect','g','polyline']);
+const SVG_OK_ATTR=new Set(['class','viewbox','xmlns','id','x','y','x1','x2','y1','y2','cx','cy','r','d','fill','stroke','stroke-width','stroke-dasharray','stroke-linejoin','stroke-linecap','text-anchor','offset','stop-color','stop-opacity','width','height','points','style']);
+function appendTrustedSvg(parent,svgStr){
+  let doc;try{doc=new DOMParser().parseFromString(svgStr,'image/svg+xml');}catch(e){return null;}
+  const root=doc.documentElement;
+  if(!root||root.localName!=='svg'||doc.getElementsByTagName('parsererror').length)return null;
+  const clean=el=>{
+    Array.from(el.children).forEach(ch=>{if(!SVG_OK_EL.has(ch.localName.toLowerCase())){ch.remove();return;}clean(ch);});
+    Array.from(el.attributes).forEach(a=>{
+      const n=a.name.toLowerCase();
+      if(!SVG_OK_ATTR.has(n)||(n==='style'&&!/^[\w\s:;#.,%()-]*$/.test(a.value))||/javascript:|url\((?!#)/i.test(a.value))el.removeAttribute(a.name);
+    });
+  };
+  clean(root);
+  const node=document.importNode(root,true);parent.appendChild(node);return node;
+}
 const fmtDate  = d=>{if(!d)return'';const[,m,dy]=d.split('-');return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+ +dy;};
 // ── UNIT NORMALIZATION (BEGIN) ───────────────────────
 // Stored weights are NEVER converted. Everything that compares / sorts / divides
@@ -1761,9 +1781,8 @@ function renderPicker(){
       const n=document.createElement('span');n.textContent=name;
       const sub=document.createElement('span');sub.style.cssText='font-size:.57rem;color:var(--m1)';
       if(last){
-        let txt=last.date+' · '+(last.sets||[]).map(s=>s.weight+(s.unit||'')+'×'+s.reps).join(', ');
-        if(pr) txt+=' <span style="color:var(--ac)">· PR '+pr.weight+pr.unit+'×'+pr.reps+'</span>';
-        sub.innerHTML=txt;
+        sub.appendChild(document.createTextNode(last.date+' · '+(last.sets||[]).map(s=>s.weight+(s.unit||'')+'×'+s.reps).join(', ')+(pr?' ':'')));
+        if(pr){const prs=document.createElement('span');prs.style.color='var(--ac)';prs.textContent='· PR '+pr.weight+pr.unit+'×'+pr.reps;sub.appendChild(prs);}
       } else {
         sub.textContent='No history';
       }
@@ -1918,19 +1937,23 @@ function renderHistory(){
     const pr=getPR(sessions);
     const el=document.createElement('div');el.className='hent';
     const hdr=document.createElement('div');hdr.className='hhdr';
-    hdr.innerHTML='<span class="dot" style="background:'+catColor(primCat(name))+'"></span>'
-      +'<span class="hname">'+name+'</span>'
-      +'<span class="hmeta">'+sessions.length+' session'+(sessions.length>1?'s':'')+'</span>'
-      +'<span class="hchev">▼</span>';
+    const hdot=document.createElement('span');hdot.className='dot';hdot.style.background=catColor(primCat(name));
+    hdr.append(hdot,mk('span','hname',name),mk('span','hmeta',sessions.length+' session'+(sessions.length>1?'s':'')),mk('span','hchev','▼'));
     hdr.addEventListener('click',()=>el.classList.toggle('op'));
     const body=document.createElement('div');body.className='hbody';
     sessions.slice().reverse().forEach(s=>{
       const blk=document.createElement('div');blk.className='sblk';
-      const chips=s.sets.map(set=>{
+      const chips=document.createElement('div');chips.className='schips';
+      s.sets.forEach(set=>{
         const isPR=pr&&s.date===pr.date&&set.reps===pr.reps&&compareWeights(set.weight,set.unit,pr.weight,pr.unit)===0;
-        return'<span class="chip">'+set.weight+(set.unit||'kg')+' × '+set.reps+(isPR?'<span class="prbadge">PR</span>':'')+'</span>';
-      }).join('');
-      blk.innerHTML='<div class="sdate">'+fmtDate(s.date)+' <span style="color:var(--m1);font-size:.55rem">· '+catLabel(s.cat)+'</span></div><div class="schips">'+chips+'</div>';
+        const chip=mk('span','chip',set.weight+(set.unit||'kg')+' × '+set.reps);
+        if(isPR)chip.appendChild(mk('span','prbadge','PR'));
+        chips.appendChild(chip);
+      });
+      const sdate=mk('div','sdate',fmtDate(s.date)+' ');
+      const stag=mk('span',null,'· '+catLabel(s.cat));stag.style.cssText='color:var(--m1);font-size:.55rem';
+      sdate.appendChild(stag);
+      blk.append(sdate,chips);
       body.appendChild(blk);
     });
     const db=document.createElement('button');db.className='btn brd';db.style.cssText='font-size:.55rem;padding:6px 11px;margin-top:6px';db.textContent='Delete all logs';
@@ -2060,17 +2083,20 @@ function renderProgress(){
   const latestKg=toKg(latest.weight,latest.unit), firstKg=toKg(first.weight,first.unit);
   const imp=(sessions.length>1&&firstKg>0)?((latestKg-firstKg)/firstKg*100).toFixed(1):null;
   renderGoal(name);
-  ps.innerHTML='<div class="sgrid">'
-    +'<div class="sbox"><div class="slbl">PR Weight</div><div class="sval">'+(pr?pr.weight:'—')+'</div><div class="sunit">'+(pr?pr.unit:'')+'</div></div>'
-    +'<div class="sbox"><div class="slbl">Sessions</div><div class="sval">'+sessions.length+'</div><div class="sunit">logged</div></div>'
-    +'<div class="sbox"><div class="slbl">'+(imp!==null?(+imp>=0?'↑ Gained':'↓ Change'):'Progress')+'</div>'
-    +'<div class="sval" style="font-size:'+(imp!==null?'1.3rem':'1.5rem')+';color:'+(imp===null?'inherit':+imp>=0?'var(--ac)':'var(--rd)')+'">'+
-    (imp!==null?Math.abs(imp)+'%':'—')+'</div><div class="sunit">best set wt</div></div></div>';
+  const sbox=(lbl,val,unitTxt,valStyle)=>{const b=mk('div','sbox');b.appendChild(mk('div','slbl',lbl));const v=mk('div','sval',val);if(valStyle)v.style.cssText=valStyle;b.appendChild(v);b.appendChild(mk('div','sunit',unitTxt));return b;};
+  const sgrid=mk('div','sgrid');
+  sgrid.append(
+    sbox('PR Weight',pr?pr.weight:'—',pr?pr.unit:''),
+    sbox('Sessions',sessions.length,'logged'),
+    sbox(imp!==null?(+imp>=0?'↑ Gained':'↓ Change'):'Progress',imp!==null?Math.abs(imp)+'%':'—','best set wt',
+         'font-size:'+(imp!==null?'1.3rem':'1.5rem')+';color:'+(imp===null?'inherit':+imp>=0?'var(--ac)':'var(--rd)')));
+  ps.appendChild(sgrid);
   if(sessions.length>=2){
     // chart every session in ONE unit (the unit of the most recent best set) so mixed kg/lb points are comparable
     const chartUnit=unitOf(latest.unit);
     const pts=sessions.map(s=>{const b=bestSet(s);return{date:s.date,w:Math.round(convertWeight(b.weight,b.unit,chartUnit)*100)/100};});
-    pc.innerHTML='<div class="cbox"><div class="ctitle">Best Set Weight Per Session ('+chartUnit+')</div><div id="cwrap" style="position:relative;height:140px"></div></div>';
+    const cbox=mk('div','cbox');cbox.appendChild(mk('div','ctitle','Best Set Weight Per Session ('+chartUnit+')'));
+    const cwrapEl=mk('div');cwrapEl.id='cwrap';cwrapEl.style.cssText='position:relative;height:140px';cbox.appendChild(cwrapEl);pc.appendChild(cbox);
     drawChart(pts);
   }else pc.innerHTML='<div class="empty" style="padding:14px">Log 2+ sessions to see chart</div>';
   const sd=document.createElement('div');sd.className='cbox';
@@ -2200,7 +2226,7 @@ function renderManage(){
     foot.appendChild(ab);foot.appendChild(dc);body.appendChild(foot);
     card.appendChild(body);w.appendChild(card);
   });
-  if(q&&!shown)w.innerHTML='<div class="mempty">No exercises match "'+q.replace(/</g,'&lt;')+'"</div>';
+  if(q&&!shown){w.innerHTML='';w.appendChild(mk('div','mempty','No exercises match "'+q+'"'));}
 }
 
 // ── SPLITS ───────────────────────────────────────────
@@ -2837,23 +2863,16 @@ function toggleWarmup(){
   // build table
   const tbody = document.getElementById('warmup-tbody');
   tbody.innerHTML='';
+  const wuTd=(t,cls,strong)=>{const c=document.createElement('td');if(cls)c.className=cls;if(strong){const st=document.createElement('strong');st.textContent=t;c.appendChild(st);}else c.textContent=t;return c;};
   result.warmups.forEach((s,i)=>{
     const tr=document.createElement('tr');
-    tr.innerHTML=
-      '<td>'+( i+1)+'</td>'+
-      '<td><strong>'+s.weight+' '+s.unit+'</strong></td>'+
-      '<td>'+s.reps+' reps</td>'+
-      '<td class="warmup-pct">'+s.pct+'%</td>';
+    tr.append(wuTd(i+1),wuTd(s.weight+' '+s.unit,null,true),wuTd(s.reps+' reps'),wuTd(s.pct+'%','warmup-pct'));
     tbody.appendChild(tr);
   });
   // working set row
   const trW=document.createElement('tr');
   trW.className='working';
-  trW.innerHTML=
-    '<td>➡️</td>'+
-    '<td><strong>'+result.working+' '+result.unit+'</strong></td>'+
-    '<td>Your target</td>'+
-    '<td class="warmup-pct">100%</td>';
+  trW.append(wuTd('➡️'),wuTd(result.working+' '+result.unit,null,true),wuTd('Your target'),wuTd('100%','warmup-pct'));
   tbody.appendChild(trW);
 
   panel.classList.add('show');
@@ -2908,7 +2927,10 @@ function renderGoal(name){
     // Target line
     const target = document.createElement('div');
     target.className = 'goal-target';
-    target.innerHTML = 'Target: <span>'+goal.weight+' '+goal.unit+'</span> × <span>'+goal.reps+' reps</span>';
+    target.appendChild(document.createTextNode('Target: '));
+    target.appendChild(mk('span',null,goal.weight+' '+goal.unit));
+    target.appendChild(document.createTextNode(' × '));
+    target.appendChild(mk('span',null,goal.reps+' reps'));
     box.appendChild(target);
 
     // Progress bar based on weight
@@ -2920,9 +2942,9 @@ function renderGoal(name){
 
     const barWrap = document.createElement('div');
     barWrap.className = 'goal-bar-wrap';
-    barWrap.innerHTML =
-      '<div class="goal-bar-track"><div class="goal-bar-fill'+(done?' done':'')+'" style="width:'+pct+'%"></div></div>'+
-      '<div class="goal-pct"><span>Current: '+(pr?pr.weight+' '+pr.unit:'—')+'</span><span>'+pct+'%</span></div>';
+    const gTrack=mk('div','goal-bar-track');const gFill=mk('div','goal-bar-fill'+(done?' done':''));gFill.style.width=pct+'%';gTrack.appendChild(gFill);
+    const gPct=mk('div','goal-pct');gPct.append(mk('span',null,'Current: '+(pr?pr.weight+' '+pr.unit:'—')),mk('span',null,pct+'%'));
+    barWrap.append(gTrack,gPct);
     box.appendChild(barWrap);
 
     if(done){
@@ -3099,7 +3121,8 @@ function openWeightGoalModal(){
 }
 
 function wgUpdate(weight,idx){
-  document.getElementById('wg-bignum').innerHTML=weight.toFixed(wgUnit==='kg'?1:0)+'<span id="wg-unit">'+wgUnit+'</span>';
+  const wgBig=document.getElementById('wg-bignum');wgBig.textContent=weight.toFixed(wgUnit==='kg'?1:0);
+  const wgU=document.createElement('span');wgU.id='wg-unit';wgU.textContent=wgUnit;wgBig.appendChild(wgU);
 
   // haptic feedback on real devices that support it (Android Chrome — iOS Safari
   // has no Vibration API at all, so this silently does nothing there); the
@@ -3177,11 +3200,9 @@ function saveBodyStat(){
 function showCelebration(title,sub){
   const stage=document.createElement('div');
   stage.className='celeb-stage';
-  stage.innerHTML='<div class="celeb-card">'
-    +'<div class="celeb-burst">🎉</div>'
-    +'<div class="celeb-title">'+title+'</div>'
-    +'<div class="celeb-sub">'+sub+'</div>'
-    +'</div>';
+  const ccard=mk('div','celeb-card');
+  ccard.append(mk('div','celeb-burst','🎉'),mk('div','celeb-title',title),mk('div','celeb-sub',sub));
+  stage.appendChild(ccard);
   document.body.appendChild(stage);
 
   const colors=['#e8ff47','#ff9d3d','#ff4444','#4dd8ff','#c04dff'];
@@ -3271,39 +3292,43 @@ function renderBodyStats(){
   const card=document.getElementById('wcard');if(!card)return;
   const logs=(DATA._bodyWeight||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
   const goal=DATA._weightGoal;
+  const top=goalTxt=>{
+    const t=mk('div','wc-top');t.appendChild(mk('span','wc-title','Body weight'));
+    if(goalTxt!==null)t.appendChild(mk('span','wc-goal','◎ '+goalTxt));
+    const b=mk('button','wc-log','+ Log');b.addEventListener('click',()=>openBodyModal('weight'));t.appendChild(b);return t;
+  };
+  card.innerHTML='';
   if(!logs.length){
-    card.innerHTML='<div class="wc-top"><span class="wc-title">Body weight</span>'
-      +(goal?'<span class="wc-goal">◎ '+goal.value+'</span>':'')
-      +'<button class="wc-log" onclick="openBodyModal(\'weight\')">+ Log</button></div>'
-      +'<div class="wc-empty">No weigh-ins yet — tap + Log to add your first one.</div>';
+    card.appendChild(top(goal?goal.value:null));
+    card.appendChild(mk('div','wc-empty','No weigh-ins yet — tap + Log to add your first one.'));
     return;
   }
   const latest=logs[logs.length-1];
   const unit=latest.unit||'kg';
   const prev=logs.length>1?logs[logs.length-2]:null;
   const gv=goal?Math.round(conv(goal.value,goal.unit||'kg',unit)*10)/10:null;
-  let html='<div class="wc-top"><span class="wc-title">Body weight</span>'
-    +(gv!==null?'<span class="wc-goal">◎ '+gv+'</span>':'')
-    +'<button class="wc-log" onclick="openBodyModal(\'weight\')">+ Log</button></div>';
-  let delta='';
+  card.appendChild(top(gv!==null?gv:null));
+  let deltaEl=null;
   if(prev){
     const d=Math.round((latest.value-conv(prev.value,prev.unit||'kg',unit))*10)/10;
     if(d!==0){
       const away=gv!==null?(Math.abs(latest.value-gv)>Math.abs(latest.value-d-gv)):false;
       const clr=gv===null?'var(--m2)':(away?'var(--rd)':'var(--ac)');
-      delta='<span class="wc-delta" style="color:'+clr+'">'+(d>0?'↑':'↓')+' '+Math.abs(d)+'</span>';
+      deltaEl=mk('span','wc-delta',(d>0?'↑':'↓')+' '+Math.abs(d));deltaEl.style.color=clr;
     }
   }
-  html+='<div class="wc-main"><span class="wc-val">'+latest.value+'</span><span class="wc-unit">'+unit+'</span>'+delta
-    +'<span class="wc-date">'+fmtDay(latest.date)+'</span></div>';
+  const main=mk('div','wc-main');
+  main.append(mk('span','wc-val',latest.value),mk('span','wc-unit',unit));
+  if(deltaEl)main.appendChild(deltaEl);
+  main.appendChild(mk('span','wc-date',fmtDay(latest.date)));
+  card.appendChild(main);
   if(gv!==null){
     const diff=Math.round((latest.value-gv)*10)/10;
     const txt=diff>0?Math.abs(diff)+' '+unit+' to lose':diff<0?Math.abs(diff)+' '+unit+' to gain':'goal reached 🎉';
-    html+='<div class="wc-goalline">◎ Goal '+gv+' '+unit+' · '+txt+'</div>';
+    card.appendChild(mk('div','wc-goalline','◎ Goal '+gv+' '+unit+' · '+txt));
   }
-  html+=weightChartSVG(logs,goal,unit);
-  html+='<button class="wc-all" onclick="openBodyModal(\'weight\',true)">All weigh-ins ›</button>';
-  card.innerHTML=html;
+  appendTrustedSvg(card,weightChartSVG(logs,goal,unit));
+  const allBtn=mk('button','wc-all','All weigh-ins ›');allBtn.addEventListener('click',()=>openBodyModal('weight',true));card.appendChild(allBtn);
 }
 
 
