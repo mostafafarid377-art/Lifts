@@ -1257,7 +1257,299 @@ function migrateDataShape(){
     }
   });
 }
-// SPLITS: [{id, name, catIds:[]}]  activeSplitId: string|null
+// ── DATA VALIDATION (load time) ──────────────────────
+// Everything read from Firestore, the local backup and the pending-workout queue passes through these before the app uses it.
+// Rules: repair what is recoverable (numeric strings, missing ids/names, date formats); drop only entries with nothing
+// recoverable; keep sessions that have sets but no usable date out of sight in UNPLACED (written back untouched on save);
+// copy every unreadable entry to a local quarantine so nothing disappears silently. None of these functions throws.
+const isObj=v=>!!v&&typeof v==='object'&&!Array.isArray(v);
+const numOf=v=>{
+  if(typeof v==='number')return Number.isFinite(v)?v:null;
+  if(typeof v==='string'){const t=v.trim().replace(/^(-?\d+),(\d+)$/,'$1.$2');if(t!==''&&Number.isFinite(Number(t)))return Number(t);}
+  return null;
+};
+const isoOf=v=>{
+  let t=null;
+  if(typeof v==='string')t=v.trim();
+  else if(typeof v==='number'&&Number.isInteger(v)&&v>=10000101&&v<=99991231)t=String(v);
+  if(!t)return null;
+  const m=/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/.exec(t)||/^(\d{4})(\d{2})(\d{2})$/.exec(t);
+  if(!m)return null;
+  const y=+m[1],mo=+m[2],d=+m[3];
+  if(mo<1||mo>12||d<1||d>new Date(y,mo,0).getDate())return null;
+  return m[1]+'-'+m[2]+'-'+m[3];
+};
+const textOf=v=>(typeof v==='string')?v:((typeof v==='number'&&Number.isFinite(v))?String(v):'');
+const hashId=(p,o)=>{const t=JSON.stringify(o)||'';let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return p+'_'+(h>>>0).toString(36);};
+const KNOWN_FIELDS=new Set(['cats','ex','data','msets','customMuscles','hiddenMuscles','splits','activeSplitId','routines','schedule','workouts','activeWorkout','awUpdatedAt','savedAt']);
+let UNPLACED={}, EXTRA={}, REPAIR={dropped:0,unplaced:0}, NORM_UID=null;
+function quarantine(kind,raw){
+  REPAIR.dropped++;
+  if(!NORM_UID)return;
+  try{
+    const k='lifts_quarantine_'+NORM_UID;
+    let a=[];try{a=JSON.parse(localStorage.getItem(k)||'[]');if(!Array.isArray(a))a=[];}catch(e){a=[];}
+    const sig=kind+'|'+JSON.stringify(raw);
+    if(a.some(x=>x&&x.sig===sig))return;
+    a.push({sig,kind,ts:Date.now(),raw});
+    localStorage.setItem(k,JSON.stringify(a.slice(-100)));
+  }catch(e){}
+}
+function normSet(x){
+  if(!isObj(x))return null;
+  const w=numOf(x.weight),r=numOf(x.reps);
+  if(w===null||r===null)return null;
+  return {...x,weight:w,reps:r};
+}
+function normSets(raw){
+  const sets=[],bad=[];
+  (Array.isArray(raw)?raw:[]).forEach(x=>{const n=normSet(x);if(n)sets.push(n);else if(isObj(x))bad.push(x);});
+  return {sets,bad};
+}
+function normSession(s){            // → {session} | {unplaced} | null
+  if(!isObj(s))return null;
+  const {sets,bad}=normSets(s.sets);
+  if(!sets.length){if(bad.length)quarantine('session-sets-unreadable',s);return null;}
+  if(bad.length)quarantine('sets-unreadable',{date:s.date,cat:s.cat,sets:bad});
+  const date=isoOf(s.date);
+  const out={...s,sets};
+  if(typeof out.cat!=='string'||!out.cat)delete out.cat;
+  if(!date)return {unplaced:out};   // valid sets, no usable date: kept untouched, hidden from the app
+  out.date=date;
+  return {session:out};
+}
+function sanitizeData(raw){
+  const out={};
+  if(!isObj(raw)){if(raw!=null&&!(Array.isArray(raw)&&!raw.length))quarantine('data-unreadable',raw);return out;}
+  Object.keys(raw).forEach(name=>{
+    const v=raw[name];
+    if(name.startsWith('_')){out[name]=JSON.parse(JSON.stringify(v===undefined?null:v));return;}
+    let list,flat=false;
+    if(Array.isArray(v))list=v;
+    else if(isObj(v)){                 // previous per-category nested shape {catId:[sessions]} — flatten
+      flat=true;list=[];
+      Object.keys(v).forEach(catId=>{
+        const c=v[catId];
+        if(Array.isArray(c))c.forEach(x=>{if(isObj(x))list.push({...x,cat:catId});});
+        else if(c!=null&&c!=='')quarantine('legacy-category-unreadable',{name,catId,value:c});
+      });
+    }else{if(v!=null)quarantine('history-unreadable',{name,value:v});return;}
+    const arr=[];
+    list.forEach(x=>{
+      const r=normSession(x);
+      if(!r)return;
+      if(r.unplaced){(UNPLACED[name]=UNPLACED[name]||[]).push(r.unplaced);REPAIR.unplaced++;}
+      else arr.push(r.session);
+    });
+    if(flat)arr.sort((a,b)=>a.date.localeCompare(b.date));
+    out[name]=arr;
+  });
+  if('_bodyWeight' in out){
+    const bw=out._bodyWeight;
+    if(Array.isArray(bw)){
+      const keep=[];
+      bw.forEach(e=>{
+        if(!isObj(e))return;
+        const val=numOf(e.value),date=isoOf(e.date);
+        if(val===null){quarantine('bodyweight-no-value',e);return;}
+        if(!date){(UNPLACED._bodyWeight=UNPLACED._bodyWeight||[]).push({...e,value:val});REPAIR.unplaced++;return;}
+        keep.push({...e,date,value:val});
+      });
+      out._bodyWeight=keep;
+    }else{if(bw!=null)quarantine('bodyweight-unreadable',bw);out._bodyWeight=[];}
+  }
+  if('_goals' in out){
+    const g=out._goals,ng={};
+    if(isObj(g)){
+      Object.keys(g).forEach(n=>{
+        const x=g[n];
+        if(!isObj(x)){if(x!=null)quarantine('goal-unreadable',{name:n,goal:x});return;}
+        const w=numOf(x.weight),r=numOf(x.reps);
+        if(w===null||r===null){quarantine('goal-unreadable',{name:n,goal:x});return;}
+        ng[n]={...x,weight:w,reps:r};
+      });
+    }else if(g!=null)quarantine('goals-unreadable',g);
+    out._goals=ng;
+  }
+  if('_weightGoal' in out){
+    const wg=out._weightGoal,val=isObj(wg)?numOf(wg.value):null;
+    if(val!==null)out._weightGoal={...wg,value:val};
+    else{if(wg!=null)quarantine('weight-goal-unreadable',wg);delete out._weightGoal;}
+  }
+  if('_restDays' in out){
+    const n=numOf(out._restDays);
+    if(n!==null&&Number.isInteger(n)&&n>=0)out._restDays=n;else delete out._restDays;
+  }
+  return out;
+}
+function normCats(raw){             // → array, or null when the field is missing/unreadable
+  if(!Array.isArray(raw))return null;
+  const out=[],seen=new Set();
+  raw.forEach(c=>{
+    if(!isObj(c))return;
+    let id=textOf(c.id).trim()?textOf(c.id):'';
+    const label=textOf(c.label).trim()?textOf(c.label):'';
+    if(!id&&!label)return;
+    if(!id)id=(label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'cat');
+    const lbl=label||id;
+    if(seen.has(id)){
+      const same=out.find(x=>x.id===id);
+      if(same&&same.label===lbl)return;                  // exact duplicate
+      let n=2;while(seen.has(id+'_'+n))n++;id=id+'_'+n;  // different category sharing an id → keep both
+    }
+    seen.add(id);
+    out.push({...c,id,label:lbl,color:safeColor(c.color)});
+  });
+  return out;
+}
+function normEx(raw){               // → {catId:[names]}, or null when missing/unreadable
+  if(!isObj(raw))return null;
+  const out={};
+  Object.keys(raw).forEach(k=>{
+    const v=raw[k];let arr;
+    if(Array.isArray(v))arr=v;
+    else if(typeof v==='string'&&v.trim())arr=[v];
+    else{if(v!=null)quarantine('exercise-list-unreadable',{cat:k,value:v});out[k]=[];return;}
+    const names=[];
+    arr.forEach(n=>{const t=textOf(n);if(t.trim()&&!names.includes(t))names.push(t);});
+    out[k]=names;
+  });
+  return out;
+}
+function deriveCats(ex){            // category list recovered from the exercise map's keys
+  return Object.keys(ex).map(k=>{const dc=DC.find(c=>c.id===k);return dc?{...dc}:{id:k,label:k.charAt(0).toUpperCase()+k.slice(1),color:'#888'};});
+}
+function gatherNames(data,routines,workouts){   // every exercise name the saved data still mentions, with its category hint
+  const pairs=[];
+  Object.keys(data||{}).forEach(n=>{
+    if(n.startsWith('_')||!Array.isArray(data[n])||!data[n].length)return;
+    const last=data[n].slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))).pop();
+    pairs.push([n,last&&last.cat]);
+  });
+  routines.forEach(r=>r.exercises.forEach(e=>pairs.push([e.name,e.cat])));
+  workouts.forEach(w=>w.exercises.forEach(e=>pairs.push([e.name,e.cat])));
+  return pairs;
+}
+function placeNames(ex,cats,pairs){
+  const first=cats[0]&&cats[0].id,known=new Set();
+  Object.keys(ex).forEach(k=>(ex[k]||[]).forEach(n=>known.add(n)));
+  pairs.forEach(([name,hint])=>{
+    if(typeof name!=='string'||!name.trim()||known.has(name))return;
+    const cid=cats.some(c=>c.id===hint)?hint:first;
+    if(!cid)return;
+    (ex[cid]=ex[cid]||[]).push(name);known.add(name);
+  });
+}
+function rebuildEx(cats,data,routines,workouts){
+  const ex={};cats.forEach(c=>{ex[c.id]=[];});
+  placeNames(ex,cats,gatherNames(data,routines,workouts));
+  Object.keys(ex).forEach(k=>ex[k].sort((a,b)=>a.localeCompare(b)));
+  return ex;
+}
+function normRoutines(raw){
+  if(!Array.isArray(raw)){if(raw!=null)quarantine('routines-unreadable',raw);return [];}
+  const out=[],seen=new Set();
+  raw.forEach(r=>{
+    if(!isObj(r))return;
+    const exs=[];
+    (Array.isArray(r.exercises)?r.exercises:[]).forEach(e=>{
+      const o=typeof e==='string'?{name:e}:e;
+      if(!isObj(o))return;
+      const nm=textOf(o.name);
+      if(!nm.trim())return;
+      exs.push({...o,name:nm,cat:(typeof o.cat==='string'&&o.cat)?o.cat:primCat(nm)});
+    });
+    let name=textOf(r.name),id=textOf(r.id);
+    if(!name.trim()&&!exs.length&&!id)return;
+    if(!name.trim())name='Routine';
+    if(!id)id=hashId('rt',{name,exs});
+    if(seen.has(id)){let n=2;while(seen.has(id+'_'+n))n++;id=id+'_'+n;}   // duplicate id → later routine gets its own id
+    seen.add(id);
+    out.push({...r,id,name,exercises:exs});
+  });
+  return out;
+}
+function normWorkout(w){            // → normalised record, or null when nothing is recoverable
+  if(!isObj(w))return null;
+  const exs=[];
+  (Array.isArray(w.exercises)?w.exercises:[]).forEach(e=>{
+    if(!isObj(e))return;
+    const nm=textOf(e.name);
+    const {sets,bad}=normSets(e.sets);
+    const rawN=Array.isArray(e.sets)?e.sets.length:0;
+    if(!nm.trim()||!sets.length){if(rawN)quarantine('workout-exercise-unreadable',e);return;}
+    if(bad.length)quarantine('workout-sets-unreadable',{name:nm,sets:bad});
+    exs.push({...e,name:nm,cat:(typeof e.cat==='string'&&e.cat)?e.cat:primCat(nm),sets});
+  });
+  if(!exs.length){quarantine('workout-unreadable',w);return null;}
+  const st=numOf(w.startedAt),fi=numOf(w.finishedAt),du=numOf(w.durationSec);
+  const date=isoOf(w.date)||(st!==null?localISO(new Date(st)):'')||(fi!==null?localISO(new Date(fi)):'');
+  const out={...w,exercises:exs,date,name:(typeof w.name==='string'&&w.name)?w.name:'Workout'};
+  if(st!==null)out.startedAt=st;else delete out.startedAt;
+  if(fi!==null)out.finishedAt=fi;else delete out.finishedAt;
+  if(du!==null)out.durationSec=du;else delete out.durationSec;
+  return out;
+}
+function normWorkouts(raw){
+  if(!Array.isArray(raw)){if(raw!=null)quarantine('workouts-unreadable',raw);return [];}
+  const out=[],seen=new Map();
+  raw.forEach(w=>{
+    const n=normWorkout(w);if(!n)return;
+    let id=textOf(w.id);
+    if(!id)id=hashId('w',n);
+    const sig=JSON.stringify({...n,id:undefined});
+    if(seen.has(id)){
+      if(seen.get(id)===sig)return;                       // exact duplicate (old recovery bug) → one record
+      let k=2,nid=hashId('w',n);while(seen.has(nid))nid=hashId('w',{...n,k:k++});id=nid;   // different record sharing an id → keep both
+    }
+    seen.set(id,sig);
+    out.push({...n,id});
+  });
+  return out;
+}
+function normSplits(raw){
+  if(!Array.isArray(raw)){if(raw!=null)quarantine('splits-unreadable',raw);return [];}
+  const out=[],seen=new Set();
+  raw.forEach(sp=>{
+    if(!isObj(sp))return;
+    const ids=Array.isArray(sp.catIds)?sp.catIds.map(textOf).filter(Boolean):(textOf(sp.catIds)?[textOf(sp.catIds)]:[]);
+    let label=textOf(sp.label)||textOf(sp.name),id=textOf(sp.id);
+    if(!label&&!id&&!ids.length)return;
+    if(!label)label='Split';
+    if(!id)id=hashId('split',{label,ids});
+    if(seen.has(id)){let n=2;while(seen.has(id+'_'+n))n++;id=id+'_'+n;}
+    seen.add(id);
+    out.push({...sp,id,label,catIds:ids});
+  });
+  return out;
+}
+function normMsets(raw){
+  const out={};
+  if(!isObj(raw)){if(raw!=null)quarantine('muscle-sets-unreadable',raw);return out;}
+  Object.keys(raw).forEach(k=>{const n=numOf(raw[k]);if(n!==null)out[k]=n;else if(raw[k]!=null)quarantine('muscle-set-unreadable',{muscle:k,value:raw[k]});});
+  return out;
+}
+function normCustomMuscles(raw){
+  return (Array.isArray(raw)?raw:[]).filter(m=>isObj(m)&&textOf(m.id)&&textOf(m.label)).map(m=>({...m,id:textOf(m.id),label:textOf(m.label)}));
+}
+const strList=raw=>(Array.isArray(raw)?raw:(typeof raw==='string'&&raw?[raw]:[])).map(textOf).filter(Boolean);
+function snapshotShapeOk(p){        // a local backup must at least look like one of our documents
+  if(!isObj(p))return false;
+  const opt=(k,t)=>p[k]===undefined||p[k]===null||t(p[k]);
+  if(!opt('cats',Array.isArray)||!opt('ex',isObj)||!opt('data',isObj)||!opt('workouts',Array.isArray)||!opt('routines',Array.isArray)||!opt('splits',Array.isArray))return false;
+  return ['cats','ex','data','workouts','routines'].some(k=>p[k]!==undefined&&p[k]!==null);
+}
+function quarantineSnapshot(uid,snap,reason){
+  try{
+    const k='lifts_snapquarantine_'+uid;
+    let a=[];try{a=JSON.parse(localStorage.getItem(k)||'[]');if(!Array.isArray(a))a=[];}catch(e){a=[];}
+    a.push({ts:Date.now(),reason:String(reason).slice(0,120),snapshot:snap});
+    localStorage.setItem(k,JSON.stringify(a.slice(-3)));
+    localStorage.removeItem(snapKey(uid));
+  }catch(e){ try{localStorage.removeItem(snapKey(uid));}catch(e2){} }
+  toast('A damaged local backup was set aside — using your cloud data');
+}
+// SPLITS: [{id, label, catIds:[]}]  activeSplitId: string|null
 let SPLITS=[], activeSplitId=null;
 let currentUser=null;
 let selDay='all', selEx=null, selCatCtx=null, sets=[], unit='kg';
@@ -1278,6 +1570,32 @@ let dataLoadedUid=null;    // uid whose cloud data is loaded in memory — saves
 // ── Firestore ─────────────────────────────────────────
 function userRef(uid){ return db.collection('users').doc(uid); }
 
+function applyDoc(d,uid){            // validates, then installs one document (cloud copy or local backup); throws only on a real bug
+  NORM_UID=uid;UNPLACED={};EXTRA={};REPAIR={dropped:0,unplaced:0};
+  const cl=v=>JSON.parse(JSON.stringify(v));
+  Object.keys(d).forEach(k=>{if(!KNOWN_FIELDS.has(k)&&k!=='__proto__'&&d[k]!==undefined)EXTRA[k]=cl(d[k]);});   // fields this app doesn't own: written back untouched
+  const cats=normCats(d.cats),ex=normEx(d.ex);
+  if(d.cats!=null&&cats===null)quarantine('cats-unreadable',d.cats);
+  if(d.ex!=null&&ex===null)quarantine('ex-unreadable',d.ex);
+  const data=sanitizeData(d.data);
+  // provisional categories/exercises so primCat() works while routines and workouts are validated
+  if(cats&&ex){CATS=cats;EX=ex;}
+  else if(cats){CATS=cats;EX={};}                    // existing document without an exercise map: rebuilt below, never replaced by the stock list
+  else if(ex){CATS=deriveCats(ex);EX=ex;}            // categories lost but exercises intact: categories recovered from the exercise map
+  else{CATS=cl(DC);EX=cl(DE);}                       // very old document with neither: the original default library
+  const routines=normRoutines(d.routines),workouts=normWorkouts(d.workouts);
+  if(cats&&!ex)EX=rebuildEx(CATS,data,routines,workouts);
+  else if(!cats&&!ex)placeNames(EX,CATS,gatherNames(data,routines,workouts));   // old document: stock library + any exercise found in the saved history
+  DATA=data;
+  MSETS=normMsets(d.msets);
+  CUSTOM_MUSCLES=normCustomMuscles(d.customMuscles);
+  HIDDEN_MUSCLES=new Set(strList(d.hiddenMuscles));
+  SPLITS=normSplits(d.splits);
+  activeSplitId=(typeof d.activeSplitId==='string'&&SPLITS.some(x=>x.id===d.activeSplitId))?d.activeSplitId:null;
+  if(MSETS.back!==undefined){ if(MSETS.lats===undefined)MSETS.lats=MSETS.back; delete MSETS.back; }
+  migrateDataShape();
+  p1LoadFrom({...d,routines,workouts},uid);
+}
 async function loadUserData(uid){
   const tok=++loadSeq;
   let snapApplied=false;
@@ -1285,22 +1603,17 @@ async function loadUserData(uid){
   try{
     const snap = await userRef(uid).get();
     if(tok!==loadSeq||!currentUser||currentUser.uid!==uid){showSync(false);return;} // user changed (or a newer load started) while loading — discard
-    let d=snap.exists?snap.data():null;
+    const d=snap.exists?snap.data():null;
     const localSnap=snapPick(uid,d);            // unsaved local changes from a failed/interrupted cloud save
-    if(localSnap){d=localSnap;snapApplied=true;}
-    if(d){
-      CATS = d.cats ? JSON.parse(JSON.stringify(d.cats)) : JSON.parse(JSON.stringify(DC));
-      CATS = CATS.map(c=>(c&&typeof c==='object')?{...c,color:safeColor(c.color)}:c);
-      EX   = d.ex   ? JSON.parse(JSON.stringify(d.ex))   : JSON.parse(JSON.stringify(DE));
-      DATA = d.data  ? JSON.parse(JSON.stringify(d.data)) : {};
-      MSETS = d.msets ? JSON.parse(JSON.stringify(d.msets)) : {};
-      CUSTOM_MUSCLES = d.customMuscles ? JSON.parse(JSON.stringify(d.customMuscles)) : [];
-      HIDDEN_MUSCLES = new Set(d.hiddenMuscles || []);
-      SPLITS = d.splits ? JSON.parse(JSON.stringify(d.splits)) : [];
-      activeSplitId = d.activeSplitId || null;
-      if(MSETS.back!==undefined){ if(MSETS.lats===undefined)MSETS.lats=MSETS.back; delete MSETS.back; }
-      migrateDataShape();
-      p1LoadFrom(d,uid);
+    let applied=false;
+    if(localSnap){
+      if(snapshotShapeOk(localSnap)){
+        try{applyDoc(localSnap,uid);applied=true;snapApplied=true;}
+        catch(e){console.error('Local backup unusable:',e.message);quarantineSnapshot(uid,localSnap,e.message);}
+      }else quarantineSnapshot(uid,localSnap,'unexpected structure');
+    }
+    if(!applied&&d){applyDoc(d,uid);applied=true;}
+    if(applied){
       dataLoadedUid=uid;
     } else {
       // Brand new user — completely blank, no categories, no exercises
@@ -1312,6 +1625,7 @@ async function loadUserData(uid){
       HIDDEN_MUSCLES=new Set();
       SPLITS=[];
       activeSplitId=null;
+      UNPLACED={};EXTRA={};
       p1Reset();dataLoadedUid=uid;
       scheduleSave(); // create the user's document through the serialized save queue
     }
@@ -1329,7 +1643,14 @@ async function loadUserData(uid){
     HIDDEN_MUSCLES=new Set();
     SPLITS=[];
     activeSplitId=null;
+    UNPLACED={};EXTRA={};
     p1Reset();
+  }
+  if(dataLoadedUid===uid&&(REPAIR.dropped||REPAIR.unplaced)){
+    // tell the user when something was set aside; entries that stay parked in the document don't re-announce themselves on every load
+    let seen=null;try{seen=localStorage.getItem('lifts_repairnote_'+uid);}catch(e){}
+    if(REPAIR.dropped>0||seen!==String(REPAIR.unplaced))toast('Some saved entries were unreadable — they were set aside and kept on this device');
+    try{localStorage.setItem('lifts_repairnote_'+uid,String(REPAIR.unplaced));}catch(e){}
   }
   // changes queued before the load finished (or a recovered local snapshot) are pushed now that saving is allowed
   if(dataLoadedUid===uid&&SV&&SV.uid===uid&&(snapApplied||SV.saved<SV.rev))scheduleSave();
@@ -1343,7 +1664,11 @@ async function loadUserData(uid){
 //  • nothing is written until that user's cloud data was loaded successfully (no overwriting real data with blanks)
 //  • sign-out flushes the pending save to the OLD user's document before auth changes
 function buildPayload(ts){
-  return {cats:CATS,ex:EX,data:DATA,msets:MSETS,customMuscles:CUSTOM_MUSCLES,hiddenMuscles:[...HIDDEN_MUSCLES],splits:SPLITS,activeSplitId:activeSplitId,
+  let dataOut=DATA;
+  const up=Object.keys(UNPLACED);
+  if(up.length){dataOut={...DATA};up.forEach(k=>{if(Array.isArray(dataOut[k]))dataOut[k]=dataOut[k].concat(UNPLACED[k]);});}   // unreadable-date entries are written back untouched
+  return {...EXTRA,   // fields this app doesn't own come first so they can never override the app's own fields below
+          cats:CATS,ex:EX,data:dataOut,msets:MSETS,customMuscles:CUSTOM_MUSCLES,hiddenMuscles:[...HIDDEN_MUSCLES],splits:SPLITS,activeSplitId:activeSplitId,
           routines:ROUTINES,schedule:SCHEDULE,workouts:WORKOUTS,activeWorkout:ACTIVE_WORKOUT||null,awUpdatedAt:AW_UPDATED,savedAt:ts||Date.now()};
 }
 // ── Save queue (one per signed-in user) ──────────────
@@ -1699,7 +2024,7 @@ function appendTrustedSvg(parent,svgStr){
 // Colours loaded from saved data are applied via CSSOM; accept only plain colour syntax so a tampered value can't be
 // something like url(https://…) that would make the browser fetch an outside address.
 const safeColor=c=>(typeof c==='string'&&/^(#[0-9a-f]{3,8}|(rgb|hsl)a?\([\d\s.,%\/-]+\)|[a-z]{3,20})$/i.test(c.trim()))?c.trim():'#888';
-const fmtDate  = d=>{if(!d)return'';const[,m,dy]=d.split('-');return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+ +dy;};
+const fmtDate  = d=>{if(!d||typeof d!=='string')return'';const[,m,dy]=d.split('-');const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1];return mo?mo+' '+ +dy:d;};
 // ── UNIT NORMALIZATION (BEGIN) ───────────────────────
 // Stored weights are NEVER converted. Everything that compares / sorts / divides
 // weights goes through these helpers so kg and lb are always compared in kg.
@@ -1761,7 +2086,7 @@ function buildCatPills(){
   };
   mk('all','All');
   const activeSplit=SPLITS.find(s=>s.id===activeSplitId);
-  const visibleCats=activeSplit?CATS.filter(c=>activeSplit.catIds.includes(c.id)):CATS;
+  const visibleCats=activeSplit?CATS.filter(c=>(activeSplit.catIds||[]).includes(c.id)):CATS;
   // if a split filtered out the category currently selected, fall back to "all"
   if(selDay!=='all'&&!visibleCats.some(c=>c.id===selDay))selDay='all';
   visibleCats.forEach(c=>mk(c.id,c.label));
@@ -1923,6 +2248,7 @@ function saveLog(){
     const valid=sets.filter(s=>s.w!==''&&s.r!=='');
     if(!valid.length){toast('Add at least one set');return;}
     const date=document.getElementById('logdate').value;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!isoOf(date)){toast('Pick a valid date');return;}
     const catId=selCatCtx||primCat(selEx);
     const exName=selEx;
     const arr=sessionsFor(exName);
@@ -2203,7 +2529,7 @@ function renderManage(){
   if(!mOpen)mOpen=new Set(CATS.length?[CATS[0].id]:[]);
   const q=(document.getElementById('msearch')?.value||'').trim().toLowerCase();
   const activeSp=SPLITS.find(x=>x.id===activeSplitId);
-  const visible=activeSp?CATS.filter(c=>activeSp.catIds.includes(c.id)):CATS;
+  const visible=activeSp?CATS.filter(c=>(activeSp.catIds||[]).includes(c.id)):CATS;
   if(!CATS.length){w.innerHTML='<div class="mempty">No categories yet — tap + New Category.</div>';return;}
   if(!visible.length){w.innerHTML='<div class="mempty">This split has no categories yet — tap Edit above to add some.</div>';return;}
   let shown=0;
@@ -2287,7 +2613,7 @@ function renderSplits(){
   if(active){
     const info=document.createElement('div');info.className='m-splitinfo';
     const t=document.createElement('div');t.className='t';
-    t.textContent=active.catIds.map(id=>{const c=CATS.find(x=>x.id===id);return c?c.label:null;}).filter(Boolean).join(' · ')||'No categories';
+    t.textContent=(active.catIds||[]).map(id=>{const c=CATS.find(x=>x.id===id);return c?c.label:null;}).filter(Boolean).join(' · ')||'No categories';
     const eb=document.createElement('button');eb.className='m-sbtn';eb.textContent='Edit';
     eb.addEventListener('click',()=>openSplitModal(active.id));
     const db=document.createElement('button');db.className='m-sbtn del';db.textContent='Delete';
@@ -3564,7 +3890,7 @@ function p1SwitchUser(){
   if(sv){clearTimeout(sv.timer);sv.timer=null;clearTimeout(sv.retry);sv.retry=null;}
   SV=null;loadSeq++;
   dataLoadedUid=null;wkStopTicker();wkReturn=false;
-  CATS=[];EX={};DATA={};MSETS={};CUSTOM_MUSCLES=[];HIDDEN_MUSCLES=new Set();SPLITS=[];activeSplitId=null;
+  CATS=[];EX={};DATA={};MSETS={};CUSTOM_MUSCLES=[];HIDDEN_MUSCLES=new Set();SPLITS=[];activeSplitId=null;UNPLACED={};EXTRA={};REPAIR={dropped:0,unplaced:0};NORM_UID=null;
   p1Reset();
   selEx=null;selCatCtx=null;sets=[];selDay='all';mOpen=null;wkLastRecord=null;histOpenId=null;expCats=new Set();
   try{stopTimer();}catch(e){}
@@ -3590,6 +3916,7 @@ function pendingPrune(uid,savedIds){pendingWrite(uid,pendingRead(uid).filter(x=>
 // Make sure per-exercise history (DATA) contains the sets of a workout. Never overwrites existing entries.
 function ensureSessions(date,exs){
   let added=false;
+  if(!isoOf(date))return false;   // never create a session without a real calendar date
   (exs||[]).forEach(ex=>{
     if(!ex||!ex.name||!Array.isArray(ex.sets)||!ex.sets.length)return;
     const cat=ex.cat||primCat(ex.name);
@@ -3606,14 +3933,9 @@ function ensureSessions(date,exs){
 
 // ── load from Firestore doc ──────────────────────────
 function p1LoadFrom(d,uid){
-  const clone=v=>JSON.parse(JSON.stringify(v));
-  ROUTINES=Array.isArray(d.routines)?clone(d.routines).filter(r=>r&&r.id&&typeof r.name==='string').map(r=>({
-    id:r.id,name:r.name,
-    exercises:(Array.isArray(r.exercises)?r.exercises:[]).map(e=>typeof e==='string'?{name:e,cat:primCat(e)}:e).filter(e=>e&&typeof e.name==='string').map(e=>({name:e.name,cat:e.cat||primCat(e.name)}))
-  })):[];
+  ROUTINES=normRoutines(d.routines);     // idempotent: already-validated lists pass through unchanged
   SCHEDULE=normSchedule(d.schedule);
-  {const seen=new Set();   // one record per workout id (heals duplicates created by the old recovery bug)
-   WORKOUTS=(Array.isArray(d.workouts)?clone(d.workouts):[]).filter(w=>{if(!w||!w.id||!Array.isArray(w.exercises)||seen.has(w.id))return false;seen.add(w.id);return true;});}
+  WORKOUTS=normWorkouts(d.workouts);
   wkResolveRestore(uid,d);
   p1MergePending(uid);
 }
@@ -3627,10 +3949,17 @@ function wkResolveRestore(uid,d){
   const valid=aw&&isFinite(Number(aw.startedAt))&&Array.isArray(aw.exercises);
   if(!valid){ACTIVE_WORKOUT=null;AW_UPDATED=t;return;}
   aw.startedAt=Number(aw.startedAt);
-  aw.logged=(aw.logged&&typeof aw.logged==='object')?aw.logged:{};
-  aw.date=aw.date||localISO(new Date(aw.startedAt));
-  aw.routineName=aw.routineName||'Workout';
-  aw.exercises=aw.exercises.filter(e=>e&&typeof e.name==='string');
+  aw.date=isoOf(aw.date)||localISO(new Date(aw.startedAt));
+  aw.routineName=(typeof aw.routineName==='string'&&aw.routineName)?aw.routineName:'Workout';
+  aw.exercises=aw.exercises.filter(e=>e&&typeof e.name==='string').map(e=>({...e,cat:(typeof e.cat==='string'&&e.cat)?e.cat:primCat(e.name)}));
+  {const lg={};   // logged sets: keep every readable entry/set, drop the rest
+   if(isObj(aw.logged))Object.keys(aw.logged).forEach(k=>{
+     const e=aw.logged[k];if(!isObj(e))return;
+     const {sets}=normSets(e.sets);if(!sets.length)return;
+     lg[k]={...e,cat:(typeof e.cat==='string'&&e.cat)?e.cat:primCat(wkKeyName(k)),sets};
+   });
+   aw.logged=lg;
+   if(isObj(aw.base)){const b={};Object.keys(aw.base).forEach(k=>{if(Array.isArray(aw.base[k]))b[k]=normSets(aw.base[k]).sets;});aw.base=b;}else delete aw.base;}
   ACTIVE_WORKOUT=aw;AW_UPDATED=t;
   // if Firebase had failed earlier, re-apply sets logged in this workout to the exercise history
   const exs=Object.keys(aw.logged).map(k=>({name:wkKeyName(k),cat:aw.logged[k].cat,sets:aw.logged[k].sets}));
@@ -3643,12 +3972,14 @@ function p1MergePending(uid){
   const have=new Set(WORKOUTS.map(w=>w.id));
   const keep=[];let changed=false;
   pend.forEach(w=>{
-    const ok=w&&typeof w==='object'&&w.id&&Array.isArray(w.exercises);
-    if(!ok){ if(w&&typeof w==='object')keep.push(w); return; }  // unreadable record: never merged, never deleted
-    if(have.has(w.id))return;      // already present (cloud copy, or an earlier entry of this queue) → duplicate, drop
-    have.add(w.id);                // accepted: later duplicates are rejected immediately
-    WORKOUTS.push(w);ensureSessions(w.date,w.exercises);changed=true;
-    keep.push(w);                  // stays queued until a cloud save is confirmed (pendingPrune)
+    const n=(w&&typeof w==='object')?normWorkout(w):null;
+    const id=n?textOf(w.id):'';
+    if(!n||!id){ if(w&&typeof w==='object')keep.push(w); return; }   // unreadable record: never merged, never deleted
+    if(have.has(id))return;        // already present (cloud copy, or an earlier entry of this queue) → duplicate, drop
+    have.add(id);                  // accepted: later duplicates are rejected immediately
+    const rec={...n,id};
+    WORKOUTS.push(rec);ensureSessions(rec.date,rec.exercises);changed=true;
+    keep.push(rec);                // stays queued until a cloud save is confirmed (pendingPrune)
   });
   pendingWrite(uid,keep);
   if(changed)scheduleSave();
@@ -3752,7 +4083,7 @@ function renderStart(){
   }
   // only the ACTIVE split's categories are offered here (no active split → all categories, same as the Log filter)
   const activeSp=SPLITS.find(x=>x.id===activeSplitId);
-  const otherCats=CATS.filter(c=>(!activeSp||activeSp.catIds.includes(c.id))&&!todayRefs.has(CATREF+c.id)&&(EX[c.id]||[]).length);
+  const otherCats=CATS.filter(c=>(!activeSp||(activeSp.catIds||[]).includes(c.id))&&!todayRefs.has(CATREF+c.id)&&(EX[c.id]||[]).length);
   if(otherCats.length){
     body.appendChild(mk('div','m-slabel',activeSp?'Categories · '+activeSp.label:'Categories'));
     otherCats.forEach(c=>{
@@ -4099,7 +4430,7 @@ function wkSummaryView(){
 let histOpenId=null;
 function renderWorkoutHistory(w,q){
   let list=WORKOUTS.slice().sort((a,b)=>(b.finishedAt||0)-(a.finishedAt||0)||String(b.date).localeCompare(String(a.date)));
-  if(q)list=list.filter(x=>String(x.name||'').toLowerCase().includes(q)||x.exercises.some(e=>String(e.name).toLowerCase().includes(q)));
+  if(q)list=list.filter(x=>String(x.name||'').toLowerCase().includes(q)||(x.exercises||[]).some(e=>e&&String(e.name).toLowerCase().includes(q)));
   if(!list.length)return 0;
   w.appendChild(mk('div','m-slabel','Workouts'));
   list.forEach(x=>{
