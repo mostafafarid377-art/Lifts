@@ -1929,7 +1929,21 @@ function saveLog(){
     DATA[exName]=arr; // ensure it's normalized/attached even if it was empty before
     const idx=arr.findIndex(e=>e.date===date&&e.cat===catId);
     const entry={date,cat:catId,sets:valid.map(s=>({weight:parseFloat(s.w),reps:parseInt(s.r),unit:s.u||unit}))};
-    if(idx>=0)arr[idx]=entry;else arr.push(entry);
+    let dataEntry=entry;
+    const aw=ACTIVE_WORKOUT;
+    if(aw&&date===aw.date){
+      // The exercise history keeps ONE session per exercise/date/category. Sets already in it from an earlier workout (or quick log)
+      // that day are kept; this workout adds its own sets after them (re-saving inside the same workout replaces only its own sets).
+      aw.base=aw.base||{};
+      const bk=exName+wkSep+catId;
+      let base;
+      if(idx<0)base=[];
+      else if(bk in aw.base)base=aw.base[bk];
+      else{const own=wkLogFor(aw,exName,catId);base=(own&&own.sets&&own.sets.length)?[]:arr[idx].sets.map(x=>({...x}));}
+      aw.base[bk]=base;
+      dataEntry={date,cat:catId,sets:base.map(x=>({...x})).concat(entry.sets)};
+    }
+    if(idx>=0)arr[idx]=dataEntry;else arr.push(dataEntry);
     arr.sort((a,b)=>a.date.localeCompare(b.date));
     scheduleSave();toast('Saved ✓');
     wkRecordLogged(exName,catId,entry);
@@ -3619,7 +3633,7 @@ function wkResolveRestore(uid,d){
   aw.exercises=aw.exercises.filter(e=>e&&typeof e.name==='string');
   ACTIVE_WORKOUT=aw;AW_UPDATED=t;
   // if Firebase had failed earlier, re-apply sets logged in this workout to the exercise history
-  const exs=Object.keys(aw.logged).map(n=>({name:n,cat:aw.logged[n].cat,sets:aw.logged[n].sets}));
+  const exs=Object.keys(aw.logged).map(k=>({name:wkKeyName(k),cat:aw.logged[k].cat,sets:aw.logged[k].sets}));
   if(ensureSessions(aw.date,exs))scheduleSave();
   if(loc&&locT>fsT)scheduleSave(); // local copy was newer than cloud — push it up
 }
@@ -3678,6 +3692,17 @@ function wkRenderBanner(){
   const onWk=cur&&cur.id==='s-workout';
   if(ACTIVE_WORKOUT&&!onWk){b.classList.add('show');gid('wk-bn').textContent=ACTIVE_WORKOUT.routineName;wkTick();}
   else b.classList.remove('show');
+}
+// An active workout logs each exercise under its name (a.logged[name]). When the SAME exercise name is logged under a second
+// category in the same workout, that log is kept under name+SEP+category instead of overwriting the first one.
+const wkSep='\u0001';
+const wkKeyName=k=>String(k).split(wkSep)[0];
+function wkLogFor(a,name,cat){   // the logged entry that belongs to this (exercise, category)
+  const pl=a.logged[name];
+  if(pl&&pl.cat===cat)return pl;
+  const c=a.logged[name+wkSep+cat];if(c)return c;
+  if(pl&&!a.exercises.some(e=>e.name===name&&e.cat===pl.cat))return pl;  // older workouts: the plain-name log belongs to the entry no other entry claims
+  return null;
 }
 const wkSetCount=a=>Object.keys(a.logged||{}).reduce((n,k)=>n+(((a.logged[k]||{}).sets)||[]).length,0);
 const wkExCount=a=>Object.keys(a.logged||{}).filter(k=>(((a.logged[k]||{}).sets)||[]).length).length;
@@ -3960,15 +3985,15 @@ function renderWorkout(){
   if(!a.exercises.length)list.appendChild(mk('div','empty','No exercises yet — tap "+ Add Exercise".'));
   a.exercises.forEach(ex=>{
     const cat=catById(ex.cat)?ex.cat:primCat(ex.name);
-    const lg=a.logged[ex.name],sets=(lg&&lg.sets)||[];
+    const lg=wkLogFor(a,ex.name,ex.cat),sets=(lg&&lg.sets)||[];
     const card=mk('div','wk-ex');
     const head=mk('div','wk-exhead');
     const dot=mk('span','dot');dot.style.background=catColor(cat);
-    head.append(dot,mk('span','wk-exname',ex.name),mk('span','wk-excount',sets.length?plural(sets.length,'set'):'not started'));
+    head.append(dot,mk('span','wk-exname',ex.name+(a.exercises.filter(e=>e.name===ex.name).length>1?' · '+catLabel(ex.cat):'')),mk('span','wk-excount',sets.length?plural(sets.length,'set'):'not started'));
     head.onclick=()=>wkOpenEx(ex.name,cat,false);
     if(!sets.length){
       const x=mk('button','pl-ib x','✕');x.title='Remove from workout';
-      x.onclick=e=>{e.stopPropagation();wkRemoveEx(ex.name);};head.appendChild(x);
+      x.onclick=e=>{e.stopPropagation();wkRemoveEx(ex.name,ex.cat);};head.appendChild(x);
     }
     card.appendChild(head);
     sets.forEach((s,i)=>{
@@ -3985,25 +4010,32 @@ function wkOpenEx(name,cat,addOne){
   const a=ACTIVE_WORKOUT;if(!a)return;
   go('log');wkReturn=true;
   selectEx(name,cat);
-  const lg=a.logged[name];
+  const lg=wkLogFor(a,name,cat);
   if(lg&&lg.sets&&lg.sets.length){
     sets=lg.sets.map(rowFromSet);
     setUnit(unitOf(lg.sets[0].unit)); // re-renders the rows
     if(addOne)addSet();
   }
 }
-function wkRemoveEx(name){
+function wkRemoveEx(name,cat){
   const a=ACTIVE_WORKOUT;if(!a)return;
-  if(a.logged[name]&&a.logged[name].sets&&a.logged[name].sets.length)return;
-  a.exercises=a.exercises.filter(e=>e.name!==name);delete a.logged[name];
+  const lg=cat===undefined?a.logged[name]:wkLogFor(a,name,cat);
+  if(lg&&lg.sets&&lg.sets.length)return;
+  a.exercises=a.exercises.filter(e=>!(e.name===name&&(cat===undefined||e.cat===cat)));
+  if(cat===undefined)delete a.logged[name];
   wkPersist();renderWorkout();
 }
 function wkAddExercise(){if(!ACTIVE_WORKOUT)return;xpOpen('workout');}
 // called from saveLog(): remember what was logged inside the active workout
 function wkRecordLogged(name,cat,entry){
   const a=ACTIVE_WORKOUT;if(!a||entry.date!==a.date)return;
-  a.logged[name]={cat,sets:entry.sets.map(s=>({weight:s.weight,reps:s.reps,unit:unitOf(s.unit)}))};
-  if(!a.exercises.some(e=>e.name===name))a.exercises.push({name,cat});
+  const pl=a.logged[name];
+  const key=(!pl||pl.cat===cat)?name:name+wkSep+cat;
+  if(!a.exercises.some(e=>e.name===name&&e.cat===cat)){
+    const unstarted=key===name?a.exercises.find(e=>e.name===name&&!wkLogFor(a,name,e.cat)):null;
+    if(unstarted)unstarted.cat=cat;else a.exercises.push({name,cat});
+  }
+  a.logged[key]={cat,sets:entry.sets.map(s=>({weight:s.weight,reps:s.reps,unit:unitOf(s.unit)}))};
   wkPersist();
 }
 
@@ -4029,7 +4061,7 @@ function wkFinish(){
   const uid=currentUser.uid,finishedAt=Date.now();
   const exercises=[];
   a.exercises.forEach(ex=>{
-    const lg=a.logged[ex.name];
+    const lg=wkLogFor(a,ex.name,ex.cat);
     if(lg&&lg.sets&&lg.sets.length)exercises.push({name:ex.name,cat:lg.cat||ex.cat,sets:lg.sets.map(s=>({weight:s.weight,reps:s.reps,unit:unitOf(s.unit)}))});
   });
   let rec=null;
@@ -4115,7 +4147,7 @@ function p1OnExerciseRenamed(o,n){
   const a=ACTIVE_WORKOUT;
   if(a){
     a.exercises.forEach(e=>{if(e.name===o)e.name=n;});
-    if(a.logged[o]){a.logged[n]=a.logged[o];delete a.logged[o];}
+    [a.logged,a.base].forEach(m=>{if(!m)return;Object.keys(m).forEach(k=>{if(wkKeyName(k)===o){const nk=n+k.slice(o.length);m[nk]=m[k];delete m[k];}});});
     wkPersist();
   }
 }
