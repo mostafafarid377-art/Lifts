@@ -496,8 +496,11 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .mcard.open .mchev{transform:rotate(180deg)}
 .mcbody{display:none;padding:0 12px 12px 18px;border-top:1px solid var(--b1)}
 .mcard.open .mcbody{display:block}
-.mrow2{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;background:none;border:none;border-bottom:1px solid var(--b1);color:var(--tx);text-align:left;font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;padding:0 4px}
-.mrow2 .nm{flex:1}
+.mrow2{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;background:none;border:none;border-bottom:1px solid var(--b1);color:var(--tx);text-align:left;font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;padding:8px 4px}
+.mrow2 .nm{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.mrow2 .nm-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow2 .nm-m{font-size:.55rem;color:var(--m1);letter-spacing:.04em;text-transform:none}
+.mrow2 .nm-m.unmapped{color:var(--rd)}
 .mrow2 .pen{color:var(--m1);font-size:.8rem}
 .mrow2:active{background:var(--s2)}
 .maddrow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}
