@@ -391,6 +391,17 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
   box-shadow:0 3px 0 #000;transform:translateY(0);transition:transform .09s ease,box-shadow .09s ease}
 .danger-btn:active{transform:translateY(3px);box-shadow:0 0 0 #000}
 
+/* PROFILE: history nav button */
+.hist-btn{width:100%;display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--sf);border:1px solid var(--b2);border-radius:2px;color:var(--tx);text-align:left;margin-bottom:2px;
+  box-shadow:0 3px 0 #000;transform:translateY(0);transition:transform .09s ease,box-shadow .09s ease,border-color .15s}
+.hist-btn:active{transform:translateY(3px);box-shadow:0 0 0 #000;border-color:var(--ac)}
+.hist-ic{width:38px;height:38px;border-radius:50%;background:var(--s2);border:1px solid var(--b2);color:var(--ac);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hist-ic svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.hist-tx{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+.hist-t{font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;color:var(--tx)}
+.hist-s{font-size:.58rem;color:var(--m1);letter-spacing:.04em}
+.hist-chev{font-size:1.1rem;color:var(--m1);flex-shrink:0;line-height:1}
+
 /* SYNC */
 .sync-bar{font-size:.52rem;color:var(--m1);letter-spacing:.12em;text-align:center;padding:4px;background:var(--s2);display:none}
 .sync-bar.show{display:block}
@@ -865,6 +876,15 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
         <div class="prof-stat"><div class="prof-stat-num" id="pstat-streak">0</div><div class="prof-stat-lbl">Current Streak 🔥</div></div>
         <div class="prof-stat"><div class="prof-stat-num" id="pstat-best">0</div><div class="prof-stat-lbl">Best Streak 🏆</div></div>
       </div>
+    </div>
+
+    <div class="prof-section">
+      <div class="prof-section-title">History</div>
+      <button class="hist-btn" onclick="go('history')" aria-label="Open workout history">
+        <span class="hist-ic"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 2.64-6.36"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg></span>
+        <span class="hist-tx"><span class="hist-t">Workout History</span><span class="hist-s" id="hist-btn-sub">All sessions</span></span>
+        <span class="hist-chev">›</span>
+      </button>
     </div>
 
     <div class="prof-section">
@@ -2906,6 +2926,15 @@ function renderProfile(){
   const totalSessions=loggedNames.reduce((t,n)=>t+sessionsFor(n).length,0);
   document.getElementById('pstat-sessions').textContent=totalSessions;
   document.getElementById('pstat-exercises').textContent=loggedNames.length;
+
+  // history nav button subtitle
+  const histSub=document.getElementById('hist-btn-sub');
+  if(histSub){
+    const parts=[];
+    if(WORKOUTS.length)parts.push(plural(WORKOUTS.length,'workout'));
+    if(totalSessions)parts.push(plural(totalSessions,'session'));
+    histSub.textContent=parts.length?parts.join(' · '):'No sessions yet';
+  }
 
   // streak
   const {current,best}=calcStreak();
