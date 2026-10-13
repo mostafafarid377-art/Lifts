@@ -620,6 +620,7 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .wk-exhead{display:flex;align-items:center;gap:9px;cursor:pointer;min-height:30px}
 .wk-exname{flex:1;min-width:0;font-size:.76rem;letter-spacing:.05em;text-transform:uppercase}
 .wk-excount{font-size:.58rem;color:var(--m1)}
+.wk-expr{font-size:.58rem;color:var(--ac);white-space:nowrap;flex-shrink:0}
 .wk-set{display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid var(--b1);font-size:.8rem}
 .wk-set:first-of-type{margin-top:8px}
 .wk-setn{width:18px;text-align:center;font-size:.6rem;color:var(--m1)}
@@ -4320,7 +4321,11 @@ function renderWorkout(){
     const card=mk('div','wk-ex');
     const head=mk('div','wk-exhead');
     const dot=mk('span','dot');dot.style.background=catColor(cat);
-    head.append(dot,mk('span','wk-exname',ex.name+(a.exercises.filter(e=>e.name===ex.name).length>1?' · '+catLabel(ex.cat):'')),mk('span','wk-excount',sets.length?plural(sets.length,'set'):'not started'));
+    const exPR=getPR(sessionsFor(ex.name));
+    const prTxt=exPR?mk('span','wk-expr','PR '+exPR.weight+unitOf(exPR.unit)+'×'+exPR.reps):null;
+    head.append(dot,mk('span','wk-exname',ex.name+(a.exercises.filter(e=>e.name===ex.name).length>1?' · '+catLabel(ex.cat):'')));
+    if(prTxt)head.appendChild(prTxt);
+    head.appendChild(mk('span','wk-excount',sets.length?plural(sets.length,'set'):'not started'));
     head.onclick=()=>wkOpenEx(ex.name,cat,false);
     if(!sets.length){
       const x=mk('button','pl-ib x','✕');x.title='Remove from workout';
