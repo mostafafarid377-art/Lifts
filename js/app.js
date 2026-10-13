@@ -60,6 +60,24 @@ const MUSCLES=[
   {id:'biceps',label:'Biceps'},{id:'triceps',label:'Triceps'},{id:'forearms',label:'Forearms'},{id:'quads',label:'Quads'},
   {id:'hamstrings',label:'Hamstrings'},{id:'glutes',label:'Glutes'},{id:'adductors',label:'Adductors'},{id:'calves',label:'Calves'},{id:'abs',label:'Abs'}
 ];
+const bmName=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const BM_CATEGORY_ALIASES={pecs:'chest',trapezius:'traps',quadriceps:'quads',hamstring:'hamstrings',glute:'glutes',calf:'calves',abdominals:'abs',core:'abs','front deltoids':'frontdelts','side deltoids':'sidedelts','rear deltoids':'reardelts'};
+function normMuscleId(v){
+  const s=bmName(v);
+  if(!s)return null;
+  const m=MUSCLES.find(x=>x.id===s||bmName(x.id)===s||bmName(x.label)===s);
+  if(m)return m.id;
+  return Object.hasOwn(BM_CATEGORY_ALIASES,s)?BM_CATEGORY_ALIASES[s]:null;
+}
+function normMuscleList(raw){
+  const list=Array.isArray(raw)?raw:(typeof raw==='string'&&raw.trim()?[raw]:[]);
+  const out=[];
+  list.forEach(x=>{
+    const id=normMuscleId(x);
+    if(id&&!out.includes(id))out.push(id);
+  });
+  return out;
+}
 
 // ── App state ─────────────────────────────────────────
 let CATS=[...DC], EX=JSON.parse(JSON.stringify(DE)), DATA={};
@@ -203,6 +221,18 @@ function sanitizeData(raw){
       });
     }else if(g!=null)quarantine('goals-unreadable',g);
     out._goals=ng;
+  }
+  if('_exMuscles' in out){
+    const em=out._exMuscles,nem={};
+    if(isObj(em)){
+      Object.keys(em).forEach(n=>{
+        if(typeof n!=='string'||!n.trim())return;
+        const arr=normMuscleList(em[n]);
+        if(arr.length)nem[n]=arr;
+        else if(em[n]!=null&&!(Array.isArray(em[n])&&!em[n].length))quarantine('ex-muscles-unreadable',{name:n,muscles:em[n]});
+      });
+    }else if(em!=null)quarantine('ex-muscles-unreadable',em);
+    out._exMuscles=nem;
   }
   if('_weightGoal' in out){
     const wg=out._weightGoal,val=isObj(wg)?numOf(wg.value):null;
@@ -386,7 +416,7 @@ function quarantineSnapshot(uid,snap,reason){
 let SPLITS=[], activeSplitId=null;
 let currentUser=null;
 let selDay='all', selEx=null, selCatCtx=null, sets=[], unit='kg';
-let modalCats=new Set();
+let modalCats=new Set(), modalMuscles=new Set();
 let authMode='login';
 
 // ── PHASE 1 state (kept separate from CATS/EX/DATA/SPLITS) ──
@@ -787,12 +817,7 @@ function renderOnboarding(){
     btn.textContent='+ Add Exercise';
     btn.addEventListener('click',()=>{
       const cat=CATS[0];if(!cat)return;
-      document.getElementById('ex-mtitle').textContent='Add to '+cat.label;
-      modalCats=new Set([cat.id]);
-      document.getElementById('ex-name').value='';
-      renderExCatPills();
-      document.getElementById('modal-ex').classList.add('on');
-      setTimeout(()=>document.getElementById('ex-name').focus(),220);
+      openAddExModal(cat.id);
     });
   } else if(step===3){
     title.textContent='Log your first set';
@@ -1288,9 +1313,33 @@ const BM_EXERCISE_RULES=[
   [/\bdips?\b/,['chest','triceps']],
   [/\b(abs|abdominals|crunch(?:es)?|sit ups?|planks?|leg raises?|knee raises?|wood ?chops?|russian twists?|ab (?:wheel|rollouts?)|dead bugs?)\b/,['abs']]
 ];
-const bmName=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-const BM_CATEGORY_ALIASES={pecs:'chest',trapezius:'traps',quadriceps:'quads',hamstring:'hamstrings',glute:'glutes',calf:'calves',abdominals:'abs',core:'abs','front deltoids':'frontdelts','side deltoids':'sidedelts','rear deltoids':'reardelts'};
+function getExMuscles(name){
+  if(typeof name!=='string'||!name.trim())return [];
+  const map=DATA&&isObj(DATA._exMuscles)?DATA._exMuscles:null;
+  if(map&&Object.hasOwn(map,name)){
+    const saved=normMuscleList(map[name]);
+    if(saved.length)return saved;
+  }
+  return [];
+}
+function setExMuscles(name,muscles){
+  if(typeof name!=='string'||!name.trim())return [];
+  const clean=normMuscleList(muscles);
+  if(!isObj(DATA._exMuscles))DATA._exMuscles={};
+  if(clean.length)DATA._exMuscles[name]=clean;
+  else delete DATA._exMuscles[name];
+  if(clean.length&&Array.isArray(WORKOUTS)){
+    WORKOUTS.forEach(w=>{
+      (Array.isArray(w?.exercises)?w.exercises:[]).forEach(e=>{
+        if(e&&e.name===name)e.muscles=[...clean];
+      });
+    });
+  }
+  return clean;
+}
 function inferWorkoutMuscles(name,cat){
+  const saved=getExMuscles(name);
+  if(saved.length)return [...saved];
   const normalized=bmName(name);
   const rule=BM_EXERCISE_RULES.find(([pattern])=>pattern.test(normalized));
   if(rule)return [...rule[1]];
@@ -1301,6 +1350,8 @@ function inferWorkoutMuscles(name,cat){
   return id?[id]:[];
 }
 function workoutMusclesFor(ex){
+  const saved=getExMuscles(ex?.name);
+  if(saved.length)return [...saved];
   // New records keep a snapshot so renaming an exercise/category cannot change an old map.
   // Legacy records without that snapshot are estimated from their saved exercise names.
   if(Array.isArray(ex.muscles))return [...new Set(ex.muscles.filter(id=>MUSCLES.some(m=>m.id===id)))];
@@ -1340,7 +1391,7 @@ function buildWorkoutMuscleCard(workout){
     card.appendChild(list);
   }
   card.appendChild(mk('p','wk-muscle-note',trained.length?'Brighter muscles = more sets this workout. Estimated from logged exercises; a compound set can count toward several muscles.':'No muscle matches yet. Your workout is saved; unrecognized exercises are not highlighted.'));
-  if(unmapped.length)card.appendChild(mk('p','wk-muscle-note wk-muscle-unmapped','Not mapped: '+unmapped.join(', ')+'. Use a muscle-specific category (e.g. Chest) for custom exercises in future workouts.'));
+  if(unmapped.length)card.appendChild(mk('p','wk-muscle-note wk-muscle-unmapped','Not mapped: '+unmapped.join(', ')+'. Edit the exercise in Manage to select the muscles it hits.'));
   return card;
 }
 
@@ -1482,7 +1533,15 @@ function renderManage(){
     const body=document.createElement('div');body.className='mcbody';
     list.forEach(name=>{
       const r=document.createElement('button');r.className='mrow2';
-      const n=document.createElement('span');n.className='nm';n.textContent=name;
+      const n=document.createElement('span');n.className='nm';
+      const nt=document.createElement('span');nt.className='nm-t';nt.textContent=name;
+      const mIds=inferWorkoutMuscles(name,cat.id);
+      const nmSub=document.createElement('span');
+      nmSub.className='nm-m'+(mIds.length?'':' unmapped');
+      nmSub.textContent=mIds.length
+        ?mIds.map(id=>MUSCLES.find(m=>m.id===id)?.label||id).join(' · ')
+        :'No muscles selected — tap to set';
+      n.append(nt,nmSub);
       const pen=document.createElement('span');pen.className='pen';pen.textContent='✎';
       r.appendChild(n);r.appendChild(pen);
       r.addEventListener('click',()=>openEditExModal(name,cat.id));
@@ -1491,14 +1550,7 @@ function renderManage(){
     if(!list.length){const e=document.createElement('div');e.className='mempty';e.style.padding='14px 6px';e.textContent='No exercises yet';body.appendChild(e);}
     const foot=document.createElement('div');foot.className='maddrow';
     const ab=document.createElement('button');ab.className='maddbtn';ab.textContent='+ Add exercise';
-    ab.addEventListener('click',()=>{
-      document.getElementById('ex-mtitle').textContent='Add to '+cat.label;
-      modalCats=new Set([cat.id]);
-      document.getElementById('ex-name').value='';
-      renderExCatPills();
-      document.getElementById('modal-ex').classList.add('on');
-      setTimeout(()=>document.getElementById('ex-name').focus(),220);
-    });
+    ab.addEventListener('click',()=>openAddExModal(cat.id));
     const dc=document.createElement('button');dc.className='mdelcat';dc.textContent='Delete category';
     dc.addEventListener('click',()=>{
       if(!confirm('Delete category "'+cat.label+'"?'))return;
@@ -1630,6 +1682,19 @@ function openModal(type){
 }
 function closeModal(type){ document.getElementById('modal-'+type).classList.remove('on'); }
 
+function openAddExModal(catId){
+  const cat=catById(catId)||CATS[0];
+  if(!cat)return;
+  document.getElementById('ex-mtitle').textContent='Add to '+cat.label;
+  modalCats=new Set([cat.id]);
+  modalMuscles=new Set(inferWorkoutMuscles('',cat.id));
+  document.getElementById('ex-name').value='';
+  renderExCatPills();
+  renderExMusclePills();
+  document.getElementById('modal-ex').classList.add('on');
+  setTimeout(()=>document.getElementById('ex-name').focus(),220);
+}
+
 function renderExCatPills(){
   const g=document.getElementById('ex-catpills');g.innerHTML='';
   CATS.forEach(cat=>{
@@ -1645,15 +1710,40 @@ function renderExCatPills(){
   });
 }
 
+function renderExMusclePills(){
+  const g=document.getElementById('ex-muscles');
+  if(!g)return;
+  g.innerHTML='';
+  MUSCLES.forEach(m=>{
+    const on=modalMuscles.has(m.id);
+    const b=document.createElement('button');
+    b.type='button';
+    b.className='mchip'+(on?' on':'');
+    b.textContent=m.label;
+    b.setAttribute('aria-pressed',on?'true':'false');
+    b.addEventListener('click',()=>{
+      if(modalMuscles.has(m.id))modalMuscles.delete(m.id);
+      else modalMuscles.add(m.id);
+      renderExMusclePills();
+    });
+    g.appendChild(b);
+  });
+}
+
 function saveEx(){
   const name=document.getElementById('ex-name').value.trim();
   if(!name){toast('Enter a name');return;}
   if(!modalCats.size){toast('Pick at least one category');return;}
+  if(!modalMuscles.size){toast('Pick at least one muscle');return;}
   let added=0;
   modalCats.forEach(catId=>{
     if(!(EX[catId]||[]).includes(name)){if(!EX[catId])EX[catId]=[];EX[catId].push(name);added++;}
   });
-  if(!added){toast('Already in those categories');return;}
+  setExMuscles(name,[...modalMuscles]);
+  if(!added){
+    scheduleSave();closeModal('ex');renderManage();buildCatPills();renderPicker();toast('Muscles updated ✓');
+    return;
+  }
   scheduleSave();closeModal('ex');renderManage();buildCatPills();renderPicker();renderOnboarding();toast('Added ✓');
 }
 
@@ -2645,6 +2735,7 @@ function renderBodyStats(){
 // ── EDIT EXERCISE ─────────────────────────────────────
 let editExOrigName = '';
 let editExCats = new Set();
+let editExMuscles = new Set();
 
 let editExFromCat=null;
 function openEditExModal(name, fromCatId){
@@ -2654,10 +2745,12 @@ function openEditExModal(name, fromCatId){
   CATS.forEach(cat=>{
     if((EX[cat.id]||[]).includes(name)) editExCats.add(cat.id);
   });
+  editExMuscles = new Set(inferWorkoutMuscles(name, fromCatId));
   document.getElementById('editex-name').value = name;
   const fc=document.getElementById('editex-fromcat');
   if(fc)fc.textContent=catLabel(fromCatId)||'this category';
   renderEditExCatPills();
+  renderEditExMusclePills();
   document.getElementById('modal-editex').classList.add('on');
 }
 function moveInEdit(dir){
@@ -2710,10 +2803,31 @@ function renderEditExCatPills(){
   });
 }
 
+function renderEditExMusclePills(){
+  const g = document.getElementById('editex-muscles');
+  if(!g)return;
+  g.innerHTML = '';
+  MUSCLES.forEach(m=>{
+    const on = editExMuscles.has(m.id);
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'mchip'+(on?' on':'');
+    b.textContent = m.label;
+    b.setAttribute('aria-pressed',on?'true':'false');
+    b.addEventListener('click',()=>{
+      if(editExMuscles.has(m.id)) editExMuscles.delete(m.id);
+      else editExMuscles.add(m.id);
+      renderEditExMusclePills();
+    });
+    g.appendChild(b);
+  });
+}
+
 function saveEditEx(){
   const newName = document.getElementById('editex-name').value.trim();
   if(!newName){ toast('Enter a name'); return; }
   if(!editExCats.size){ toast('Pick at least one category'); return; }
+  if(!editExMuscles.size){ toast('Pick at least one muscle'); return; }
 
   const oldName = editExOrigName;
   const renamed = newName !== oldName;
@@ -2751,12 +2865,19 @@ function saveEditEx(){
     delete DATA._goals[oldName];
   }
 
+  // Rename exercise muscles if name changed
+  if(renamed && DATA._exMuscles && DATA._exMuscles[oldName]){
+    DATA._exMuscles[newName] = DATA._exMuscles[oldName];
+    delete DATA._exMuscles[oldName];
+  }
+
   if(renamed)p1OnExerciseRenamed(oldName,newName);
+  setExMuscles(newName,[...editExMuscles]);
   scheduleSave();
   closeModal('editex');
   renderManage();
   renderPicker();
-  toast(renamed ? 'Renamed to "'+newName+'" ✓' : 'Categories updated ✓');
+  toast(renamed ? 'Renamed to "'+newName+'" ✓' : 'Exercise updated ✓');
 }
 
 // Attached once (the track element persists across modal opens — only its
@@ -2827,8 +2948,9 @@ function p1SwitchUser(){
   CATS=[];EX={};DATA={};MSETS={};CUSTOM_MUSCLES=[];HIDDEN_MUSCLES=new Set();SPLITS=[];activeSplitId=null;UNPLACED={};EXTRA={};REPAIR={dropped:0,unplaced:0};NORM_UID=null;
   p1Reset();
   selEx=null;selCatCtx=null;sets=[];selDay='all';mOpen=null;wkLastRecord=null;histOpenId=null;expCats=new Set();
+  modalCats=new Set();modalMuscles=new Set();editExCats=new Set();editExMuscles=new Set();
   try{stopTimer();}catch(e){}
-  ['st-body','pl-week','pl-routines','wk-list','hlist','pstats','pchart','psess','pgoal','msets-wrap','ws-bodymap','ws-prlist','mlist','m-splits','picker','slist','catpills','onboard-wrap','wcard','exp-cats','cal-grid','dp-list','rt-exlist','xp-list','wl-recent'].forEach(id=>{const e=gid(id);if(e)e.innerHTML='';});
+  ['st-body','pl-week','pl-routines','wk-list','hlist','pstats','pchart','psess','pgoal','msets-wrap','ws-bodymap','ws-prlist','mlist','m-splits','picker','slist','catpills','onboard-wrap','wcard','exp-cats','cal-grid','dp-list','rt-exlist','xp-list','wl-recent','ex-muscles','editex-muscles'].forEach(id=>{const e=gid(id);if(e)e.innerHTML='';});
   const pe=gid('progex');if(pe)pe.innerHTML='<option value="">— Pick an exercise —</option>';
   ['exsearch','hsearch','msearch','xp-search'].forEach(id=>{const e=gid(id);if(e)e.value='';});
   [['prof-name','—'],['prof-email','—'],['prof-avatar','?']].forEach(([id,t])=>{const e=gid(id);if(e)e.textContent=t;});
@@ -3574,6 +3696,7 @@ function _expose(){
   try{ g.drawChart = drawChart; }catch(e){}
   try{ g.editExCats = editExCats; }catch(e){}
   try{ g.editExFromCat = editExFromCat; }catch(e){}
+  try{ g.editExMuscles = editExMuscles; }catch(e){}
   try{ g.editExOrigName = editExOrigName; }catch(e){}
   try{ g.editSplitId = editSplitId; }catch(e){}
   try{ g.emptySchedule = emptySchedule; }catch(e){}
@@ -3590,6 +3713,7 @@ function _expose(){
   try{ g.fromKg = fromKg; }catch(e){}
   try{ g.gatherNames = gatherNames; }catch(e){}
   try{ g.getDateFilter = getDateFilter; }catch(e){}
+  try{ g.getExMuscles = getExMuscles; }catch(e){}
   try{ g.getExercisesForExport = getExercisesForExport; }catch(e){}
   try{ g.getGoal = getGoal; }catch(e){}
   try{ g.getPR = getPR; }catch(e){}
@@ -3614,6 +3738,7 @@ function _expose(){
   try{ g.migrateDataShape = migrateDataShape; }catch(e){}
   try{ g.mk = mk; }catch(e){}
   try{ g.modalCats = modalCats; }catch(e){}
+  try{ g.modalMuscles = modalMuscles; }catch(e){}
   try{ g.moveEx = moveEx; }catch(e){}
   try{ g.moveInEdit = moveInEdit; }catch(e){}
   try{ g.newCatSplits = newCatSplits; }catch(e){}
@@ -3623,6 +3748,8 @@ function _expose(){
   try{ g.normCustomMuscles = normCustomMuscles; }catch(e){}
   try{ g.normEx = normEx; }catch(e){}
   try{ g.normMsets = normMsets; }catch(e){}
+  try{ g.normMuscleId = normMuscleId; }catch(e){}
+  try{ g.normMuscleList = normMuscleList; }catch(e){}
   try{ g.normRoutines = normRoutines; }catch(e){}
   try{ g.normSchedule = normSchedule; }catch(e){}
   try{ g.normSession = normSession; }catch(e){}
@@ -3632,6 +3759,7 @@ function _expose(){
   try{ g.normWorkout = normWorkout; }catch(e){}
   try{ g.normWorkouts = normWorkouts; }catch(e){}
   try{ g.numOf = numOf; }catch(e){}
+  try{ g.openAddExModal = openAddExModal; }catch(e){}
   try{ g.openBodyModal = openBodyModal; }catch(e){}
   try{ g.openEditExModal = openEditExModal; }catch(e){}
   try{ g.openGoalModal = openGoalModal; }catch(e){}
@@ -3663,7 +3791,9 @@ function _expose(){
   try{ g.renderCal = renderCal; }catch(e){}
   try{ g.renderDp = renderDp; }catch(e){}
   try{ g.renderEditExCatPills = renderEditExCatPills; }catch(e){}
+  try{ g.renderEditExMusclePills = renderEditExMusclePills; }catch(e){}
   try{ g.renderExCatPills = renderExCatPills; }catch(e){}
+  try{ g.renderExMusclePills = renderExMusclePills; }catch(e){}
   try{ g.renderGoal = renderGoal; }catch(e){}
   try{ g.renderHistory = renderHistory; }catch(e){}
   try{ g.renderManage = renderManage; }catch(e){}
@@ -3713,6 +3843,7 @@ function _expose(){
   try{ g.selectEx = selectEx; }catch(e){}
   try{ g.sessionsFor = sessionsFor; }catch(e){}
   try{ g.setBodyUnit = setBodyUnit; }catch(e){}
+  try{ g.setExMuscles = setExMuscles; }catch(e){}
   try{ g.setExpFormat = setExpFormat; }catch(e){}
   try{ g.setExpRange = setExpRange; }catch(e){}
   try{ g.setGoalUnit = setGoalUnit; }catch(e){}

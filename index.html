@@ -314,6 +314,9 @@
     <label class="mflbl">Categories (select all that apply)</label>
     <div class="catpills" id="editex-catpills" style="margin-top:6px"></div>
 
+    <label class="mflbl">Muscles Hit (select all that apply)</label>
+    <div class="mchips" id="editex-muscles" style="margin-top:6px"></div>
+
     <label class="mflbl">Order &amp; delete (in <span id="editex-fromcat">this category</span>)</label>
     <div class="brow" style="margin-top:6px">
       <button class="btn bgh" onclick="moveInEdit(-1)">▲ Up</button>
@@ -423,6 +426,8 @@
       onkeydown="if(event.key==='Enter')saveEx()">
     <label class="mflbl">Categories</label>
     <div class="catpills" id="ex-catpills"></div>
+    <label class="mflbl">Muscles Hit</label>
+    <div class="mchips" id="ex-muscles"></div>
     <div class="brow">
       <button class="btn bacc" onclick="saveEx()">Save</button>
       <button class="btn bgh" onclick="closeModal('ex')">Cancel</button>

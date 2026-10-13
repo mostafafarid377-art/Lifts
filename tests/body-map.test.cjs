@@ -129,7 +129,7 @@ function app() {
     clearInterval() {}
   });
   vm.runInContext(script, context, { filename: 'app.js' });
-  const api = vm.runInContext('({inferWorkoutMuscles,workoutMuscleSets,buildBodyMap,buildWorkoutMuscleCard,bmLevel,wkFinish,p1SwitchUser,normWorkout,workoutMusclesFor,workoutNewPRs,wkCapturePRBaseline,renderWorkoutPRs,p1OnExerciseRenamed})', context);
+  const api = vm.runInContext('({inferWorkoutMuscles,workoutMuscleSets,buildBodyMap,buildWorkoutMuscleCard,bmLevel,wkFinish,p1SwitchUser,normWorkout,workoutMusclesFor,workoutNewPRs,wkCapturePRBaseline,renderWorkoutPRs,p1OnExerciseRenamed,openAddExModal,saveEx,openEditExModal,saveEditEx,getExMuscles,setExMuscles,sanitizeData})', context);
   return { api, context, nodes, storage, run: code => vm.runInContext(code, context) };
 }
 
@@ -391,4 +391,69 @@ test('renaming an exercise during a workout also carries its pre-workout PR base
   api.p1OnExerciseRenamed('Bench Press', 'Renamed Press');
   assert.equal(run('ACTIVE_WORKOUT.prBefore["Renamed Press"].weight'), 40);
   assert.equal(run('Object.hasOwn(ACTIVE_WORKOUT.prBefore,"Bench Press")'), false);
+});
+
+test('creating an exercise with selected muscles maps it in the post-workout muscle map', () => {
+  const { api, run, nodes } = app();
+  api.openAddExModal('push');
+  assert.equal(nodes.get('ex-muscles').children.length, 16);
+  nodes.get('ex-name').value = 'Bayesian Cablestation';
+
+  // Saving without selecting a muscle is rejected
+  api.saveEx();
+  assert.equal(run('EX.push.includes("Bayesian Cablestation")'), false);
+  assert.match(nodes.get('toast').textContent, /Pick at least one muscle/);
+
+  // Selecting muscles and saving persists the mapping and highlights the post-workout map
+  run('modalMuscles = new Set(["chest", "frontdelts"])');
+  api.saveEx();
+  assert.equal(run('EX.push.includes("Bayesian Cablestation")'), true);
+  assert.deepEqual(plain(api.getExMuscles('Bayesian Cablestation')), ['chest', 'frontdelts']);
+  assert.deepEqual(plain(api.inferWorkoutMuscles('Bayesian Cablestation', 'push')), ['chest', 'frontdelts']);
+
+  run(`
+    currentUser={uid:'test-user'};
+    ACTIVE_WORKOUT={
+      id:'w_custom_ex',routineId:null,routineName:'Push Day',date:'2026-10-13',startedAt:Date.now()-1800000,
+      prBefore:{'Bayesian Cablestation':null},
+      exercises:[{name:'Bayesian Cablestation',cat:'push'}],
+      logged:{'Bayesian Cablestation':{cat:'push',sets:[{weight:30,reps:12,unit:'kg'},{weight:30,reps:10,unit:'kg'},{weight:30,reps:10,unit:'kg'}]}}
+    };
+  `);
+  api.wkFinish();
+  const record = plain(run('WORKOUTS[0]'));
+  assert.deepEqual(record.exercises[0].muscles, ['chest', 'frontdelts']);
+  assert.deepEqual(plain(api.workoutMuscleSets(record)), {
+    counts: { chest: 3, frontdelts: 3 }, unmapped: []
+  });
+  assert.match(textOf(nodes.get('ws-bodymap')), /Chest 3 sets/);
+  assert.match(textOf(nodes.get('ws-bodymap')), /Front Delts 3 sets/);
+});
+
+test('editing an exercise updates its muscles, fixes past workout maps, and survives sanitizeData', () => {
+  const { api, run, nodes } = app();
+  run(`
+    EX.pull.push('Mystery Puller');
+    WORKOUTS=[{
+      id:'w_past',name:'Pull Day',date:'2026-10-12',
+      exercises:[{name:'Mystery Puller',cat:'pull',muscles:[],sets:[{weight:60,reps:10,unit:'kg'},{weight:60,reps:10,unit:'kg'}]}]
+    }];
+  `);
+  assert.deepEqual(plain(api.workoutMuscleSets(run('WORKOUTS[0]'))), {
+    counts: {}, unmapped: ['Mystery Puller']
+  });
+
+  api.openEditExModal('Mystery Puller', 'pull');
+  assert.equal(nodes.get('editex-muscles').children.length, 16);
+  nodes.get('editex-name').value = 'Seated Cable Puller';
+  run('editExMuscles = new Set(["lats", "reardelts"])');
+  api.saveEditEx();
+
+  assert.deepEqual(plain(api.getExMuscles('Seated Cable Puller')), ['lats', 'reardelts']);
+  assert.deepEqual(plain(api.workoutMuscleSets(run('WORKOUTS[0]'))), {
+    counts: { lats: 2, reardelts: 2 }, unmapped: []
+  });
+
+  const sanitized = plain(api.sanitizeData(run('DATA')));
+  assert.deepEqual(sanitized._exMuscles, { 'Seated Cable Puller': ['lats', 'reardelts'] });
 });
