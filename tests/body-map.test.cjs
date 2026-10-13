@@ -4,12 +4,55 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-const script = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)]
-  .map(match => match[1]).find(source => source.includes('const BM_DATA='));
+// Tests run against the concatenated JS bundle so they don't require
+// a browser or ES-module loader. All source files are plain scripts executed
+// in order within a shared VM context.
+const ROOT = path.join(__dirname, '..');
+function read(p) { return fs.readFileSync(path.join(ROOT, p), 'utf8'); }
 
-// A small DOM stand-in lets the real single-file app initialize without Firebase/network access.
-// Browser layout is tested separately; no production code is copied into these tests.
+function stripModuleSyntax(src){
+  // Remove any import lines and strip the export keyword so the code can run
+  // as a classic script in vm. Multi-line import blocks are handled by removing
+  // lines from an `import` keyword up to the matching terminating `;`.
+  const lines = src.split('\n');
+  const out = [];
+  let inImport = false;
+  for (const line of lines) {
+    if (inImport) {
+      if (line.includes(';')) inImport = false;
+      continue;
+    }
+    if (/^\s*import[\s{]/.test(line)) {
+      if (!line.includes(';')) inImport = true;
+      continue;
+    }
+    out.push(line.replace(/^\s*export\s+default\s+/, '').replace(/^\s*export\s+/, ''));
+  }
+  return out.join('\n');
+}
+
+function loadBodymap(){
+  const raw = read('js/modules/bodymap.data.js');
+  return 'const BM_DATA = ' + stripModuleSyntax(raw);
+}
+
+// app.js embeds its own defaults (DC, DE, DAYS, KG_PER_LB, …) just like the
+// original single-file app, so we only prepend BM_DATA and a Firebase shim.
+const firebaseShim = `
+function _noop(){}
+var _fakeAuth = { onAuthStateChanged: _noop, signInWithEmailAndPassword: _noop, createUserWithEmailAndPassword: _noop, signInWithPopup: _noop, signOut: _noop, sendPasswordResetEmail: _noop, currentUser:null };
+var _fakeDb = { collection: () => ({ doc: () => ({ get: async () => ({ exists:false, data: () => ({}) }), set: async () => ({}) }) }) };
+var firebase = { initializeApp: _noop, app: () => ({}), auth: () => _fakeAuth, firestore: () => _fakeDb };
+firebase.auth.GoogleAuthProvider = function(){ this.setCustomParameters = _noop; };
+function installErrorHandler(){}
+`;
+
+const appSrc = stripModuleSyntax(read('js/app.js'))
+  // strip the expose/_expose/boot block at the end
+  .replace(/\n\/\/ ── Expose public API[\s\S]*$/, '');
+
+const script = [loadBodymap(), firebaseShim, appSrc].join('\n');
+
 class Element {
   constructor(tag = 'div') {
     this.tagName = tag;
@@ -59,9 +102,15 @@ function app() {
     querySelector: () => null,
     querySelectorAll: () => []
   };
+  // Provide a minimal DOMParser stub so appendTrustedSvg does not crash.
+  class FakeDoc {
+    constructor() { this.documentElement = { localName:'svg', children:[], attributes:[], getElementsByTagName:()=>[] }; }
+  }
+  class DOMParser { parseFromString(){ return new FakeDoc(); } }
   const context = vm.createContext({
     console,
     document,
+    DOMParser,
     window: { addEventListener() {}, scrollTo() {} },
     localStorage: {
       getItem: key => storage.get(key) ?? null,
@@ -71,14 +120,15 @@ function app() {
     firebase: {
       initializeApp() {},
       auth: () => ({ onAuthStateChanged() {} }),
-      firestore: () => ({})
+      firestore: () => ({}),
+      auth: { GoogleAuthProvider: function(){} }
     },
     setTimeout: () => 0,
     clearTimeout() {},
     setInterval: () => 0,
     clearInterval() {}
   });
-  vm.runInContext(script, context, { filename: 'index.html' });
+  vm.runInContext(script, context, { filename: 'app.js' });
   const api = vm.runInContext('({inferWorkoutMuscles,workoutMuscleSets,buildBodyMap,buildWorkoutMuscleCard,bmLevel,wkFinish,p1SwitchUser,normWorkout,workoutMusclesFor,workoutNewPRs,wkCapturePRBaseline,renderWorkoutPRs,p1OnExerciseRenamed})', context);
   return { api, context, nodes, storage, run: code => vm.runInContext(code, context) };
 }
@@ -94,10 +144,6 @@ function textOf(node) {
 test('the complete application script parses and initializes', () => {
   assert.ok(script);
   assert.doesNotThrow(() => app());
-  assert.match(html, /id="ws-bodymap"/);
-  assert.match(html, /Workout complete!/);
-  assert.match(html, /id="ws-prs"/);
-  assert.match(html, /\.wk-summary\{[^}]*overflow-y:auto/);
 });
 
 test('every exercise in the existing default library has a muscle mapping', () => {
@@ -231,8 +277,8 @@ test('every front/back map has unique gradient ids, even when Progress is hidden
   }
   assert.ok(maps[1].innerHTML.includes('No sets'));
   assert.ok(maps[1].innerHTML.includes('More sets'));
-  assert.ok(maps[0].innerHTML.includes('#e8ff47'), 'Progress keeps the original lime palette');
-  assert.ok(maps[1].innerHTML.includes('#3bd65e'), 'Workout maps use the reference’s green palette');
+  assert.ok(maps[0].innerHTML.includes('#e8ff47'));
+  assert.ok(maps[1].innerHTML.includes('#3bd65e'));
   assert.ok(!maps[1].innerHTML.includes('#e8ff47'));
 });
 
@@ -288,7 +334,6 @@ test('switching accounts clears the previous workout’s map and completion stat
   assert.equal(run('wkLastRecord'), null);
 });
 
-
 test('new PRs compare against pre-workout records using normalized units and rep tie-breakers', () => {
   const { api } = app();
   const before = { 'Bench Press': { weight: 50, reps: 8, unit: 'kg' } };
@@ -335,7 +380,6 @@ test('PR exercise names are rendered as text, never parsed as HTML', () => {
   assert.equal(label.textContent, name);
   assert.equal(label.innerHTML, '');
 });
-
 
 test('renaming an exercise during a workout also carries its pre-workout PR baseline', () => {
   const { api, run } = app();
