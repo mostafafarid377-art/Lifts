@@ -1,0 +1,350 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+
+const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+const script = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)]
+  .map(match => match[1]).find(source => source.includes('const BM_DATA='));
+
+// A small DOM stand-in lets the real single-file app initialize without Firebase/network access.
+// Browser layout is tested separately; no production code is copied into these tests.
+class Element {
+  constructor(tag = 'div') {
+    this.tagName = tag;
+    this.children = [];
+    this.style = {};
+    this.attributes = {};
+    this.className = '';
+    this.innerHTML = '';
+    this.textContent = '';
+    this.value = '';
+    this.classList = {
+      contains: name => this.className.split(' ').includes(name),
+      add: name => { if (!this.classList.contains(name)) this.className += ' ' + name; },
+      remove: name => { this.className = this.className.split(' ').filter(n => n !== name).join(' '); },
+      toggle: name => {
+        const has = this.classList.contains(name);
+        this.classList[has ? 'remove' : 'add'](name);
+        return !has;
+      }
+    };
+  }
+  set innerHTML(value) { this._innerHTML = value; this.children = []; }
+  get innerHTML() { return this._innerHTML; }
+  append(...nodes) { this.children.push(...nodes); }
+  appendChild(node) { this.append(node); return node; }
+  prepend(node) { this.children.unshift(node); }
+  replaceChildren(...nodes) { this.children = nodes; }
+  addEventListener() {}
+  setAttribute(name, value) { this.attributes[name] = String(value); }
+  focus() { this.focused = true; }
+  querySelector(selector) {
+    if (selector === 'svg' && this.innerHTML.includes('<svg ')) return new Element('svg');
+    return null;
+  }
+}
+
+function app() {
+  const nodes = new Map();
+  const storage = new Map();
+  const document = {
+    createElement: tag => new Element(tag),
+    getElementById: id => {
+      if (!nodes.has(id)) nodes.set(id, new Element());
+      return nodes.get(id);
+    },
+    addEventListener() {},
+    querySelector: () => null,
+    querySelectorAll: () => []
+  };
+  const context = vm.createContext({
+    console,
+    document,
+    window: { addEventListener() {}, scrollTo() {} },
+    localStorage: {
+      getItem: key => storage.get(key) ?? null,
+      setItem: (key, value) => storage.set(key, value),
+      removeItem: key => storage.delete(key)
+    },
+    firebase: {
+      initializeApp() {},
+      auth: () => ({ onAuthStateChanged() {} }),
+      firestore: () => ({})
+    },
+    setTimeout: () => 0,
+    clearTimeout() {},
+    setInterval: () => 0,
+    clearInterval() {}
+  });
+  vm.runInContext(script, context, { filename: 'index.html' });
+  const api = vm.runInContext('({inferWorkoutMuscles,workoutMuscleSets,buildBodyMap,buildWorkoutMuscleCard,bmLevel,wkFinish,p1SwitchUser,normWorkout,workoutMusclesFor,workoutNewPRs,wkCapturePRBaseline,renderWorkoutPRs,p1OnExerciseRenamed})', context);
+  return { api, context, nodes, storage, run: code => vm.runInContext(code, context) };
+}
+
+const plain = value => JSON.parse(JSON.stringify(value));
+const sets = (n, unit = 'kg', weight = 50) => Array.from({ length: n }, () => ({ weight, reps: 10, unit }));
+const exercise = (name, n, cat = 'other') => ({ name, cat, sets: sets(n) });
+
+function textOf(node) {
+  return [node.textContent, ...node.children.map(textOf)].join(' ');
+}
+
+test('the complete application script parses and initializes', () => {
+  assert.ok(script);
+  assert.doesNotThrow(() => app());
+  assert.match(html, /id="ws-bodymap"/);
+  assert.match(html, /Workout complete!/);
+  assert.match(html, /id="ws-prs"/);
+  assert.match(html, /\.wk-summary\{[^}]*overflow-y:auto/);
+});
+
+test('every exercise in the existing default library has a muscle mapping', () => {
+  const { run } = app();
+  const unmapped = plain(run('[...new Set(Object.values(DE).flat())].filter(name=>!inferWorkoutMuscles(name,"other").length)'));
+  assert.deepEqual(unmapped, []);
+});
+
+test('specific exercises take precedence over broad name rules, including singular presses', () => {
+  const { api } = app();
+  const cases = [
+    ['Shoulder Press Machine', ['frontdelts', 'sidedelts', 'triceps']],
+    ['Dumbbell Chest Press', ['chest', 'frontdelts', 'triceps']],
+    ['Incline DB Press', ['chest', 'frontdelts', 'triceps']],
+    ['Leg Press', ['quads', 'glutes']],
+    ['Cable Lat Pulldown Full Range Of Motion', ['lats', 'biceps']],
+    ['Barbell Bent Over Row', ['lats', 'reardelts', 'biceps']],
+    ['Reverse Pec Deck', ['reardelts', 'traps']],
+    ['Face Pull', ['reardelts', 'traps']],
+    ['Lying Leg Curl', ['hamstrings']],
+    ['Reverse Curl', ['forearms', 'biceps']],
+    ['Bench Dips', ['triceps']],
+    ['Upright Row', ['sidedelts', 'traps']],
+    ['Straight-arm Pulldown', ['lats']],
+    ['Romanian Deadlift', ['hamstrings', 'glutes', 'lowerback']],
+    ['Cable Fly', ['chest']],
+    ['Hip Adduction', ['adductors']],
+    ['Crunch', ['abs']],
+    ['  PUSH-UPS  ', ['chest', 'frontdelts', 'triceps']]
+  ];
+  for (const [name, expected] of cases) {
+    assert.deepEqual(plain(api.inferWorkoutMuscles(name, 'other')), expected, name);
+  }
+});
+
+test('custom lifts use muscle-specific category labels, not entire Push/Pull/Legs splits', () => {
+  const { api, run } = app();
+  run('CATS.push({id:"custom_chest",label:"Chest",color:"#fff"})');
+  assert.deepEqual(plain(api.inferWorkoutMuscles('My custom lift', 'custom_chest')), ['chest']);
+  assert.deepEqual(plain(api.inferWorkoutMuscles('My custom lift', 'Rear Delts')), ['reardelts']);
+  assert.deepEqual(plain(api.inferWorkoutMuscles('My custom lift', 'Quadriceps')), ['quads']);
+  for (const cat of ['push', 'pull', 'legs', 'upper', 'other', 'Constructor', 'toString']) {
+    assert.deepEqual(plain(api.inferWorkoutMuscles('My custom lift', cat)), [], cat);
+  }
+});
+
+test('only this workout’s logged sets contribute, regardless of history, manual totals or units', () => {
+  const { api, run } = app();
+  run('MSETS={chest:99,biceps:88}; DATA={"Bench Press":[{date:"2026-10-13",cat:"push",sets:[{weight:50,reps:10}]}]}');
+  const workout = { exercises: [
+    exercise('Bench Press', 3, 'push'),
+    exercise('Pec Deck', 2, 'push'),
+    { name: 'Triceps Pushdown', cat: 'push', sets: sets(4, 'lb', 100) },
+    exercise('Squat', 0, 'legs')
+  ] };
+  assert.deepEqual(plain(api.workoutMuscleSets(workout)), {
+    counts: { chest: 5, frontdelts: 3, triceps: 7 }, unmapped: []
+  });
+  assert.deepEqual(plain(run('MSETS')), { chest: 99, biceps: 88 });
+  assert.deepEqual(plain(api.workoutMuscleSets({ exercises: [exercise('Preacher Curl', 1)] })), {
+    counts: { biceps: 1 }, unmapped: []
+  });
+});
+
+test('empty, malformed and unlogged entries are ignored, while zero-weight bodyweight sets count', () => {
+  const { api } = app();
+  assert.deepEqual(plain(api.workoutMuscleSets(null)), { counts: {}, unmapped: [] });
+  assert.deepEqual(plain(api.workoutMuscleSets({ exercises: {} })), { counts: {}, unmapped: [] });
+  const workout = { exercises: [
+    null,
+    { name: 'Squat' },
+    exercise('Leg Curl', 0),
+    { name: 'Bench Press', sets: [{ weight: NaN, reps: 10 }, { weight: 50 }, { weight: -1, reps: 10 }, { weight: 10, reps: 0 }] },
+    { name: 'Push Ups', sets: sets(2, 'kg', 0) }
+  ] };
+  assert.deepEqual(plain(api.workoutMuscleSets(workout)), {
+    counts: { chest: 2, frontdelts: 2, triceps: 2 }, unmapped: []
+  });
+});
+
+test('unknown exercises are reported honestly and their names are rendered only as text', () => {
+  const { api } = app();
+  const name = '<img src=x onerror=alert(1)>';
+  const workout = { exercises: [exercise(name, 2), exercise(name, 1)] };
+  assert.deepEqual(plain(api.workoutMuscleSets(workout)), { counts: {}, unmapped: [name] });
+  const card = api.buildWorkoutMuscleCard(workout);
+  assert.match(textOf(card), /No muscle matches yet/);
+  const note = card.children.find(node => node.className.includes('wk-muscle-unmapped'));
+  assert.ok(note.textContent.includes(name));
+  assert.equal(note.innerHTML, '');
+});
+
+test('saved muscle snapshots survive exercise renames and normalization', () => {
+  const { api } = app();
+  const record = {
+    id: 'w_snapshot', date: '2026-10-13', name: 'Push Day',
+    exercises: [{ name: 'Renamed custom lift', cat: 'deleted_category', muscles: ['chest', 'chest', 'invalid', 'triceps'], sets: sets(3) }]
+  };
+  const loaded = api.normWorkout(plain(record));
+  assert.deepEqual(plain(api.workoutMuscleSets(loaded)), {
+    counts: { chest: 3, triceps: 3 }, unmapped: []
+  });
+  assert.deepEqual(plain(api.workoutMusclesFor({ name: 'Bench Press', muscles: [] })), []);
+  assert.deepEqual(plain(api.workoutMusclesFor({ name: 'Bench Press' })), ['chest', 'frontdelts', 'triceps']);
+});
+
+test('a same-named exercise logged in two categories contributes both sets, not other sessions', () => {
+  const { api } = app();
+  assert.deepEqual(plain(api.workoutMuscleSets({ exercises: [
+    exercise('Bench Press', 2, 'push'), exercise('Bench Press', 3, 'upper')
+  ] })), { counts: { chest: 5, frontdelts: 5, triceps: 5 }, unmapped: [] });
+});
+
+test('heat levels are finite and bounded, including neutral and empty states', () => {
+  const { api } = app();
+  for (const [count, max, level] of [[0, 4, 0], [-1, 4, 0], [1, 4, 1], [2, 4, 2], [3, 4, 3], [4, 4, 4], [10, 4, 4], [3, 0, 4], [NaN, 4, 0]]) {
+    assert.equal(api.bmLevel(count, max), level);
+  }
+});
+
+test('every front/back map has unique gradient ids, even when Progress is hidden', () => {
+  const { api } = app();
+  const maps = [api.buildBodyMap({ frontdelts: 20 }, 20), api.buildBodyMap({ sidedelts: 3 }, 3, true), api.buildBodyMap({}, 1, true)];
+  const ids = maps.flatMap(map => [...map.innerHTML.matchAll(/<linearGradient id="([^"]+)"/g)].map(match => match[1]));
+  assert.equal(ids.length, 12);
+  assert.equal(new Set(ids).size, ids.length);
+  for (const map of maps) {
+    const own = new Set([...map.innerHTML.matchAll(/<linearGradient id="([^"]+)"/g)].map(match => match[1]));
+    for (const [, ref] of map.innerHTML.matchAll(/url\(#([^)]+)\)/g)) assert.ok(own.has(ref));
+    assert.ok(map.innerHTML.includes('<span>Front</span><span>Back</span>'));
+  }
+  assert.ok(maps[1].innerHTML.includes('No sets'));
+  assert.ok(maps[1].innerHTML.includes('More sets'));
+  assert.ok(maps[0].innerHTML.includes('#e8ff47'), 'Progress keeps the original lime palette');
+  assert.ok(maps[1].innerHTML.includes('#3bd65e'), 'Workout maps use the reference’s green palette');
+  assert.ok(!maps[1].innerHTML.includes('#e8ff47'));
+});
+
+test('finishing a workout shows a session map and backs up its muscle snapshots', () => {
+  const { api, run, nodes, storage } = app();
+  run(`
+    currentUser={uid:'test-user'};
+    MSETS={chest:99};
+    ACTIVE_WORKOUT={
+      id:'w_test',routineId:null,routineName:'Push Day',date:'2026-10-13',startedAt:Date.now()-2700000,
+      prBefore:{'Bench Press':{weight:40,reps:10,unit:'kg'}},
+      exercises:[{name:'Bench Press',cat:'push'},{name:'Squat',cat:'legs'}],
+      logged:{'Bench Press':{cat:'push',sets:[{weight:50,reps:10,unit:'kg'},{weight:50,reps:8,unit:'kg'}]}}
+    };
+  `);
+  api.wkFinish();
+  const record = plain(run('WORKOUTS[0]'));
+  assert.equal(record.exercises.length, 1);
+  assert.deepEqual(record.prs, [{ name: 'Bench Press', weight: 50, reps: 10, unit: 'kg' }]);
+  assert.equal(nodes.get('ws-prs').textContent, 1);
+  assert.match(textOf(nodes.get('ws-prlist')), /New PR: Bench Press/);
+  assert.deepEqual(record.exercises[0].muscles, ['chest', 'frontdelts', 'triceps']);
+  assert.deepEqual(plain(api.workoutMuscleSets(record)).counts, { chest: 2, frontdelts: 2, triceps: 2 });
+  assert.ok(nodes.get('wk-summary').classList.contains('on'));
+  assert.ok(nodes.get('wk-summary').focused);
+  assert.equal(nodes.get('ws-bodymap').children.length, 1);
+  assert.match(textOf(nodes.get('ws-bodymap')), /Chest 2 sets/);
+  assert.deepEqual(JSON.parse(storage.get('lifts_pw_test-user'))[0].exercises[0].muscles, record.exercises[0].muscles);
+  assert.deepEqual(JSON.parse(storage.get('lifts_pw_test-user'))[0].prs, record.prs);
+  assert.deepEqual(plain(api.normWorkout(record)).prs, record.prs);
+  assert.deepEqual(plain(run('MSETS')), { chest: 99 });
+  api.wkFinish();
+  assert.equal(run('WORKOUTS.length'), 1, 'double-tap does not duplicate the workout');
+});
+
+test('discarding an empty workout does not show a completion map', () => {
+  const { api, run, nodes } = app();
+  run("currentUser={uid:'test-user'};ACTIVE_WORKOUT={id:'empty',exercises:[],logged:{}};go=id=>{globalThis.lastGo=id}");
+  api.wkFinish();
+  assert.equal(run('WORKOUTS.length'), 0);
+  assert.equal(run('lastGo'), 'start');
+  assert.equal(nodes.get('wk-summary')?.classList.contains('on') ?? false, false);
+});
+
+test('switching accounts clears the previous workout’s map and completion state', () => {
+  const { api, run, nodes } = app();
+  run("gid('ws-bodymap').appendChild(mk('section','wk-muscle-card'));gid('ws-prlist').appendChild(mk('li',null,'Previous record'));gid('wk-summary').classList.add('on')");
+  api.p1SwitchUser();
+  assert.equal(nodes.get('ws-bodymap').innerHTML, '');
+  assert.equal(nodes.get('ws-bodymap').children.length, 0);
+  assert.equal(nodes.get('ws-prlist').children.length, 0);
+  assert.equal(nodes.get('wk-summary').classList.contains('on'), false);
+  assert.equal(run('wkLastRecord'), null);
+});
+
+
+test('new PRs compare against pre-workout records using normalized units and rep tie-breakers', () => {
+  const { api } = app();
+  const before = { 'Bench Press': { weight: 50, reps: 8, unit: 'kg' } };
+  assert.deepEqual(plain(api.workoutNewPRs([
+    { name: 'Bench Press', sets: [{ weight: 110.23, reps: 8, unit: 'lb' }] }
+  ], before)), [], 'same weight in another unit is not a PR');
+  assert.deepEqual(plain(api.workoutNewPRs([
+    { name: 'Bench Press', cat: 'push', sets: [{ weight: 110.23, reps: 9, unit: 'lb' }] },
+    { name: 'Bench Press', cat: 'upper', sets: [{ weight: 45, reps: 12, unit: 'kg' }] }
+  ], before)), [{ name: 'Bench Press', weight: 110.23, reps: 9, unit: 'lb' }], 'one PR per exercise, across categories');
+  assert.deepEqual(plain(api.workoutNewPRs([
+    { name: 'Bench Press', sets: [{ weight: 55, reps: 5, unit: 'kg' }] }
+  ], before)), [{ name: 'Bench Press', weight: 55, reps: 5, unit: 'kg' }]);
+});
+
+test('first records count as benchmarks, while missing or corrupt PR baselines never create claims', () => {
+  const { api } = app();
+  const ex = exercise('Preacher Curl', 1);
+  assert.equal(api.workoutNewPRs([ex], { 'Preacher Curl': null }).length, 1);
+  for (const before of [undefined, null, {}, { 'Preacher Curl': 'bad' }, { 'Preacher Curl': { weight: NaN, reps: 10 } }]) {
+    assert.deepEqual(plain(api.workoutNewPRs([ex], before)), []);
+  }
+});
+
+test('PR baselines are captured once before logging and not guessed for an already-logged resumed workout', () => {
+  const { api, run } = app();
+  run('DATA={"Bench Press":[{date:"2026-10-13",cat:"push",sets:[{weight:40,reps:8,unit:"kg"}]}]}');
+  const active = { logged: {} };
+  api.wkCapturePRBaseline(active, 'Bench Press');
+  assert.equal(active.prBefore['Bench Press'].weight, 40);
+  run('DATA["Bench Press"][0].sets.push({weight:50,reps:10,unit:"kg"})');
+  api.wkCapturePRBaseline(active, 'Bench Press');
+  assert.equal(active.prBefore['Bench Press'].weight, 40, 'own sets cannot overwrite the baseline');
+  const restored = { logged: { 'Bench Press': { sets: sets(1) } } };
+  api.wkCapturePRBaseline(restored, 'Bench Press');
+  assert.equal(Object.hasOwn(restored.prBefore, 'Bench Press'), false);
+});
+
+test('PR exercise names are rendered as text, never parsed as HTML', () => {
+  const { api, nodes } = app();
+  const name = '<img src=x onerror=alert(1)>';
+  api.renderWorkoutPRs({ prs: [{ name, weight: 50, reps: 10, unit: 'kg' }] });
+  const label = nodes.get('ws-prlist').children[0].children[2];
+  assert.equal(label.textContent, name);
+  assert.equal(label.innerHTML, '');
+});
+
+
+test('renaming an exercise during a workout also carries its pre-workout PR baseline', () => {
+  const { api, run } = app();
+  run(`ACTIVE_WORKOUT={
+    exercises:[{name:'Bench Press',cat:'push'}],
+    prBefore:{'Bench Press':{weight:40,reps:10,unit:'kg'}},
+    logged:{'Bench Press':{cat:'push',sets:[{weight:50,reps:10,unit:'kg'}]}}
+  }`);
+  api.p1OnExerciseRenamed('Bench Press', 'Renamed Press');
+  assert.equal(run('ACTIVE_WORKOUT.prBefore["Renamed Press"].weight'), 40);
+  assert.equal(run('Object.hasOwn(ACTIVE_WORKOUT.prBefore,"Bench Press")'), false);
+});
