@@ -1,0 +1,22 @@
+# ── Migration artifacts: never commit real PII/credentials ─────────────────
+# Real Firebase exports and generated migration manifests (they contain
+# emails/UIDs) live OUTSIDE the repository — see docs/phase-3-auth-migration-plan.md.
+# scripts/migration/build-manifest.mjs also refuses --out paths inside the repo.
+exports/
+manifests/
+firebase-export*.json
+firebase-export*.jsonl
+*-manifest.jsonl
+
+# ── Credentials (trusted local environment only) ───────────────────────────
+service-account*.json
+*service-account*.json
+firebase-*credentials*.json
+supabase-service-role*.json
+supabase-*secret*.json
+.env
+.env.*
+
+# ── Generic tool noise ─────────────────────────────────────────────────────
+node_modules/
+.DS_Store
