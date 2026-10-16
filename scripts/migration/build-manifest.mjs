@@ -5,6 +5,18 @@
 // prints a deterministic firebase_uid → supabase_uuid migration manifest
 // (JSONL) to stdout or to --out <path>.
 //
+// The manifest is a PLAN, not a record of real Auth users: every row leaves
+// this tool with status "planned", and supabase_uuid is a *planned pin*.
+// Supabase Auth's Admin API supports caller-supplied ids (verified in the
+// Phase 3a review — supabase/auth internal/api/admin.go adminUserCreate and
+// the supabase-js AdminUserAttributes `id` field), so provisioning will
+// REQUEST this pin — but the mapping is only trusted after the provisioning
+// step checks the Admin API response id against the pin and advances status
+// to "provisioned"/"verified". If a future API returns a different actual id,
+// firebase_uid remains the identity key and the returned id is recorded by
+// approved reconciliation — never inferred from an email. Nothing here ever
+// inserts into, or reads from, auth.users.
+//
 //   node scripts/migration/build-manifest.mjs <auth-export.jsonl> [--out <path>]
 //
 // Safety contract (docs/phase-3-auth-migration-plan.md, Phase 3a):

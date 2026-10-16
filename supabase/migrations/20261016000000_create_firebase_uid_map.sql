@@ -12,7 +12,16 @@
 -- Invariants (deny duplicates at the database, not just in tooling):
 --   * firebase_uid is the PRIMARY KEY  → exactly one mapping per Firebase UID.
 --   * supabase_uuid is UNIQUE          → one-to-one pinned Supabase UUIDs.
---   * email is UNIQUE                  → one row per address (no hidden twins).
+--
+-- Deliberate non-invariant: `email` is NOT unique and is NOT identity.
+-- (Verified in the Phase 3a review, docs/phase-3-auth-migration-plan.md
+-- "Phase 3a verification addendum".) Identity is firebase_uid → supabase_uuid
+-- only; emails change over time (delta exports, in-app edits) and one account
+-- legitimately carries several provider identities with the same address.
+-- UNIQUE(email) would fight legitimate row updates while catching nothing the
+-- offline builder does not already reject at export time; duplicates are
+-- therefore reported as build errors / `status='conflict'` rows, never
+-- enforced here. The column exists for provisioning and conflict reporting.
 --
 -- Access model — deny-by-default, browser roles see nothing:
 --   * Row-level security is enabled and the table defines ZERO policies: for
@@ -42,8 +51,18 @@
 
 create table public.firebase_uid_map (
   firebase_uid  text primary key,
+  -- Planned pin. Supabase Auth's Admin API (POST /admin/users) accepts a
+  -- caller-supplied "id" (verified against supabase/auth internal/api/admin.go
+  -- and the supabase-js AdminUserAttributes type), so this value is requested
+  -- at provisioning and only trusted once status >= 'provisioned' and the
+  -- Admin API response id has been checked to equal it. Because firebase_uid
+  -- is the primary key, a future API that returns a different actual id can
+  -- still be recorded here through approved reconciliation without ever
+  -- remapping by email.
   supabase_uuid uuid not null unique,
-  email         text not null unique,
+  -- Advisory copy of the account email at export time — provisioning and
+  -- conflict reporting only; never used for identity matching (see header).
+  email         text not null,
   provider_hint text not null default 'password',
   status        text not null default 'planned',
   created_at    timestamptz not null default now(),
@@ -54,6 +73,10 @@ create table public.firebase_uid_map (
 
 comment on table public.firebase_uid_map is
   'Planning-only mapping between Firebase Auth UIDs and pinned Supabase Auth UUIDs. Deny-by-default: RLS enabled with zero policies and no grants for anon/authenticated. service_role (trusted migration tooling outside the browser only) performs all access.';
+comment on column public.firebase_uid_map.email is
+  'Advisory email snapshot at export time. Not unique by design, never used for identity matching; duplicate/changed emails are surfaced by the offline builder and status=conflict rows for human review.';
+comment on column public.firebase_uid_map.supabase_uuid is
+  'Planned Supabase Auth UUID (deterministic pin). Trustworthy only for status >= provisioned after the Admin API response id has been verified to match; mismatches are status=conflict and require approved reconciliation.';
 
 alter table public.firebase_uid_map enable row level security;
 

@@ -159,12 +159,17 @@ parked under the conflict key — never silently deleted.
    UID, and `public.user_data.user_id` is a `uuid` FK to `auth.users(id)` (Phase 1
    migration). There is no way to “keep” a Firebase UID as a Supabase primary key — an
    **explicit mapping** is mandatory (§3).
-2. **Passwords cannot be transferred.** Supabase’s Admin API accepts a *plaintext*
-   password only at creation time; it does **not** import external password hashes
-   (Firebase’s scrypt/PBKDF2 variants are not accepted anywhere). We never have
-   plaintext passwords, so **no email/password credential can move**. Every
-   email/password user must choose a new password once, via the normal recovery flow
-   (§6). Google users are unaffected — they re-authenticate with Google (§8).
+2. **Passwords cannot be *silently* carried over.** Supabase Auth’s Admin API accepts a
+   *plaintext* password at creation time — which we never have. The Phase 3a technical
+   review additionally **verified** that GoTrue supports importing external password
+   hashes through the admin `password_hash` parameter, including a dedicated
+   Firebase-scrypt format (`$fbscrypt$…`), and that imported hashes are actually
+   verified at sign-in (see the “Phase 3a verification addendum”, V6). Whether *this*
+   project’s hashes can be exported and used end-to-end is **not yet verified**, so the
+   safe planning assumption stands: **every email/password user must be able to choose a
+   new password once via the normal recovery flow (§6)**, with hash import evaluated as
+   a possible UX optimization (D-14), never as a dependency. Google users are
+   unaffected — they re-authenticate with Google (§8).
 
 ### 2.2 Chosen strategy: pre-provision + explicit mapping + parallel run (staged cutover)
 
@@ -438,11 +443,14 @@ Order (FK requires auth users first):
 | Google-only | No password exists or is needed; “recovery” is just signing in with Google (§8). |
 | Multi-provider | Either path; both land on the same pinned UUID (staging test case §3.3). |
 
-### 6.2 Why old passwords cannot be verified anywhere (requirement 6)
+### 6.2 Password transfer status (requirement 6)
 
-Firebase hashes are not accepted by Supabase, and we never see plaintext. There is no
-“silent acceptance of the old password” option that is safe or possible. Communicating
-this clearly is a product requirement, not an edge case.
+We never see plaintext passwords, and there is no safe “silent acceptance of the old
+password” option. *Correction from the Phase 3a review:* Supabase Auth **can** verify an
+imported Firebase-scrypt hash (`password_hash` / `$fbscrypt$`, verified in addendum V6),
+so hash import may later remove the forced reset for some users — but its availability
+for this project is unproven, so the recovery flow documented here ships regardless and
+communicating the one-time reset remains a product requirement.
 
 ### 6.3 Required app-side pieces (future; part of cutover scope, not built yet)
 
@@ -650,10 +658,16 @@ test passes, Google cutover is blocked regardless of everything else being green
 | D-11 | Ship localStorage remap shim in the cutover change-set vs immediately after | Same change-set |
 | D-12 | Confirm target Supabase project (`msnoktushqwadtknxrij`) and staging project choice | Confirm before any apply |
 | D-13 | Date/window for staging rehearsal completion before cutover is even discussed | Set after Phase 3a/3b land |
+| D-14 | Whether to evaluate Firebase `$fbscrypt$` password-hash import in staging (verified as a supported code path — addendum V6) or ship reset-only | Evaluate in staging; **the recovery flow ships either way** |
 
 ---
 
 ## Recommended next smallest safe implementation step
+
+> **Status update:** Phase 3a (items 1–2 below) has been **implemented** as commits
+> `2ec6074` (plan) and `3a647be` (schema + builder + 18 tests), then revised by the
+> Phase 3a verification addendum below (email uniqueness removed, planned-pin
+> semantics documented). The current next step is at the end of the addendum.
 
 **Phase 3a — schema + offline mapping tooling, zero credentials, zero production
 contact:**
@@ -677,3 +691,199 @@ migration.
 **Stop point:** this document + Phase 3a are the only sanctioned artifacts of Phase 3
 so far; cutover remains blocked on the approvals above and on staging validation that
 has not yet been written or run.
+
+---
+
+# Phase 3a verification addendum
+
+**Review date:** 2026-10-16. Verification method: official Supabase documentation plus
+the public source of the actual server implementation (`supabase/auth` / GoTrue) and the
+official client (`supabase/supabase-js`), read offline via GitHub. **No SQL was applied,
+no Supabase or Firebase project was contacted, no user was provisioned, no real data was
+read, and the live app was not modified.** Every item marked *staging check* below is
+planned but **unperformed**; nothing in this addendum claims a live test.
+
+## V1. Provisioning Auth users with predetermined UUIDs — VERIFIED SUPPORTED
+
+*Decision 1 outcome: no redesign needed; pinning stands, with a verification guard.*
+
+Evidence:
+
+- GoTrue admin handler (`supabase/auth`, `master`,
+  [`internal/api/admin.go`](https://github.com/supabase/auth/blob/master/internal/api/admin.go)):
+  `AdminUserParams` declares `Id string \`json:"id"\`` (L22–23); in `adminUserCreate`
+  (L400 ff.) the server executes `customId, err := uuid.FromString(params.Id)`, rejects
+  a nil UUID, then sets `user.ID = customId` (L481–491). The error string says
+  “ID must conform to the uuid v4 format”, but **no version check exists** in the
+  handler: parsing is `gofrs/uuid.FromString` → `Parse`/`UnmarshalText`, which accepts
+  canonical/braced/urn forms with any version nibble — gofrs itself parses its **v1**
+  namespace constants with the same function
+  ([`codec.go`](https://github.com/gofrs/uuid/blob/master/codec.go), `FromString` at
+  L126–132; namespace constants `6ba7b810-9dad-11d1-80b4-00c04fd430c8` at `uuid.go`
+  L184–187). **UUIDv5 pins are therefore accepted.**
+- Official SDK types (`supabase/supabase-js`, `master`,
+  [`packages/core/auth-js/src/lib/types.ts`](https://github.com/supabase/supabase-js/blob/master/packages/core/auth-js/src/lib/types.ts)):
+  `AdminUserAttributes.id?: string` — *“Allows you to overwrite the default `id` set
+  for the user.”*
+- Official reference: [JavaScript: createUser](https://supabase.com/docs/reference/javascript/auth-admin-createuser)
+  (`createUser(attributes: AdminUserAttributes)`; server-only, service key).
+
+Workflow consequences (incorporated into the migration, builder header, and plan §3):
+
+1. The offline manifest’s `supabase_uuid` is a **planned pin**; every row it emits has
+   `status = 'planned'`. It is a plan, never proof of a real Auth user id, and the tool
+   never touches `auth.users`.
+2. The (future) provisioning step must call `createUser({ id: pin, … })`, compare the
+   **returned** `user.id` against the pin, and only then set
+   `status = 'provisioned'` / `verified_at`. Mismatch → `status = 'conflict'`, halt for
+   that row, never an email-based fallback.
+3. Because `firebase_uid` (not the UUID) is the table’s primary key, a future API that
+   generates ids automatically can still be accommodated: the returned actual id is
+   recorded into `supabase_uuid` by approved reconciliation, and the manifest keeps its
+   deterministic pin as an internal correlation key. This contingency requires **no
+   schema change** (contingency not tested — API behavior is current as of the source
+   read above).
+
+## V2. `UNIQUE(email)` on `firebase_uid_map` — UNNECESSARY; REMOVED
+
+*Decision 2 outcome: email is **not unique**, **not nullable**, and used **only for
+provisioning and conflict reporting** — never for identity matching.*
+
+- **Duplicate emails:** at any instant Firebase enforces one account per email, and the
+  offline builder already rejects normalized-email collisions across UIDs as a
+  “conflicting mapping” build error (fixture-tested). A second, database-level unique
+  index duplicates that check at the wrong layer: it would fire on legitimate row
+  *updates* and on support-driven reconciliation, not on the actual identity error.
+- **Changed emails:** delta re-exports and in-app/Google email changes mean the stored
+  email must remain updatable. A unique constraint turns every such update into a
+  constraint-failure risk (and forces update-ordering workarounds) while protecting no
+  identity property.
+- **Multiple identity providers:** one Firebase account with `password` + `google.com`
+  is **one** mapping row (one email, `provider_hint = 'password+google.com'`).
+  Supabase likewise stores multiple identities under one user. Email uniqueness across
+  rows says nothing about identities *within* a row, and provider emails that diverge
+  later must never re-key the mapping anyway.
+- **Recommendation adopted:** `email text not null` (required for provisioning and
+  reporting; the builder rejects missing emails) **without** a unique index, with
+  `COMMENT ON COLUMN` stating its advisory role; duplicate/changed email situations are
+  surfaced by the builder (build failure) and by `status = 'conflict'` rows for human
+  review. Identity remains `firebase_uid` (PK) → `supabase_uuid` (UNIQUE) only.
+  Revisit `nullable` only if an account with no usable email ever appears in an export
+  (currently rejected for manual handling).
+
+## V3. Trusted tooling can write the table without exposing service-role credentials — VERIFIED SAFE AS SPECIFIED
+
+- Official [API keys guide](https://supabase.com/docs/guides/getting-started/api-keys):
+  secret/`service_role` keys are elevated, *“bypassing Row Level Security”*, because
+  *“service_role has the BYPASSRLS attribute”*, and *“Never put one in a browser, a
+  shipped application, or source control.”* The
+  [Users guide](https://supabase.com/docs/guides/auth/users) likewise: admin actions are
+  performed *“from a trusted server environment using your secret key, or from the
+  Dashboard.”*
+- Defense in depth in our schema: RLS enabled **with zero policies** plus `REVOKE ALL`
+  from `public`/`anon`/`authenticated` — browser roles cannot read or map rows even if
+  key discipline failed. The explicit `GRANT` to `service_role` remains necessary
+  because BYPASSRLS bypasses *policies*, not *table privileges*.
+- Credential path: the key/secret is read from the environment (or secret manager) of
+  the operator’s local machine by the migration CLI only — never argv, never this repo
+  (`.gitignore`), never browser bundles (`js/supabase-client.js` refuses
+  `sb_secret_`/`service_role` keys before loading the SDK). A zero-key alternative
+  exists for row/DML work: Dashboard SQL editor or local `psql` as `postgres` (table
+  owner), also outside the browser.
+- *Staging check (unperformed):* demonstrate with two test sessions that `anon` and
+  `authenticated` get zero rows from `firebase_uid_map` on SELECT and errors on
+  INSERT/UPDATE/DELETE.
+
+## V4. `raw_app_meta_data.firebase_uid` claim — VERIFIED POPULABLE AND VERIFIABLE
+
+- **Set on create:** `AdminUserParams.AppMetaData` (`json:"app_metadata"`) and, inside
+  the create transaction, `adminUserCreate` runs
+  `user.UpdateAppMetaData(tx, params.AppMetaData)` *after* seeding
+  `provider`/`providers` (admin.go L492, L560–562). The update path (`PUT
+  /admin/users/{id}`) uses the same call (L364–365).
+- **Merge semantics:** `UpdateAppMetaData`
+  ([`internal/models/user.go`](https://github.com/supabase/auth/blob/master/internal/models/user.go)
+  L246–259) merges keys into the existing map (JSON `null` deletes a key) and writes
+  only `raw_app_meta_data` — so `{ "firebase_uid": "…" }` coexists with the provider
+  fields instead of clobbering them.
+- **Trustworthy claim:** SDK types mark `app_metadata` as *“Only a service role can
+  modify”* (same `types.ts` file as V1), i.e. end users cannot forge `firebase_uid` —
+  which is exactly what the localStorage remap shim’s identity gate (§4.2) requires.
+- **Readback:** server-side `supabase.auth.admin.getUserById()` (official reference:
+  *“requires the user’s id which maps to the auth.users.id column”*) returns
+  `raw_app_meta_data`; the browser session exposes the same data as
+  `user.app_metadata`, listed in the official
+  [user object table](https://supabase.com/docs/guides/auth/users).
+- *Staging check (unperformed):* create → `getUserById` assert → sign in → assert
+  `session.user.app_metadata.firebase_uid` equals the mapping row.
+
+## V5. UUIDv5 pins as planned references without unsupported `auth.users` records — VERIFIED SAFE BY DESIGN
+
+- `public.firebase_uid_map.supabase_uuid` has **no foreign key** to `auth.users`
+  (schema file) — planned pins are ordinary planning rows and exist fully offline until
+  provisioning.
+- Nothing in Phase 3a writes to `auth.users`; the only sanctioned creator of Auth rows
+  is the Admin API from V1 (dashboard “Add user” is the manual equivalent). Direct SQL
+  seeding of `auth.users`/`auth.identities` is explicitly out of scope — it is a known
+  source of broken logins in community reports
+  ([discussion #9251](https://github.com/orgs/supabase/discussions/9251),
+  [discussion #5248](https://github.com/supabase/supabase/discussions/5248) —
+  community-level evidence, not official docs).
+- `public.user_data.user_id` **does** reference `auth.users(id)` (Phase 1); import is
+  ordered after provisioning (§5.3), so the FK is only ever satisfied by rows created
+  through the Admin API with verified pins.
+
+## V6. Password hashes — prior plan claim CORRECTED; staging evaluation required
+
+The previous statements “Supabase does not import external password hashes / Firebase
+variants are not accepted anywhere” (old §2.1 and §6.2) are **wrong for current
+Supabase Auth** and have been corrected in place. Verified:
+
+- SDK types: `AdminUserAttributes.password_hash?: string` — *“Supports bcrypt, scrypt
+  (firebase), and argon2 password hashes”* (`types.ts`, same file as V1).
+- Server: `AdminUserParams.PasswordHash` → `models.NewUserWithPasswordHash` at create
+  (admin.go L468–471).
+- Verification path exists: `internal/crypto/password.go` defines
+  `FirebaseScryptPrefix = "$fbscrypt$"`, `ParseFirebaseScryptHash` parsing
+  `$fbscrypt$v=…,n=…,r=…,p=…[,ss=…][,sk=…]$salt$hash` (mirroring
+  [github.com/firebase/scrypt](https://github.com/firebase/scrypt), AES-256 ⇒ key
+  length 32), and `CompareHashAndPassword` dispatches `$fbscrypt$` hashes to
+  `compareHashAndPasswordFirebaseScrypt` (L338–343) — i.e. imported hashes are checked
+  at sign-in, not just stored.
+
+**Still unverified (must not be claimed):** (a) whether this Firebase project’s export
+surfaces each user’s `passwordHash`/salt material, (b) availability of the project’s
+secure-password-salt signer key (`sk`) and salt separator (`ss`), (c) end-to-end
+import → successful login in staging. Until (a)–(c) pass in staging, §6 recovery
+remains the mandatory path and hash import stays an optional evaluation (D-14).
+
+## V7. Citations (accessed 2026-10-16)
+
+1. Supabase Docs — [JavaScript: createUser](https://supabase.com/docs/reference/javascript/auth-admin-createuser)
+2. Supabase Docs — [Users (user object, admin actions, identities)](https://supabase.com/docs/guides/auth/users)
+3. Supabase Docs — [API keys (service_role BYPASSRLS, never in browser/source control)](https://supabase.com/docs/guides/getting-started/api-keys)
+4. `supabase/auth` — [`internal/api/admin.go` (AdminUserParams.id, adminUserCreate, app_metadata merge)](https://github.com/supabase/auth/blob/master/internal/api/admin.go)
+5. `supabase/auth` — [`internal/models/user.go` (UpdateAppMetaData merge semantics)](https://github.com/supabase/auth/blob/master/internal/models/user.go)
+6. `supabase/auth` — [`internal/crypto/password.go` ($fbscrypt$ Firebase scrypt parse/verify)](https://github.com/supabase/auth/blob/master/internal/crypto/password.go)
+7. `supabase/supabase-js` — [`AdminUserAttributes` (id, password_hash, app_metadata)](https://github.com/supabase/supabase-js/blob/master/packages/core/auth-js/src/lib/types.ts)
+8. `gofrs/uuid` — [`FromString`/`Parse` (no version restriction)](https://github.com/gofrs/uuid/blob/master/codec.go)
+
+## Smallest safe next step (updated)
+
+**Phase 3b-staging — approval-gated (D-2, D-12), non-production project only:**
+
+1. Apply both schema-only migrations (`user_data` from Phase 1,
+   `firebase_uid_map` from Phase 3a as revised here) to a **staging** Supabase project.
+2. Synthetic provisioning smoke with 2–3 **fake** accounts (no real data): call
+   `createUser` with a pinned v5 id, `email_confirm: true`, and
+   `app_metadata.firebase_uid`; assert returned id == pin, read the claim back with
+   `getUserById`, and confirm a deliberate duplicate-pin/duplicate-email conflict is
+   rejected by the builder/table rather than silently merged.
+3. RLS denial checks (V3) and the two-role isolation checks already listed in
+   `supabase/README.md`.
+4. *Only if D-14 is approved:* one synthetic `$fbscrypt$` hash-import + login test.
+
+This step needs no Firebase credentials, no real user data, no app changes and no
+deployment. **Stop point:** SQL remains unapplied until D-2/D-12 are granted; the live
+app and production Firebase stay untouched; no authentication migration has been
+performed or tested against a real project.
