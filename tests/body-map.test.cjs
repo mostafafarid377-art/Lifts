@@ -457,3 +457,96 @@ test('editing an exercise updates its muscles, fixes past workout maps, and surv
   const sanitized = plain(api.sanitizeData(run('DATA')));
   assert.deepEqual(sanitized._exMuscles, { 'Seated Cable Puller': ['lats', 'reardelts'] });
 });
+
+// ── Existing recovery safeguards — Phase 3c preservation pins ──────────────
+// These lock the behaviors the migration must NOT weaken: sign-out flushes
+// pending writes to the OLD user before auth changes, an unsaved failure
+// keeps the local snapshot and can abort sign-out, and switching accounts
+// parks unsaved state under the old uid instead of dropping or reusing it.
+
+test('sign-out flushes pending changes to the old user before signing out, then clears the confirmed snapshot', async () => {
+  const { run, storage } = app();
+  run(`
+    globalThis.__log = [];
+    globalThis.__confirms = [];
+    globalThis.__lastPayload = null;
+    globalThis.confirm = (msg) => { __confirms.push(String(msg)); return true; };
+    auth.signOut = () => { __log.push('signOut'); };
+    db.collection = () => ({ doc: (id) => ({
+      get: async () => ({ exists: false, data: () => ({}) }),
+      set: async (p) => { __log.push('set:' + id); __lastPayload = p; }
+    }) });
+    currentUser = { uid: 'user-A', email: 'a@example.com', displayName: null };
+    dataLoadedUid = 'user-A';
+    SV = newSV('user-A');
+    CATS = [{ id: 'push', label: 'Push', color: '#ff5c35' }];
+    EX = { push: ['Bench Press'] };
+    DATA = { 'Bench Press': [{ date: '2026-10-01', cat: 'push', sets: [{ weight: 50, reps: 5, unit: 'kg' }] }] };
+    scheduleSave();
+  `);
+  assert.ok(storage.has('lifts_snap_user-A'), 'pending change mirrored into the local snapshot first');
+
+  await run('doSignOut()');
+
+  assert.deepEqual(plain(run('__log')), ['set:user-A', 'signOut'],
+    'the old user\'s document must be written before auth.signOut()');
+  assert.deepEqual(plain(run('__confirms')), ['Sign out?'], 'no unsaved warning when the flush succeeded');
+  const payload = plain(run('__lastPayload'));
+  assert.equal(payload.cats[0].id, 'push');
+  assert.equal(payload.savedAt !== undefined && Number.isFinite(Number(payload.savedAt)), true);
+  assert.equal(storage.has('lifts_snap_user-A'), false,
+    'snapshot is removed only after the confirmed cloud write');
+});
+
+test('sign-out aborts with a recovery warning and keeps the local snapshot when the flush cannot save', async () => {
+  const { run, storage } = app();
+  run(`
+    globalThis.__log = [];
+    globalThis.__confirms = [];
+    globalThis.__answers = [true, false];
+    globalThis.confirm = (msg) => { __confirms.push(String(msg)); return __answers.shift() !== false; };
+    auth.signOut = () => { __log.push('signOut'); };
+    db.collection = () => ({ doc: () => ({
+      get: async () => ({ exists: false, data: () => ({}) }),
+      set: async () => { __log.push('set'); throw new Error('offline'); }
+    }) });
+    currentUser = { uid: 'user-A', email: 'a@example.com', displayName: null };
+    dataLoadedUid = 'user-A';
+    SV = newSV('user-A');
+    CATS = [{ id: 'legs', label: 'Legs', color: '#4fff91' }];
+    scheduleSave();
+  `);
+  assert.ok(storage.has('lifts_snap_user-A'));
+
+  await run('doSignOut()');
+
+  assert.deepEqual(plain(run('__log')), ['set'], 'auth.signOut() must never run after a failed flush');
+  assert.equal(run('__confirms').length, 2, 'confirmation + unsaved-changes warning');
+  assert.match(String(run('__confirms')[1]), /backup is stored on this device/);
+  assert.ok(storage.has('lifts_snap_user-A'), 'recovery snapshot survives the aborted sign-out');
+});
+
+test('switching accounts parks unsaved changes under the old uid’s snapshot and wipes in-memory state', () => {
+  const { run, storage } = app();
+  run(`
+    currentUser = { uid: 'user-A' };
+    dataLoadedUid = 'user-A';
+    SV = newSV('user-A');
+    CATS = [{ id: 'legs', label: 'Legs', color: '#4fff91' }];
+    EX = { legs: ['Hip Thrust'] };
+    DATA = { 'Hip Thrust': [{ date: '2026-10-02', cat: 'legs', sets: [{ weight: 60, reps: 5, unit: 'kg' }] }] };
+    EXTRA = { futureField: 1 };
+    SV.rev = 4; SV.saved = 1;
+    p1SwitchUser();
+  `);
+
+  const snap = JSON.parse(storage.get('lifts_snap_user-A'));
+  assert.equal(snap.payload.cats[0].id, 'legs', 'old user\'s unsaved state parked verbatim');
+  assert.equal(snap.payload.futureField, 1, 'unknown fields travel with the snapshot');
+  assert.ok(Number.isFinite(Number(snap.ts)), 'snapshot keeps its timestamp for snapPick ordering');
+  assert.equal(run('SV'), null, 'no save queue survives the switch');
+  assert.equal(run('dataLoadedUid'), null);
+  assert.equal(run('CATS.length'), 0, 'in-memory state fully wiped');
+  assert.equal(run('EXTRA.futureField'), undefined);
+  assert.equal(storage.has('lifts_snap_user-B'), false, 'nothing written for another account');
+});
