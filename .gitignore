@@ -8,6 +8,12 @@ firebase-export*.json
 firebase-export*.jsonl
 *-manifest.jsonl
 
+# Phase 3b harness outputs and local env (real keys/reports stay outside Git)
+staging-smoke*.json
+lifts-phase3b*.json
+*.env.local
+.env.local
+
 # ── Credentials (trusted local environment only) ───────────────────────────
 service-account*.json
 *service-account*.json
