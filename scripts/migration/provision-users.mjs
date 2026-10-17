@@ -225,8 +225,9 @@ const errCode = res => {
 /**
  * Call with bounded retries on transient failures (429/5xx/throw).
  * Returns { attempts, res?, error?, exhausted? }. Never retries other 4xx.
+ * Shared with import-user-data.mjs so both runners classify retries alike.
  */
-async function attemptCall(call, method, href, opts, maxAttempts, retryBaseMs, delay) {
+export async function attemptCall(call, method, href, opts, maxAttempts, retryBaseMs, delay) {
   let attempts = 0;
   let last = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
