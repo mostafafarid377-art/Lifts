@@ -155,6 +155,7 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .ubtn:active{transform:translateY(3px);box-shadow:0 0 0 #000}
 .ubtn.on{background:var(--ac);color:#000;border-color:var(--ac)}
 .slist{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
+.lasthint{font-size:.6rem;line-height:1.5;color:var(--m1);border-left:2px solid var(--b2);padding:2px 0 2px 8px;margin-bottom:2px}
 .srow{display:grid;grid-template-columns:24px 1fr 1fr 28px;gap:6px;align-items:center}
 .snum{font-size:.6rem;color:var(--m1);text-align:center}
 .sinp{background:var(--s2);border:1px solid var(--b2);color:var(--tx);font-size:.82rem;padding:9px;border-radius:2px;width:100%;outline:none;-webkit-appearance:none}
