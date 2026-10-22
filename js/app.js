@@ -3483,6 +3483,29 @@ function workoutNewPRs(exercises,before){
   return prs;
 }
 const WK_PR_TROPHY='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8v5a4 4 0 0 1-8 0V3ZM8 5H4v2a4 4 0 0 0 4 4M16 5h4v2a4 4 0 0 1-4 4M12 12v5M9 17h6l1 4H8l1-4Z"/></svg>';
+function renderWorkoutGoalProgress(record){
+  const section=gid('ws-goal-progress');
+  section.replaceChildren();
+  const exercises=Array.isArray(record.exercises)?record.exercises:[];
+  const withGoals=exercises.map(ex=>({ex,goal:getGoal(ex.name)})).filter(item=>item.goal);
+  if(!withGoals.length)return;
+  section.appendChild(mk('h2','wk-goal-title','Weight goal progress'));
+  withGoals.forEach(({ex,goal})=>{
+    const targetKg=toKg(goal.weight,goal.unit||'kg');
+    const bestKg=Math.max(0,...(ex.sets||[]).map(set=>toKg(set.weight,set.unit||'kg')));
+    const pct=targetKg>0?Math.min(100,Math.round(bestKg/targetKg*100)):0;
+    const row=mk('div','wk-goal-row');
+    const header=mk('div','wk-goal-row-head');
+    header.append(mk('span','wk-goal-exercise',ex.name),mk('span','wk-goal-percent',pct+'%'));
+    const track=mk('div','wk-goal-track');
+    const fill=mk('div','wk-goal-fill'+(pct>=100?' done':''));
+    fill.style.width=pct+'%';
+    track.appendChild(fill);
+    const detail=mk('div','wk-goal-detail',fmtW(bestKg?convertWeight(bestKg,'kg',goal.unit||'kg'):0)+' / '+goal.weight+' '+(goal.unit||'kg'));
+    row.append(header,track,detail);
+    section.appendChild(row);
+  });
+}
 function renderWorkoutPRs(record){
   const list=gid('ws-prlist');list.replaceChildren();
   const prs=Array.isArray(record.prs)?record.prs:[];
@@ -3542,6 +3565,7 @@ function wkFinish(){
     gid('ws-ex').textContent=rec.exercises.length;
     gid('ws-sets').textContent=plural(rec.exercises.reduce((n,e)=>n+e.sets.length,0),'set');
     renderWorkoutPRs(rec);
+    renderWorkoutGoalProgress(rec);
     gid('ws-bodymap').replaceChildren(buildWorkoutMuscleCard(rec));
     const summary=gid('wk-summary');
     summary.scrollTop=0;
