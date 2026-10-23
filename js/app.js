@@ -3458,6 +3458,30 @@ function workoutNewPRs(exercises,before){
   return prs;
 }
 const WK_PR_TROPHY='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8v5a4 4 0 0 1-8 0V3ZM8 5H4v2a4 4 0 0 0 4 4M16 5h4v2a4 4 0 0 1-4 4M12 12v5M9 17h6l1 4H8l1-4Z"/></svg>';
+function renderWorkoutGoalProgress(record){
+  const section=gid('ws-goal-progress');
+  section.replaceChildren();
+  const newPRNames=new Set((Array.isArray(record.prs)?record.prs:[]).map(pr=>pr.name));
+  (Array.isArray(record.exercises)?record.exercises:[]).forEach(ex=>{
+    if(!newPRNames.has(ex.name))return;
+    const goal=getGoal(ex.name);
+    if(!goal)return;
+    const goalKg=toKg(goal.weight,goal.unit||'kg');
+    const bestKg=Math.max(0,...(ex.sets||[]).map(s=>toKg(s.weight,s.unit||'kg')));
+    const pct=goalKg>0?Math.min(100,Math.round(bestKg/goalKg*100)):0;
+    const row=mk('div','wk-goal-row');
+    const heading=mk('div','wk-goal-row-head');
+    heading.append(mk('span','wk-goal-exercise',ex.name),mk('span','wk-goal-percent',pct+'%'));
+    const track=mk('div','wk-goal-track');
+    const fill=mk('div','wk-goal-fill'+(pct>=100?' done':''));
+    fill.style.width=pct+'%';track.appendChild(fill);
+    row.append(heading,track,mk('div','wk-goal-detail',fmtW(bestKg?convertWeight(bestKg,'kg',goal.unit||'kg'):0)+' / '+goal.weight+' '+(goal.unit||'kg')));
+    section.appendChild(row);
+  });
+  if(section.childElementCount){
+    section.prepend(mk('h2','wk-goal-title','Weight goal progress'));
+  }
+}
 function renderWorkoutPRs(record){
   const list=gid('ws-prlist');list.replaceChildren();
   const prs=Array.isArray(record.prs)?record.prs:[];
@@ -3517,6 +3541,7 @@ function wkFinish(){
     gid('ws-ex').textContent=rec.exercises.length;
     gid('ws-sets').textContent=plural(rec.exercises.reduce((n,e)=>n+e.sets.length,0),'set');
     renderWorkoutPRs(rec);
+    renderWorkoutGoalProgress(rec);
     gid('ws-bodymap').replaceChildren(buildWorkoutMuscleCard(rec));
     const summary=gid('wk-summary');
     summary.scrollTop=0;

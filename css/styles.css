@@ -635,6 +635,17 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .wk-sum-prs{display:grid;gap:7px;list-style:none;margin:0 0 24px;color:var(--wk-green,#39c85b);font-size:.86rem;font-weight:600;line-height:1.45}
 .wk-sum-prs:empty{display:none}
 .wk-sum-prs li{display:flex;align-items:flex-start;gap:7px;overflow-wrap:anywhere}
+.wk-goal-progress{display:grid;gap:10px;margin:0 0 24px}
+.wk-goal-progress:empty{display:none}
+.wk-goal-title{margin:0;color:#96969c;font-size:.9rem;font-weight:650}
+.wk-goal-row{min-width:0;padding:12px 14px;background:#1b1b1f;border:1px solid #28282d;border-radius:12px}
+.wk-goal-row-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px}
+.wk-goal-exercise{min-width:0;color:#eeeef1;font-size:.82rem;font-weight:600;overflow-wrap:anywhere}
+.wk-goal-percent{flex-shrink:0;color:var(--wk-green);font-size:.8rem;font-weight:700}
+.wk-goal-track{height:6px;background:#333339;border-radius:999px;overflow:hidden}
+.wk-goal-fill{height:100%;background:var(--wk-green);border-radius:inherit;transition:width .35s ease}
+.wk-goal-fill.done{background:#7be495}
+.wk-goal-detail{margin-top:6px;color:#85858e;font-size:.68rem}
 .wk-pr-icon{flex-shrink:0;width:16px;height:16px;margin-top:3px}
 .wk-pr-icon svg{display:block;width:100%;height:100%}
 .wk-pr-label{flex-shrink:0}
