@@ -416,6 +416,7 @@ function quarantineSnapshot(uid,snap,reason){
 let SPLITS=[], activeSplitId=null;
 let currentUser=null;
 let selDay='all', selEx=null, selCatCtx=null, sets=[], unit='kg';
+let logLast=null; // previous-session reference shown while logging inside a workout: placeholders only, never saved
 let modalCats=new Set(), modalMuscles=new Set();
 let authMode='login';
 
@@ -1032,7 +1033,7 @@ function sessionsFor(name){
 
 function selectEx(name,catId){
   try{
-    selEx=name;selCatCtx=catId;sets=[];
+    selEx=name;selCatCtx=catId;sets=[];logLast=null;
     document.getElementById('lftitle').textContent=name+(catId?' · '+catLabel(catId):'');
     document.getElementById('logwrap').style.display='block';
     document.getElementById('picker').innerHTML='';
@@ -1054,7 +1055,7 @@ function selectEx(name,catId){
 
 function cancelLog(){
   hideWarmup();
-  selEx=null;selCatCtx=null;sets=[];
+  selEx=null;selCatCtx=null;sets=[];logLast=null;
   document.getElementById('logwrap').style.display='none';
   document.getElementById('exsearch').style.display='block';
   document.getElementById('catpills').style.display='flex';
@@ -1070,6 +1071,7 @@ function setUnit(u){
       st.w=(unitOf(o.u)===u)?String(o.w):fmtW(convertWeight(o.w,o.u,u));
       o.shown=st.w;
     }
+    if(st.lw!=null&&st.lu&&st.lu!==u){ st.lw=Math.round(convertWeight(st.lw,st.lu,u)*100)/100; st.lu=u; } // keep "last time" placeholders in the shown unit
     st.u=u;
   });
   unit=u;
@@ -1080,12 +1082,22 @@ function setUnit(u){
 
 function renderSets(){
   const w=document.getElementById('slist');w.innerHTML='';
+  // Inside a workout, the previous session is only a reference: its numbers stay as input
+  // placeholders, so they can never be saved as if they were sets done in this workout.
+  if(logLast&&Array.isArray(logLast.sets)&&logLast.sets.length){
+    const hint=document.createElement('div');hint.className='lasthint';
+    hint.textContent='Last session'+(logLast.date?' ('+fmtDate(logLast.date)+')':'')+': '+
+      logLast.sets.map(s=>fmtW(s.weight)+(s.unit||'kg')+' × '+s.reps).join(' · ');
+    w.appendChild(hint);
+  }
   sets.forEach((st,i)=>{
     const row=document.createElement('div');row.className='srow';
     const num=document.createElement('div');num.className='snum';num.textContent=i+1;
-    const wi=document.createElement('input');wi.className='sinp';wi.type='number';wi.step='.5';wi.min='0';wi.inputMode='decimal';wi.placeholder='Weight ('+unit+')';wi.value=st.w;
+    const wi=document.createElement('input');wi.className='sinp';wi.type='number';wi.step='.5';wi.min='0';wi.inputMode='decimal';
+    wi.placeholder=(st.w===''&&st.lw!=null)?fmtW(st.lw)+' '+unit:'Weight ('+unit+')';wi.value=st.w;
     wi.addEventListener('input',()=>{sets[i].w=wi.value;sets[i].u=unit;const n=parseFloat(wi.value);sets[i].o=isFinite(n)?{w:n,u:unit,shown:wi.value}:null;});
-    const ri=document.createElement('input');ri.className='sinp';ri.type='number';ri.min='1';ri.inputMode='numeric';ri.placeholder='Reps';ri.value=st.r;
+    const ri=document.createElement('input');ri.className='sinp';ri.type='number';ri.min='1';ri.inputMode='numeric';
+    ri.placeholder=(st.r===''&&st.lr!=null)?String(st.lr):'Reps';ri.value=st.r;
     ri.addEventListener('input',()=>{sets[i].r=ri.value;});
     const db=document.createElement('button');db.className='dsbtn';db.textContent='✕';
     db.addEventListener('click',()=>{if(sets.length>1){sets.splice(i,1);renderSets();}});
@@ -1111,23 +1123,15 @@ function saveLog(){
     const exName=selEx;
     const arr=sessionsFor(exName);
     DATA[exName]=arr; // ensure it's normalized/attached even if it was empty before
-    const idx=arr.findIndex(e=>e.date===date&&e.cat===catId);
-    const entry={date,cat:catId,sets:valid.map(s=>({weight:parseFloat(s.w),reps:parseInt(s.r),unit:s.u||unit}))};
-    let dataEntry=entry;
     const aw=ACTIVE_WORKOUT;
-    if(aw&&date===aw.date){
-      wkCapturePRBaseline(aw,exName); // capture BEFORE these sets enter the shared exercise history
-      // The exercise history keeps ONE session per exercise/date/category. Sets already in it from an earlier workout (or quick log)
-      // that day are kept; this workout adds its own sets after them (re-saving inside the same workout replaces only its own sets).
-      aw.base=aw.base||{};
-      const bk=exName+wkSep+catId;
-      let base;
-      if(idx<0)base=[];
-      else if(bk in aw.base)base=aw.base[bk];
-      else{const own=wkLogFor(aw,exName,catId);base=(own&&own.sets&&own.sets.length)?[]:arr[idx].sets.map(x=>({...x}));}
-      aw.base[bk]=base;
-      dataEntry={date,cat:catId,sets:base.map(x=>({...x})).concat(entry.sets)};
-    }
+    const wid=(aw&&date===aw.date)?aw.id:null; // sets logged inside a workout belong to that workout's own session
+    if(wid)wkCapturePRBaseline(aw,exName); // capture BEFORE these sets enter the shared exercise history
+    // Each workout keeps its own entry (wid), so starting a new workout can never append its sets
+    // to an earlier session — even when both happen on the same day. Quick logs outside a
+    // workout keep the original one-entry-per-exercise/date/category behaviour.
+    const idx=wid?arr.findIndex(e=>e.wid===wid&&e.cat===catId):arr.findIndex(e=>e.date===date&&e.cat===catId);
+    const entry={date,cat:catId,sets:valid.map(s=>({weight:parseFloat(s.w),reps:parseInt(s.r),unit:s.u||unit}))};
+    const dataEntry=wid?{...entry,wid}:entry;
     if(idx>=0)arr[idx]=dataEntry;else arr.push(dataEntry);
     arr.sort((a,b)=>a.date.localeCompare(b.date));
     scheduleSave();toast('Saved ✓');
@@ -1444,7 +1448,7 @@ function renderProgress(){
     s.sets.forEach(set=>{const chip=document.createElement('span');chip.className='chip';chip.textContent=set.weight+(set.unit||'kg')+'×'+set.reps;chips.appendChild(chip);});
     const db=document.createElement('button');db.style.cssText='background:none;border:none;color:var(--m1);font-size:.72rem;flex-shrink:0;padding:2px 5px';db.textContent='✕';
     db.addEventListener('click',()=>{
-      DATA[name]=sessionsFor(name).filter(x=>!(x.date===s.date&&x.cat===s.cat));
+      DATA[name]=sessionsFor(name).filter(x=>!(x.date===s.date&&x.cat===s.cat&&(s.wid?x.wid===s.wid:!x.wid)));
       if(!DATA[name].length)delete DATA[name];
       scheduleSave();renderProgress();renderHistory();buildProgSel();renderMuscleSets();toast('Removed');
     });
@@ -2947,7 +2951,7 @@ function p1SwitchUser(){
   dataLoadedUid=null;wkStopTicker();wkReturn=false;
   CATS=[];EX={};DATA={};MSETS={};CUSTOM_MUSCLES=[];HIDDEN_MUSCLES=new Set();SPLITS=[];activeSplitId=null;UNPLACED={};EXTRA={};REPAIR={dropped:0,unplaced:0};NORM_UID=null;
   p1Reset();
-  selEx=null;selCatCtx=null;sets=[];selDay='all';mOpen=null;wkLastRecord=null;histOpenId=null;expCats=new Set();
+  selEx=null;selCatCtx=null;sets=[];logLast=null;selDay='all';mOpen=null;wkLastRecord=null;histOpenId=null;expCats=new Set();
   modalCats=new Set();modalMuscles=new Set();editExCats=new Set();editExMuscles=new Set();
   try{stopTimer();}catch(e){}
   ['st-body','pl-week','pl-routines','wk-list','hlist','pstats','pchart','psess','pgoal','msets-wrap','ws-bodymap','ws-prlist','mlist','m-splits','picker','slist','catpills','onboard-wrap','wcard','exp-cats','cal-grid','dp-list','rt-exlist','xp-list','wl-recent','ex-muscles','editex-muscles'].forEach(id=>{const e=gid(id);if(e)e.innerHTML='';});
@@ -2969,8 +2973,10 @@ function pendingWrite(uid,arr){try{if(arr.length)localStorage.setItem(pwKey(uid)
 function pendingAdd(uid,rec){const a=pendingRead(uid).filter(x=>x.id!==rec.id);a.push(rec);pendingWrite(uid,a);}
 function pendingPrune(uid,savedIds){pendingWrite(uid,pendingRead(uid).filter(x=>!savedIds.has(x.id)));}
 
-// Make sure per-exercise history (DATA) contains the sets of a workout. Never overwrites existing entries.
-function ensureSessions(date,exs){
+// Make sure per-exercise history (DATA) contains the sets of a workout. Never overwrites other sessions.
+// With a workout id, the workout's own entry is created/kept in sync; without one, the legacy
+// one-entry-per-exercise/date/category rule applies (used by older callers and quick logs).
+function ensureSessions(date,exs,wid){
   let added=false;
   if(!isoOf(date))return false;   // never create a session without a real calendar date
   (exs||[]).forEach(ex=>{
@@ -2978,9 +2984,16 @@ function ensureSessions(date,exs){
     const cat=ex.cat||primCat(ex.name);
     const arr=sessionsFor(ex.name);
     DATA[ex.name]=arr;
-    if(arr.findIndex(e=>e.date===date&&e.cat===cat)<0){
-      arr.push({date,cat,sets:ex.sets.map(s=>({weight:s.weight,reps:s.reps,unit:unitOf(s.unit)}))});
+    const sets=ex.sets.map(s=>({weight:s.weight,reps:s.reps,unit:unitOf(s.unit)}));
+    const i=wid?arr.findIndex(e=>e.wid===wid&&e.cat===cat):arr.findIndex(e=>e.date===date&&e.cat===cat);
+    if(i<0){
+      const rec={date,cat,sets};
+      if(wid)rec.wid=wid;
+      arr.push(rec);
       arr.sort((a,b)=>a.date.localeCompare(b.date));
+      added=true;
+    }else if(wid&&JSON.stringify(arr[i].sets)!==JSON.stringify(sets)){
+      arr[i]={...arr[i],date,cat,sets}; // this workout is the source of truth for its own entry
       added=true;
     }
   });
@@ -3019,7 +3032,7 @@ function wkResolveRestore(uid,d){
   ACTIVE_WORKOUT=aw;AW_UPDATED=t;
   // if Firebase had failed earlier, re-apply sets logged in this workout to the exercise history
   const exs=Object.keys(aw.logged).map(k=>({name:wkKeyName(k),cat:aw.logged[k].cat,sets:aw.logged[k].sets}));
-  if(ensureSessions(aw.date,exs))scheduleSave();
+  if(ensureSessions(aw.date,exs,aw.id))scheduleSave();
   if(loc&&locT>fsT)scheduleSave(); // local copy was newer than cloud — push it up
 }
 // A workout finished while Firebase was failing is kept in localStorage until a save succeeds.
@@ -3034,7 +3047,7 @@ function p1MergePending(uid){
     if(have.has(id))return;        // already present (cloud copy, or an earlier entry of this queue) → duplicate, drop
     have.add(id);                  // accepted: later duplicates are rejected immediately
     const rec={...n,id};
-    WORKOUTS.push(rec);ensureSessions(rec.date,rec.exercises);changed=true;
+    WORKOUTS.push(rec);ensureSessions(rec.date,rec.exercises,rec.id);changed=true;
     keep.push(rec);                // stays queued until a cloud save is confirmed (pendingPrune)
   });
   pendingWrite(uid,keep);
@@ -3402,12 +3415,24 @@ function wkOpenEx(name,cat,addOne){
   const a=ACTIVE_WORKOUT;if(!a)return;
   go('log');wkReturn=true;
   selectEx(name,cat);
-  const lg=wkLogFor(a,name,cat);
-  if(lg&&lg.sets&&lg.sets.length){
-    sets=lg.sets.map(rowFromSet);
-    setUnit(unitOf(lg.sets[0].unit)); // re-renders the rows
+  const own=wkLogFor(a,name,cat);
+  const ownSets=(own&&Array.isArray(own.sets))?own.sets:[];
+  if(ownSets.length){
+    // Show only what was actually logged in THIS workout.
+    logLast=null;
+    sets=ownSets.map(rowFromSet);
+    setUnit(unitOf(ownSets[0].unit)); // re-renders the rows
     if(addOne)addSet();
+    return;
   }
+  // Fresh exercise in this workout: never copy the previous session's sets into the form.
+  // Its rows are mirrored as empty inputs whose placeholders show last time's numbers.
+  const prev=sessionsFor(name).filter(s=>s.wid!==a.id).slice(-1)[0]||null;
+  logLast=prev?{date:prev.date,sets:prev.sets.map(s=>({weight:s.weight,reps:s.reps,unit:unitOf(s.unit)}))}:null;
+  const u=prev&&prev.sets[0]?unitOf(prev.sets[0].unit):unit;
+  sets=(prev?prev.sets:[null]).map(s=>s?{w:'',r:'',u,lw:s.weight,lr:s.reps,lu:unitOf(s.unit)}:{w:'',r:'',u});
+  setUnit(u);
+  if(addOne)addSet();
 }
 function wkRemoveEx(name,cat){
   const a=ACTIVE_WORKOUT;if(!a)return;
@@ -3524,7 +3549,7 @@ function wkFinish(){
   if(exercises.length){
     rec={id:a.id,routineId:a.routineId||null,name:a.routineName,date:a.date,startedAt:a.startedAt,finishedAt,
          durationSec:Math.max(0,Math.round((finishedAt-a.startedAt)/1000)),exercises,prs:workoutNewPRs(exercises,a.prBefore)};
-    ensureSessions(rec.date,rec.exercises);   // history/PRs/streak read DATA — make sure every set is there
+    ensureSessions(rec.date,rec.exercises,rec.id);   // history/PRs/streak read DATA — make sure every set is there
     if(!WORKOUTS.some(w=>w.id===rec.id))WORKOUTS.push(rec);
     pendingAdd(uid,rec);                       // local safety copy until the cloud save succeeds
   }
