@@ -3486,25 +3486,26 @@ const WK_PR_TROPHY='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 function renderWorkoutGoalProgress(record){
   const section=gid('ws-goal-progress');
   section.replaceChildren();
-  const exercises=Array.isArray(record.exercises)?record.exercises:[];
-  const withGoals=exercises.map(ex=>({ex,goal:getGoal(ex.name)})).filter(item=>item.goal);
-  if(!withGoals.length)return;
-  section.appendChild(mk('h2','wk-goal-title','Weight goal progress'));
-  withGoals.forEach(({ex,goal})=>{
-    const targetKg=toKg(goal.weight,goal.unit||'kg');
-    const bestKg=Math.max(0,...(ex.sets||[]).map(set=>toKg(set.weight,set.unit||'kg')));
-    const pct=targetKg>0?Math.min(100,Math.round(bestKg/targetKg*100)):0;
+  const newPRNames=new Set((Array.isArray(record.prs)?record.prs:[]).map(pr=>pr.name));
+  (Array.isArray(record.exercises)?record.exercises:[]).forEach(ex=>{
+    if(!newPRNames.has(ex.name))return;
+    const goal=getGoal(ex.name);
+    if(!goal)return;
+    const goalKg=toKg(goal.weight,goal.unit||'kg');
+    const bestKg=Math.max(0,...(ex.sets||[]).map(s=>toKg(s.weight,s.unit||'kg')));
+    const pct=goalKg>0?Math.min(100,Math.round(bestKg/goalKg*100)):0;
     const row=mk('div','wk-goal-row');
-    const header=mk('div','wk-goal-row-head');
-    header.append(mk('span','wk-goal-exercise',ex.name),mk('span','wk-goal-percent',pct+'%'));
+    const heading=mk('div','wk-goal-row-head');
+    heading.append(mk('span','wk-goal-exercise',ex.name),mk('span','wk-goal-percent',pct+'%'));
     const track=mk('div','wk-goal-track');
     const fill=mk('div','wk-goal-fill'+(pct>=100?' done':''));
-    fill.style.width=pct+'%';
-    track.appendChild(fill);
-    const detail=mk('div','wk-goal-detail',fmtW(bestKg?convertWeight(bestKg,'kg',goal.unit||'kg'):0)+' / '+goal.weight+' '+(goal.unit||'kg'));
-    row.append(header,track,detail);
+    fill.style.width=pct+'%';track.appendChild(fill);
+    row.append(heading,track,mk('div','wk-goal-detail',fmtW(bestKg?convertWeight(bestKg,'kg',goal.unit||'kg'):0)+' / '+goal.weight+' '+(goal.unit||'kg')));
     section.appendChild(row);
   });
+  if(section.childElementCount){
+    section.prepend(mk('h2','wk-goal-title','Weight goal progress'));
+  }
 }
 function renderWorkoutPRs(record){
   const list=gid('ws-prlist');list.replaceChildren();
