@@ -635,8 +635,11 @@ auth.onAuthStateChanged(user=>{
     document.getElementById('auth-screen').style.display='none';
     document.getElementById('app').style.display='block';
     document.getElementById('tabbar').style.display='grid';
-    const name=(user.displayName||user.email||'').split('@')[0].slice(0,8);
-    const ub=document.getElementById('user-btn');if(ub)ub.textContent=name||'Out';
+    const fullName=user.displayName||user.email||'';
+    const name=fullName.split('@')[0].slice(0,8);
+    const ub=document.getElementById('user-btn');if(ub)ub.textContent=name||'Profile';
+    const sideName=document.getElementById('sidebar-name');if(sideName)sideName.textContent=fullName.split('@')[0]||'Your account';
+    const sideAvatar=document.getElementById('sidebar-avatar');if(sideAvatar)sideAvatar.textContent=(fullName.split('@')[0].slice(0,2)||'?').toUpperCase();
     loadUserData(user.uid);
   } else {
     currentUser=null;
@@ -1912,6 +1915,8 @@ function renderProfile(){
   const name=(currentUser.displayName||email||'').split('@')[0];
   const initials=name.slice(0,2).toUpperCase()||'?';
   document.querySelectorAll('#prof-avatar').forEach(el=>el.textContent=initials);
+  const sidebarAvatar=gid('sidebar-avatar');if(sidebarAvatar)sidebarAvatar.textContent=initials;
+  const sidebarName=gid('sidebar-name');if(sidebarName)sidebarName.textContent=name||'Your account';
   document.querySelectorAll('#prof-name').forEach(el=>el.textContent=name||'—');
   document.querySelectorAll('#prof-email').forEach(el=>el.textContent=email||'—');
 
@@ -2079,6 +2084,9 @@ function downloadFile(filename,content,type){
 function go(id){
   if(id==='workout'&&!ACTIVE_WORKOUT)id='start';
   if(id!=='log')wkReturn=false;
+  const screenLabels={start:'OVERVIEW',plan:'PLANS & ROUTINES',workout:'WORKOUT',log:'LOG SET',history:'HISTORY',progress:'PROGRESS',streak:'STREAK CALENDAR',profile:'PROFILE & SETTINGS',manage:'EXERCISE LIBRARY'};
+  const context=gid('app-context');if(context)context.textContent=screenLabels[id]||id.toUpperCase();
+  document.querySelectorAll('[data-screen]').forEach(nav=>nav.classList.toggle('on',nav.dataset.screen===id||(id==='log'&&nav.dataset.screen==='start')));
   document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
   const tabId=(id==='log'||id==='workout'||id==='plan')?'start':id;
   document.querySelectorAll('[data-tab]').forEach(t=>t.classList.toggle('on',t.dataset.tab===tabId));
@@ -2953,7 +2961,7 @@ function p1SwitchUser(){
   ['st-body','pl-week','pl-routines','wk-list','hlist','pstats','pchart','psess','pgoal','msets-wrap','ws-bodymap','ws-prlist','mlist','m-splits','picker','slist','catpills','onboard-wrap','wcard','exp-cats','cal-grid','dp-list','rt-exlist','xp-list','wl-recent','ex-muscles','editex-muscles'].forEach(id=>{const e=gid(id);if(e)e.innerHTML='';});
   const pe=gid('progex');if(pe)pe.innerHTML='<option value="">— Pick an exercise —</option>';
   ['exsearch','hsearch','msearch','xp-search'].forEach(id=>{const e=gid(id);if(e)e.value='';});
-  [['prof-name','—'],['prof-email','—'],['prof-avatar','?']].forEach(([id,t])=>{const e=gid(id);if(e)e.textContent=t;});
+  [['prof-name','—'],['prof-email','—'],['prof-avatar','?'],['sidebar-name','Your account'],['sidebar-avatar','?']].forEach(([id,t])=>{const e=gid(id);if(e)e.textContent=t;});
   const lw=gid('logwrap');if(lw)lw.style.display='none';
   const se=gid('exsearch');if(se)se.style.display='block';
   const cp=gid('catpills');if(cp)cp.style.display='flex';
