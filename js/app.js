@@ -2081,7 +2081,7 @@ function go(id){
   if(id!=='log')wkReturn=false;
   document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
   const tabId=(id==='log'||id==='workout'||id==='plan')?'start':id;
-  document.querySelectorAll('[data-tab]').forEach(t=>t.classList.toggle('on',t.dataset.tab===tabId));
+  document.querySelectorAll('[data-tab]').forEach(t=>t.classList.toggle('on',t.closest('.desk-nav')?t.dataset.tab===id:t.dataset.tab===tabId));
   document.getElementById('s-'+id).classList.add('on');
   window.scrollTo(0,0);
   if(id==='log'){
