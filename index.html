@@ -21,6 +21,7 @@
 <link rel="stylesheet" href="./css/styles.css">
 <link rel="stylesheet" href="./css/redesign.css">
 <link rel="stylesheet" href="./css/profile.css">
+<link rel="stylesheet" href="./css/profile-redesign.css">
 </head>
 <body ontouchstart="">
 
@@ -234,13 +235,17 @@
   <!-- PROFILE -->
   <div class="scr" id="s-profile">
     <header class="profile-page-head">
-      <div><div class="profile-kicker">ACCOUNT &amp; TRAINING</div><div class="ptitle">Your profile<span class="profile-period">.</span></div><div class="psub">Your account, activity, and data</div></div>
+      <div><div class="profile-kicker">ACCOUNT &amp; TRAINING</div><div class="ptitle">Your profile<span class="profile-period">.</span></div><div class="psub">Personal details, training preferences, and your data.</div></div>
     </header>
     <section class="profile-identity">
       <div class="prof-avatar" id="prof-avatar">?</div>
-      <div class="profile-identity-copy"><div class="prof-name" id="prof-name">—</div><div class="prof-email" id="prof-email">—</div></div>
-      <span class="profile-member-tag">LIFTS MEMBER</span>
+      <div class="profile-identity-copy"><div class="identity-title"><div class="prof-name" id="prof-name">—</div><span class="profile-member-tag">LIFTS MEMBER</span></div><div class="prof-email" id="prof-email">—</div><div class="profile-since">YOUR TRAINING, ALL IN ONE PLACE</div></div>
+      <button class="profile-edit-button" id="profile-edit-btn" onclick="toggleProfileEdit()">Edit profile <span>✎</span></button>
     </section>
+    <div class="profile-edit-panel" id="profile-edit-panel" hidden>
+      <label for="profile-name-input">Display name</label><input id="profile-name-input" class="field" maxlength="60" autocomplete="name" placeholder="Your name">
+      <div class="profile-edit-actions"><button class="btn bacc" onclick="saveProfileName()">Save name</button><button class="btn bgh" onclick="toggleProfileEdit(false)">Cancel</button></div>
+    </div>
 
     <section class="prof-section profile-stats-section">
       <div class="prof-section-title"><span>YOUR TRAINING</span><span class="profile-title-note">ALL-TIME TOTALS</span></div>
@@ -254,52 +259,39 @@
 
     <div class="profile-columns">
       <div class="profile-main-col">
-        <section class="prof-section">
-          <div class="prof-section-title"><span>HISTORY</span></div>
+        <section class="prof-section"><div class="prof-section-title"><span>HISTORY</span></div>
           <button class="hist-btn" onclick="go('history')" aria-label="Open workout history">
             <span class="hist-ic"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 2.64-6.36"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg></span>
-            <span class="hist-tx"><span class="hist-t">Workout History</span><span class="hist-s" id="hist-btn-sub">All sessions</span></span>
-            <span class="hist-chev">›</span>
+            <span class="hist-tx"><span class="hist-t">Workout History</span><span class="hist-s" id="hist-btn-sub">All sessions</span></span><span class="hist-chev">›</span>
           </button>
         </section>
-
-        <section class="prof-section">
-          <div class="prof-section-title"><span>BODY METRICS</span><span class="profile-title-note">WEIGHT TRACKING</span></div>
+        <section class="prof-section"><div class="prof-section-title"><span>BODY METRICS</span><span class="profile-title-note">WEIGHT TRACKING</span></div>
           <div class="wcard" id="wcard"></div>
           <button class="btn bgh profile-goal-btn" onclick="openWeightGoalModal()">◎ &nbsp; Set Weight Goal</button>
         </section>
       </div>
 
       <div class="profile-side-col">
-        <section class="prof-section profile-export-section">
-          <div class="prof-section-title"><span>DATA &amp; PRIVACY</span></div>
-          <div class="export-intro"><span class="export-mark">⇩</span><div><b>Export your data</b><small>Take your training log with you.</small></div></div>
-          <div class="exp-label">Categories</div>
-          <div class="exp-pills" id="exp-cats"></div>
+        <section class="prof-section profile-settings-section"><div class="prof-section-title"><span>PREFERENCES</span></div>
+          <div class="profile-setting-row"><span class="profile-setting-icon">⚖</span><div class="profile-setting-copy"><b>Weight units</b><small>Default weight-entry unit</small></div><div class="profile-segmented"><button type="button" id="profile-unit-kg" onclick="setProfileUnit('kg')">kg</button><button type="button" id="profile-unit-lb" onclick="setProfileUnit('lb')">lb</button></div></div>
+          <div class="profile-setting-row"><span class="profile-setting-icon">◷</span><div class="profile-setting-copy"><b>Rest timer</b><small>Default between sets</small></div><select id="profile-timer-setting" onchange="setProfileTimer(this.value)"><option value="60">60 seconds</option><option value="90">90 seconds</option><option value="120">120 seconds</option><option value="180">180 seconds</option></select></div>
+          <div class="profile-setting-row"><span class="profile-setting-icon">▦</span><div class="profile-setting-copy"><b>Rest days</b><small>Weekly training schedule</small></div><div class="profile-stepper"><button type="button" aria-label="Fewer rest days" onclick="changeRestDays(-1)">−</button><b id="profile-rest-days">1</b><button type="button" aria-label="More rest days" onclick="changeRestDays(1)">+</button></div></div>
+          <div class="profile-setting-row"><span class="profile-setting-icon">♪</span><div class="profile-setting-copy"><b>Timer sound</b><small>Alert when rest timer ends</small></div><label class="profile-switch"><input type="checkbox" id="profile-timer-sound" onchange="setProfilePref('timerSound',this.checked)"><span></span></label></div>
+          <button class="profile-reminder-row" onclick="go('plan')"><span class="profile-setting-icon">◷</span><span class="profile-setting-copy"><b>Workout schedule</b><small id="profile-schedule-summary">Manage training days and routines</small></span><span class="profile-chevron">›</span></button>
+        </section>
+        <section class="prof-section profile-export-section"><div class="prof-section-title"><span>DATA &amp; PRIVACY</span></div>
+          <div class="export-intro"><span class="export-mark">⇩</span><div><b>Export your data</b><small>Download selected training records.</small></div></div>
+          <div class="exp-label">Categories</div><div class="exp-pills" id="exp-cats"></div>
           <div class="exp-label profile-field-label">Date range</div>
-          <div class="exp-range-btns">
-            <button class="exp-range-btn on" id="exp-all" onclick="setExpRange('all')">All Time</button>
-            <button class="exp-range-btn" id="exp-month" onclick="setExpRange('month')">This Month</button>
-            <button class="exp-range-btn" id="exp-custom" onclick="setExpRange('custom')">Custom</button>
-          </div>
-          <div id="exp-custom-dates" style="display:none;margin-top:8px;display:none">
-            <div class="profile-date-range">
-              <input type="date" id="exp-from" class="field">
-              <span>to</span>
-              <input type="date" id="exp-to" class="field">
-            </div>
-          </div>
-          <div class="exp-label profile-field-label">File format</div>
-          <div class="profile-format-row">
-            <button class="exp-range-btn on" id="exp-csv" onclick="setExpFormat('csv')">CSV</button>
-            <button class="exp-range-btn" id="exp-json" onclick="setExpFormat('json')">JSON</button>
-          </div>
+          <div class="exp-range-btns"><button class="exp-range-btn on" id="exp-all" onclick="setExpRange('all')">All Time</button><button class="exp-range-btn" id="exp-month" onclick="setExpRange('month')">This Month</button><button class="exp-range-btn" id="exp-custom" onclick="setExpRange('custom')">Custom</button></div>
+          <div id="exp-custom-dates" style="display:none;margin-top:8px;display:none"><div class="profile-date-range"><input type="date" id="exp-from" class="field"><span>to</span><input type="date" id="exp-to" class="field"></div></div>
+          <div class="exp-label profile-field-label">File format</div><div class="profile-format-row"><button class="exp-range-btn on" id="exp-csv" onclick="setExpFormat('csv')">CSV</button><button class="exp-range-btn" id="exp-json" onclick="setExpFormat('json')">JSON</button></div>
           <button class="btn bacc profile-export-btn" onclick="doExport()">Export data <span>↓</span></button>
         </section>
-        <section class="prof-section profile-account-section">
-          <div class="prof-section-title"><span>ACCOUNT</span></div>
-          <div class="profile-account-copy">Sign out of your LIFTS account on this device.</div>
-          <button class="danger-btn" onclick="doSignOut()">Sign Out <span>↗</span></button>
+        <section class="prof-section profile-account-section"><div class="prof-section-title"><span>ACCOUNT</span></div>
+          <button class="profile-account-action" onclick="profileResetPassword()"><span class="profile-setting-icon">⌑</span><span class="profile-setting-copy"><b>Password &amp; security</b><small>Send a password reset email</small></span><span class="profile-chevron">›</span></button>
+          <div class="profile-account-copy">Sign out of your LIFTS account on this device.</div><button class="danger-btn" onclick="doSignOut()">Sign Out <span>↗</span></button>
+          <div class="profile-delete-note">Account deletion is not currently supported in the app. Your existing data and sign-in remain unchanged.</div>
         </section>
         <div class="profile-privacy"><span>🔒</span> Your records are securely synced to your account.</div>
       </div>

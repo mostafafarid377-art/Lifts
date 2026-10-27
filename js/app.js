@@ -843,6 +843,7 @@ function renderOnboarding(){
 
 let logDateAuto=null; // the auto-filled quick-log date; refreshed after midnight only while the user hasn't picked another date
 function bootApp(){
+  applySavedProfilePrefs();
   const step=(name,fn)=>{ try{ fn(); }catch(e){ console.error(name+' failed:',e); } };
   step('set logdate',()=>{ logDateAuto=localISO(); document.getElementById('logdate').value=logDateAuto; });
   step('buildCatPills',buildCatPills);
@@ -1778,6 +1779,7 @@ function initStreak(){
 function changeRestDays(dir){
   restDays = Math.max(0, Math.min(7, restDays + dir));
   document.getElementById('rest-val').textContent = restDays;
+  const profileRest=gid('profile-rest-days');if(profileRest)profileRest.textContent=restDays;
   DATA._restDays = restDays;
   scheduleSave();
   renderStreak();
@@ -1910,6 +1912,63 @@ function renderCal(){
 }
 
 // ── PROFILE ──────────────────────────────────────────
+function profilePrefs(){return isObj(DATA._profilePrefs)?DATA._profilePrefs:{};}
+function editProfilePrefs(){if(!isObj(DATA._profilePrefs))DATA._profilePrefs={};return DATA._profilePrefs;}
+function applySavedProfilePrefs(){
+  const prefs=isObj(DATA._profilePrefs)?DATA._profilePrefs:{};
+  if(prefs.unit==='kg'||prefs.unit==='lb')unit=prefs.unit;
+  if([60,90,120,180].includes(Number(prefs.restTimer)))timerTotal=Number(prefs.restTimer);
+}
+function updateProfileSettingsUI(){
+  const prefs=profilePrefs();
+  const unitChoice=unitOf(prefs.unit||unit||'kg');
+  ['kg','lb'].forEach(u=>{const el=gid('profile-unit-'+u);if(el)el.classList.toggle('on',u===unitChoice);});
+  const timer=Number(prefs.restTimer);
+  const timerChoice=[60,90,120,180].includes(timer)?timer:90;
+  const timerEl=gid('profile-timer-setting');if(timerEl)timerEl.value=String(timerChoice);
+  const sound=gid('profile-timer-sound');if(sound)sound.checked=prefs.timerSound!==false;
+  restDays=Number.isInteger(DATA._restDays)?DATA._restDays:1;
+  const rest=gid('profile-rest-days');if(rest)rest.textContent=String(restDays);
+  const summary=gid('profile-schedule-summary');
+  if(summary){
+    const labels=DAYS.filter(d=>(SCHEDULE[d.k]||[]).length).map(d=>d.s);
+    summary.textContent=labels.length?'Training days · '+labels.join(' · '):'No training days scheduled';
+  }
+}
+function setProfileUnit(u){
+  u=unitOf(u);editProfilePrefs().unit=u;unit=u;
+  setUnit(u);scheduleSave();updateProfileSettingsUI();
+}
+function setProfileTimer(value){
+  const seconds=Number(value);if(![60,90,120,180].includes(seconds))return;
+  editProfilePrefs().restTimer=seconds;timerTotal=seconds;
+  document.querySelectorAll('.tpreset').forEach(b=>{const map={'1m':60,'90s':90,'2m':120,'3m':180};b.classList.toggle('on',map[b.textContent]===seconds);});
+  if(!timerEndTime)updateTimerDisplay();
+  scheduleSave();toast('Default rest timer updated');
+}
+function setProfilePref(key,value){
+  if(key!=='timerSound')return;
+  editProfilePrefs()[key]=!!value;scheduleSave();toast(value?'Timer sound enabled':'Timer sound muted');
+}
+function toggleProfileEdit(force){
+  const panel=gid('profile-edit-panel'),input=gid('profile-name-input');if(!panel||!input)return;
+  const open=typeof force==='boolean'?force:panel.hidden;
+  panel.hidden=!open;
+  if(open){input.value=currentUser?.displayName||'';setTimeout(()=>input.focus(),0);}
+}
+async function saveProfileName(){
+  const name=String(gid('profile-name-input')?.value||'').trim();
+  if(!name){toast('Enter a display name');return;}
+  if(!currentUser||typeof currentUser.updateProfile!=='function'){toast('Profile editing is unavailable');return;}
+  try{await currentUser.updateProfile({displayName:name});toggleProfileEdit(false);renderProfile();toast('Profile updated ✓');}
+  catch(e){console.error('Profile update failed',e);toast('Could not update profile');}
+}
+async function profileResetPassword(){
+  const email=currentUser&&currentUser.email;
+  if(!email||!auth){toast('Password reset is unavailable for this account');return;}
+  try{await auth.sendPasswordResetEmail(email);toast('Password reset email sent ✓');}
+  catch(e){console.error('Password reset failed',e);toast(friendlyErr(e.code||'unknown'));}
+}
 function renderProfile(){
   if(!currentUser)return;
   const email=currentUser.email||'';
@@ -1948,6 +2007,7 @@ function renderProfile(){
   initExport();
   setExpRange('all');
   setExpFormat('csv');
+  updateProfileSettingsUI();
 }
 
 // ── DATA EXPORT ──────────────────────────────────────
@@ -2111,6 +2171,7 @@ const CIRC=2*Math.PI*23;
 
 // Beep sound using Web Audio API (works on iOS + Android)
 function beep(){
+  if(isObj(DATA._profilePrefs)&&DATA._profilePrefs.timerSound===false)return;
   try{
     const ctx=new(window.AudioContext||window.webkitAudioContext)();
     const play=(freq,start,dur)=>{
@@ -2954,6 +3015,7 @@ function p1SwitchUser(){
   selEx=null;selCatCtx=null;sets=[];logLast=null;selDay='all';mOpen=null;wkLastRecord=null;histOpenId=null;expCats=new Set();
   modalCats=new Set();modalMuscles=new Set();editExCats=new Set();editExMuscles=new Set();
   try{stopTimer();}catch(e){}
+  unit='kg';timerTotal=90;
   ['st-body','pl-week','pl-routines','wk-list','hlist','pstats','pchart','psess','pgoal','msets-wrap','ws-bodymap','ws-prlist','mlist','m-splits','picker','slist','catpills','onboard-wrap','wcard','exp-cats','cal-grid','dp-list','rt-exlist','xp-list','wl-recent','ex-muscles','editex-muscles'].forEach(id=>{const e=gid(id);if(e)e.innerHTML='';});
   const pe=gid('progex');if(pe)pe.innerHTML='<option value="">— Pick an exercise —</option>';
   ['exsearch','hsearch','msearch','xp-search'].forEach(id=>{const e=gid(id);if(e)e.value='';});
@@ -3723,6 +3785,12 @@ function _expose(){
   try{ g.catColor = catColor; }catch(e){}
   try{ g.catLabel = catLabel; }catch(e){}
   try{ g.changeRestDays = changeRestDays; }catch(e){}
+  try{ g.setProfileUnit = setProfileUnit; }catch(e){}
+  try{ g.setProfileTimer = setProfileTimer; }catch(e){}
+  try{ g.setProfilePref = setProfilePref; }catch(e){}
+  try{ g.toggleProfileEdit = toggleProfileEdit; }catch(e){}
+  try{ g.saveProfileName = saveProfileName; }catch(e){}
+  try{ g.profileResetPassword = profileResetPassword; }catch(e){}
   try{ g.checkExerciseGoalCelebration = checkExerciseGoalCelebration; }catch(e){}
   try{ g.clockTime = clockTime; }catch(e){}
   try{ g.closeModal = closeModal; }catch(e){}
