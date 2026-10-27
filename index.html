@@ -19,6 +19,7 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
 <link rel="stylesheet" href="./css/styles.css">
+<link rel="stylesheet" href="./css/profile.css">
 </head>
 <body ontouchstart="">
 
@@ -221,71 +222,76 @@
 
   <!-- PROFILE -->
   <div class="scr" id="s-profile">
-    <div class="ptitle">Profile</div>
-    <div class="psub">Your account & data</div>
-    <div class="prof-avatar" id="prof-avatar">?</div>
-    <div class="prof-name" id="prof-name">—</div>
-    <div class="prof-email" id="prof-email">—</div>
+    <header class="profile-page-head">
+      <div><div class="profile-kicker">ACCOUNT &amp; TRAINING</div><div class="ptitle">Your profile<span class="profile-period">.</span></div><div class="psub">Your account, activity, and data</div></div>
+    </header>
+    <section class="profile-identity">
+      <div class="prof-avatar" id="prof-avatar">?</div>
+      <div class="profile-identity-copy"><div class="prof-name" id="prof-name">—</div><div class="prof-email" id="prof-email">—</div></div>
+      <span class="profile-member-tag">LIFTS MEMBER</span>
+    </section>
 
-    <div class="prof-section">
-      <div class="prof-section-title">Your Stats</div>
+    <section class="prof-section profile-stats-section">
+      <div class="prof-section-title"><span>YOUR TRAINING</span><span class="profile-title-note">ALL-TIME TOTALS</span></div>
       <div class="prof-stat-grid">
         <div class="prof-stat"><div class="prof-stat-num" id="pstat-sessions">0</div><div class="prof-stat-lbl">Total Sessions</div></div>
         <div class="prof-stat"><div class="prof-stat-num" id="pstat-exercises">0</div><div class="prof-stat-lbl">Exercises Logged</div></div>
         <div class="prof-stat"><div class="prof-stat-num" id="pstat-streak">0</div><div class="prof-stat-lbl">Current Streak 🔥</div></div>
         <div class="prof-stat"><div class="prof-stat-num" id="pstat-best">0</div><div class="prof-stat-lbl">Best Streak 🏆</div></div>
       </div>
-    </div>
+    </section>
 
-    <div class="prof-section">
-      <div class="prof-section-title">History</div>
-      <button class="hist-btn" onclick="go('history')" aria-label="Open workout history">
-        <span class="hist-ic"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 2.64-6.36"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg></span>
-        <span class="hist-tx"><span class="hist-t">Workout History</span><span class="hist-s" id="hist-btn-sub">All sessions</span></span>
-        <span class="hist-chev">›</span>
-      </button>
-    </div>
+    <div class="profile-columns">
+      <div class="profile-main-col">
+        <section class="prof-section">
+          <div class="prof-section-title"><span>HISTORY</span></div>
+          <button class="hist-btn" onclick="go('history')" aria-label="Open workout history">
+            <span class="hist-ic"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 2.64-6.36"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg></span>
+            <span class="hist-tx"><span class="hist-t">Workout History</span><span class="hist-s" id="hist-btn-sub">All sessions</span></span>
+            <span class="hist-chev">›</span>
+          </button>
+        </section>
 
-    <div class="prof-section">
-      <div class="prof-section-title">Body Weight</div>
-      <div class="wcard" id="wcard"></div>
-      <button class="btn bgh" onclick="openWeightGoalModal()" style="width:100%;margin-top:10px;min-height:46px">🎯 Set Weight Goal</button>
-    </div>
-
-    <div class="prof-section">
-      <div class="prof-section-title">Export Data</div>
-
-      <!-- Categories -->
-      <div class="exp-label">Categories</div>
-      <div class="exp-pills" id="exp-cats"></div>
-
-      <!-- Date range -->
-      <div class="exp-label" style="margin-top:12px">Date Range</div>
-      <div class="exp-range-btns">
-        <button class="exp-range-btn on" id="exp-all" onclick="setExpRange('all')">All Time</button>
-        <button class="exp-range-btn" id="exp-month" onclick="setExpRange('month')">This Month</button>
-        <button class="exp-range-btn" id="exp-custom" onclick="setExpRange('custom')">Custom</button>
-      </div>
-      <div id="exp-custom-dates" style="display:none;margin-top:8px;display:none">
-        <div style="display:flex;gap:8px;align-items:center">
-          <input type="date" id="exp-from" class="field" style="flex:1;margin-bottom:0">
-          <span style="color:var(--m1);font-size:.7rem">→</span>
-          <input type="date" id="exp-to" class="field" style="flex:1;margin-bottom:0">
-        </div>
+        <section class="prof-section">
+          <div class="prof-section-title"><span>BODY METRICS</span><span class="profile-title-note">WEIGHT TRACKING</span></div>
+          <div class="wcard" id="wcard"></div>
+          <button class="btn bgh profile-goal-btn" onclick="openWeightGoalModal()">◎ &nbsp; Set Weight Goal</button>
+        </section>
       </div>
 
-      <!-- Format + Export -->
-      <div class="exp-label" style="margin-top:12px">Format</div>
-      <div style="display:flex;gap:2px;margin-bottom:12px">
-        <button class="exp-range-btn on" id="exp-csv" onclick="setExpFormat('csv')" style="flex:1">CSV</button>
-        <button class="exp-range-btn" id="exp-json" onclick="setExpFormat('json')" style="flex:1">JSON</button>
+      <div class="profile-side-col">
+        <section class="prof-section profile-export-section">
+          <div class="prof-section-title"><span>DATA &amp; PRIVACY</span></div>
+          <div class="export-intro"><span class="export-mark">⇩</span><div><b>Export your data</b><small>Take your training log with you.</small></div></div>
+          <div class="exp-label">Categories</div>
+          <div class="exp-pills" id="exp-cats"></div>
+          <div class="exp-label profile-field-label">Date range</div>
+          <div class="exp-range-btns">
+            <button class="exp-range-btn on" id="exp-all" onclick="setExpRange('all')">All Time</button>
+            <button class="exp-range-btn" id="exp-month" onclick="setExpRange('month')">This Month</button>
+            <button class="exp-range-btn" id="exp-custom" onclick="setExpRange('custom')">Custom</button>
+          </div>
+          <div id="exp-custom-dates" style="display:none;margin-top:8px;display:none">
+            <div class="profile-date-range">
+              <input type="date" id="exp-from" class="field">
+              <span>to</span>
+              <input type="date" id="exp-to" class="field">
+            </div>
+          </div>
+          <div class="exp-label profile-field-label">File format</div>
+          <div class="profile-format-row">
+            <button class="exp-range-btn on" id="exp-csv" onclick="setExpFormat('csv')">CSV</button>
+            <button class="exp-range-btn" id="exp-json" onclick="setExpFormat('json')">JSON</button>
+          </div>
+          <button class="btn bacc profile-export-btn" onclick="doExport()">Export data <span>↓</span></button>
+        </section>
+        <section class="prof-section profile-account-section">
+          <div class="prof-section-title"><span>ACCOUNT</span></div>
+          <div class="profile-account-copy">Sign out of your LIFTS account on this device.</div>
+          <button class="danger-btn" onclick="doSignOut()">Sign Out <span>↗</span></button>
+        </section>
+        <div class="profile-privacy"><span>🔒</span> Your records are securely synced to your account.</div>
       </div>
-      <button class="btn bacc" style="width:100%" onclick="doExport()">Export ↓</button>
-    </div>
-
-    <div class="prof-section">
-      <div class="prof-section-title">Account</div>
-      <button class="danger-btn" onclick="doSignOut()">Sign Out</button>
     </div>
   </div>
 
