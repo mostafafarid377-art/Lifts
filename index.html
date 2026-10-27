@@ -22,6 +22,7 @@
 <link rel="stylesheet" href="./css/redesign.css">
 <link rel="stylesheet" href="./css/profile.css">
 <link rel="stylesheet" href="./css/profile-redesign.css">
+<link rel="stylesheet" href="./css/start-redesign.css">
 </head>
 <body ontouchstart="">
 
@@ -67,19 +68,24 @@
 
 <!-- APP -->
 <div id="app">
-  <nav class="nav" aria-label="Main navigation">
-    <div class="logo">LIFTS<span class="logo-sub">TRAINING LOG</span></div>
-    <div class="desk-nav">
-      <button class="ntab on" data-tab="start" onclick="go('start')">Overview</button>
-      <button class="ntab" data-tab="plan" onclick="go('plan')">Plans</button>
-      <button class="ntab" data-tab="workout" onclick="go('workout')">Workout</button>
-      <button class="ntab" data-tab="history" onclick="go('history')">History</button>
-      <button class="ntab" data-tab="progress" onclick="go('progress')">Progress</button>
-      <button class="ntab" data-tab="manage" onclick="go('manage')">Library</button>
-      <button class="ntab" data-tab="streak" onclick="go('streak')">Streak</button>
-      <button class="ntab" data-tab="profile" onclick="go('profile')">Profile</button>
-    </div>
-    <span class="nav-status"><i></i> Training mode</span>
+  <aside class="app-sidebar" aria-label="Main navigation">
+    <a class="sidebar-brand" href="#" onclick="go('start');return false"><span class="sidebar-logo">L</span><span>LIFTS<small>TRAINING LOG</small></span></a>
+    <div class="sidebar-label">TRAINING</div>
+    <button class="side-link on" data-screen="start" onclick="go('start')"><span>⌂</span>Overview</button>
+    <button class="side-link" data-screen="workout" onclick="go('workout')"><span>◉</span>Workout</button>
+    <button class="side-link" data-screen="history" onclick="go('history')"><span>◷</span>History</button>
+    <button class="side-link" data-screen="progress" onclick="go('progress')"><span>↗</span>Progress</button>
+    <button class="side-link" data-screen="plan" onclick="go('plan')"><span>▦</span>Plans &amp; routines</button>
+    <button class="side-link" data-screen="manage" onclick="go('manage')"><span>☷</span>Exercise library</button>
+    <button class="side-link" data-screen="streak" onclick="go('streak')"><span>✦</span>Streak calendar</button>
+    <div class="sidebar-label account-label">ACCOUNT</div>
+    <button class="side-link" data-screen="profile" onclick="go('profile')"><span>◌</span>Profile &amp; settings</button>
+    <div class="sidebar-user"><div class="sidebar-avatar" id="sidebar-avatar">?</div><div class="sidebar-user-copy"><b id="sidebar-name">Your account</b><small>Training profile</small></div><button class="sidebar-user-action" onclick="go('profile')" aria-label="Open profile">↗</button></div>
+  </aside>
+  <nav class="nav">
+    <div class="mobile-logo">LIFTS</div>
+    <div class="top-context"><span class="crumb-home">LIFTS</span> <span>/</span> <b id="app-context">OVERVIEW</b></div>
+    <div class="top-actions"><span class="top-sync"><i></i>Training mode</span><button class="top-profile" id="user-btn" onclick="go('profile')">Profile</button></div>
   </nav>
   <div class="sync-bar" id="sync-bar">Syncing...</div>
   <div class="wk-banner" id="wk-banner" onclick="go('workout')">
