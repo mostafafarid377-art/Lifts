@@ -19,6 +19,7 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
 <link rel="stylesheet" href="./css/styles.css">
+<link rel="stylesheet" href="./css/redesign.css">
 <link rel="stylesheet" href="./css/profile.css">
 </head>
 <body ontouchstart="">
@@ -65,9 +66,19 @@
 
 <!-- APP -->
 <div id="app">
-  <nav class="nav">
-    <div class="logo">LIFTS</div>
-    
+  <nav class="nav" aria-label="Main navigation">
+    <div class="logo">LIFTS<span class="logo-sub">TRAINING LOG</span></div>
+    <div class="desk-nav">
+      <button class="ntab on" data-tab="start" onclick="go('start')">Overview</button>
+      <button class="ntab" data-tab="plan" onclick="go('plan')">Plans</button>
+      <button class="ntab" data-tab="workout" onclick="go('workout')">Workout</button>
+      <button class="ntab" data-tab="history" onclick="go('history')">History</button>
+      <button class="ntab" data-tab="progress" onclick="go('progress')">Progress</button>
+      <button class="ntab" data-tab="manage" onclick="go('manage')">Library</button>
+      <button class="ntab" data-tab="streak" onclick="go('streak')">Streak</button>
+      <button class="ntab" data-tab="profile" onclick="go('profile')">Profile</button>
+    </div>
+    <span class="nav-status"><i></i> Training mode</span>
   </nav>
   <div class="sync-bar" id="sync-bar">Syncing...</div>
   <div class="wk-banner" id="wk-banner" onclick="go('workout')">
@@ -543,6 +554,7 @@
       <div><span>PRs</span><b id="ws-prs">0</b></div>
     </div>
     <ul class="wk-sum-prs" id="ws-prlist" aria-label="New personal records"></ul>
+    <section class="wk-goal-progress" id="ws-goal-progress" aria-label="Weight goal progress for new personal records"></section>
     <div id="ws-bodymap"></div>
     <div class="wk-sum-actions">
       <button class="btn bacc" onclick="wkSummaryView()">View Workout</button>
