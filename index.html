@@ -69,71 +69,51 @@
 <!-- APP -->
 <div id="app">
   <aside class="app-sidebar" aria-label="Main navigation">
-    <a class="sidebar-brand" href="#" onclick="go('start');return false"><span class="sidebar-logo">L</span><span>LIFTS<small>TRAINING LOG</small></span></a>
+    <a class="sidebar-brand" href="#" onclick="go('home');return false"><span class="sidebar-logo">L</span><span>LIFTS<small>TRAINING LOG</small></span></a>
     <div class="sidebar-label">TRAINING</div>
-    <button class="side-link on" data-screen="start" onclick="go('start')"><span>⌂</span>Overview</button>
+    <button class="side-link on" data-screen="home" onclick="go('home')"><span>⌂</span>Home</button>
+    <button class="side-link" data-screen="start" onclick="go('start')"><span>◉</span>Start</button>
     <button class="side-link" data-screen="workout" onclick="go('workout')"><span>◉</span>Workout</button>
     <button class="side-link" data-screen="history" onclick="go('history')"><span>◷</span>History</button>
     <button class="side-link" data-screen="progress" onclick="go('progress')"><span>↗</span>Progress</button>
     <button class="side-link" data-screen="plan" onclick="go('plan')"><span>▦</span>Plans &amp; routines</button>
     <button class="side-link" data-screen="manage" onclick="go('manage')"><span>☷</span>Exercise library</button>
-    <button class="side-link" data-screen="streak" onclick="go('streak')"><span>✦</span>Streak calendar</button>
     <div class="sidebar-label account-label">ACCOUNT</div>
     <button class="side-link" data-screen="profile" onclick="go('profile')"><span>◌</span>Profile &amp; settings</button>
     <div class="sidebar-user"><div class="sidebar-avatar" id="sidebar-avatar">?</div><div class="sidebar-user-copy"><b id="sidebar-name">Your account</b><small>Training profile</small></div><button class="sidebar-user-action" onclick="go('profile')" aria-label="Open profile">↗</button></div>
   </aside>
   <nav class="nav">
     <div class="mobile-logo">LIFTS</div>
-    <div class="top-context"><span class="crumb-home">LIFTS</span> <span>/</span> <b id="app-context">OVERVIEW</b></div>
+    <div class="top-context"><span class="crumb-home">LIFTS</span> <span>/</span> <b id="app-context">HOME</b></div>
     <div class="top-actions"><span class="top-sync"><i></i>Training mode</span><button class="top-profile" id="user-btn" onclick="go('profile')">Profile</button></div>
   </nav>
   <div class="sync-bar" id="sync-bar">Syncing...</div>
   <div class="wk-banner" id="wk-banner" onclick="go('workout')">
     <span class="wk-dot"></span><span class="wk-bn" id="wk-bn">Workout</span><span class="wk-clock">00:00:00</span><span class="wk-open">Open ›</span>
   </div>
-  <!-- START (home) -->
-  <div class="scr on" id="s-start">
-    <div class="home-intro"><div class="home-kicker">YOUR TRAINING, AT A GLANCE</div><div class="ptitle">Home</div><div class="psub" id="st-sub">Today</div></div>
-  <section class="home-streak" aria-labelledby="home-streak-title">
-    <div class="home-section-heading"><div><div class="home-kicker">✦ &nbsp; CONSISTENCY</div><div class="ptitle" id="home-streak-title">Your streak</div></div><div class="home-streak-badge">TRAINING<br>JOURNEY</div></div>
-    <div class="streak-bar" id="streak-bar">
-      <div class="streak-box">
-        <div class="streak-num fire" id="streak-current">0</div>
-        <div class="streak-lbl">Current Streak</div>
+  <!-- HOME: today's workout and streak -->
+  <div class="scr on" id="s-home">
+    <div class="home-intro"><div class="home-kicker">YOUR TRAINING, AT A GLANCE</div><div class="ptitle">Home</div><div class="psub" id="home-sub">Today</div></div>
+    <div id="home-body"></div>
+    <section class="home-streak" aria-labelledby="home-streak-title">
+      <div class="home-section-heading"><div><div class="home-kicker">✦ &nbsp; CONSISTENCY</div><div class="ptitle" id="home-streak-title">Your streak</div></div><div class="home-streak-badge">TRAINING<br>JOURNEY</div></div>
+      <div class="streak-bar" id="streak-bar">
+        <div class="streak-box"><div class="streak-num fire" id="streak-current">0</div><div class="streak-lbl">Current Streak</div></div>
+        <div class="streak-box"><div class="streak-num" id="streak-best">0</div><div class="streak-lbl">Best Streak</div></div>
+        <div class="streak-box"><div class="streak-num" id="streak-total">0</div><div class="streak-lbl">Total Days</div></div>
       </div>
-      <div class="streak-box">
-        <div class="streak-num" id="streak-best">0</div>
-        <div class="streak-lbl">Best Streak</div>
-      </div>
-      <div class="streak-box">
-        <div class="streak-num" id="streak-total">0</div>
-        <div class="streak-lbl">Total Days</div>
-      </div>
-    </div>
-  </section>
+    </section>
+    <section class="home-streak-details" aria-labelledby="streak-calendar-heading">
+      <div class="home-section-heading calendar-intro"><div><div class="home-kicker">YOUR ACTIVITY</div><div class="ptitle" id="streak-calendar-heading">Training calendar</div></div><div class="calendar-legend"><span><i class="legend-workout"></i> Workout</span><span><i class="legend-safe"></i> Streak-safe rest</span></div></div>
+      <div class="rest-setting"><div class="rest-lbl">Rest days allowed between sessions<br><span style="font-size:.55rem;color:var(--m1)">Streak stays alive through this many rest days</span></div><div class="rest-controls"><button class="rest-btn" onclick="changeRestDays(-1)" aria-label="Decrease allowed rest days">−</button><div class="rest-val" id="rest-val">1</div><button class="rest-btn" onclick="changeRestDays(1)" aria-label="Increase allowed rest days">+</button></div></div>
+      <div class="cal-wrap"><div class="cal-header"><button class="cal-nav" onclick="calPrev()" aria-label="Previous month">◀</button><div class="cal-title" id="cal-title"></div><button class="cal-nav" onclick="calNext()" aria-label="Next month">▶</button></div><div class="cal-grid" id="cal-grid"></div></div>
+    </section>
+  </div>
 
+  <!-- START: routines, categories and freestyle workout launcher -->
+  <div class="scr" id="s-start">
+    <div class="home-intro"><div class="home-kicker">CHOOSE YOUR SESSION</div><div class="ptitle">Start</div><div class="psub" id="st-sub">Routines · categories · freestyle</div></div>
     <div id="st-body"></div>
-
-  <section class="home-streak-details" aria-labelledby="streak-calendar-heading">
-    <div class="home-section-heading calendar-intro"><div><div class="home-kicker">YOUR ACTIVITY</div><div class="ptitle" id="streak-calendar-heading">Training calendar</div></div><div class="calendar-legend"><span><i class="legend-workout"></i> Workout</span><span><i class="legend-safe"></i> Streak-safe rest</span></div></div>
-    <div class="rest-setting">
-      <div class="rest-lbl">Rest days allowed between sessions<br><span style="font-size:.55rem;color:var(--m1)">Streak stays alive through this many rest days</span></div>
-      <div class="rest-controls">
-        <button class="rest-btn" onclick="changeRestDays(-1)" aria-label="Decrease allowed rest days">−</button>
-        <div class="rest-val" id="rest-val">1</div>
-        <button class="rest-btn" onclick="changeRestDays(1)" aria-label="Increase allowed rest days">+</button>
-      </div>
-    </div>
-    <div class="cal-wrap">
-      <div class="cal-header">
-        <button class="cal-nav" onclick="calPrev()" aria-label="Previous month">◀</button>
-        <div class="cal-title" id="cal-title"></div>
-        <button class="cal-nav" onclick="calNext()" aria-label="Next month">▶</button>
-      </div>
-      <div class="cal-grid" id="cal-grid"></div>
-    </div>
-  </section>
-
   </div>
 
   <!-- PLAN (weekly schedule + routines) -->
@@ -550,8 +530,9 @@
 
 <!-- BOTTOM TAB BAR -->
 <div class="tabbar" id="tabbar">
-  <button class="tbtn on" data-tab="start" onclick="go('start')"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>Home</button>
+  <button class="tbtn on" data-tab="home" onclick="go('home')"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>Home</button>
   <button class="tbtn" data-tab="manage" onclick="go('manage')"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Manage</button>
+  <button class="lbtn" data-tab="start" onclick="go('start')"><span class="lcirc"><svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg></span><span class="llbl">Start</span></button>
   <button class="tbtn" data-tab="progress" onclick="go('progress')"><svg viewBox="0 0 24 24"><path d="M6 20V11M12 20V4M18 20v-6"/></svg>Progress</button>
   <button class="tbtn" data-tab="profile" onclick="go('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Profile</button>
 </div>
