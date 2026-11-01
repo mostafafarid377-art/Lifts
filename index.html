@@ -72,27 +72,51 @@
   <div class="wk-banner" id="wk-banner" onclick="go('workout')">
     <span class="wk-dot"></span><span class="wk-bn" id="wk-bn">Workout</span><span class="wk-clock">00:00:00</span><span class="wk-open">Open ›</span>
   </div>
-  <div class="streak-banner" id="streak-banner">
-    <div class="streak-fire" id="streak-fire">🔥</div>
-    <div class="streak-info">
-      <div class="streak-num" id="streak-num">0</div>
-      <div class="streak-lbl">Day streak</div>
+  <!-- HOME: today's scheduled workout and streak -->
+  <div class="scr on" id="s-home">
+    <div class="ptitle">Home</div>
+    <div class="psub" id="home-sub">Today</div>
+    <div id="home-body"></div>
+    <section class="home-streak">
+    <div class="home-streak-title">Streak 🔥</div>
+    <div class="psub">Stay consistent</div>
+    <div class="streak-bar" id="streak-bar">
+      <div class="streak-box">
+        <div class="streak-num fire" id="streak-current">0</div>
+        <div class="streak-lbl">Current Streak</div>
+      </div>
+      <div class="streak-box">
+        <div class="streak-num" id="streak-best">0</div>
+        <div class="streak-lbl">Best Streak</div>
+      </div>
+      <div class="streak-box">
+        <div class="streak-num" id="streak-total">0</div>
+        <div class="streak-lbl">Total Days</div>
+      </div>
     </div>
-    <div style="text-align:right">
-      <div style="font-size:.55rem;color:var(--m1);letter-spacing:.1em;text-transform:uppercase">Best</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--m2)" id="streak-best">0</div>
+    <div class="rest-setting">
+      <div class="rest-lbl">Rest days allowed between sessions<br><span style="font-size:.55rem;color:var(--m1)">Streak stays alive through this many rest days</span></div>
+      <div class="rest-controls">
+        <button class="rest-btn" onclick="changeRestDays(-1)">−</button>
+        <div class="rest-val" id="rest-val">1</div>
+        <button class="rest-btn" onclick="changeRestDays(1)">+</button>
+      </div>
     </div>
-  </div>
-  <div class="streak-stats" id="streak-stats">
-    <div class="sstat"><div class="sstat-val" id="stat-total">0</div><div class="sstat-lbl">Total Days</div></div>
-    <div class="sstat"><div class="sstat-val" id="stat-week">0</div><div class="sstat-lbl">This Week</div></div>
-    <div class="sstat"><div class="sstat-val" id="stat-rest">0</div><div class="sstat-lbl">Rest Days</div></div>
+    <div class="cal-wrap">
+      <div class="cal-header">
+        <button class="cal-nav" onclick="calPrev()">◀</button>
+        <div class="cal-title" id="cal-title"></div>
+        <button class="cal-nav" onclick="calNext()">▶</button>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+    </section>
   </div>
 
-  <!-- START (home) -->
-  <div class="scr on" id="s-start">
+  <!-- START: full workout launcher, routines and categories -->
+  <div class="scr" id="s-start">
     <div class="ptitle">Start</div>
-    <div class="psub" id="st-sub">Today</div>
+    <div class="psub" id="st-sub">Choose a workout</div>
     <div id="st-body"></div>
   </div>
 
@@ -181,42 +205,6 @@
     <div id="pchart"></div>
     <div id="psess"></div>
     <div id="msets-wrap" style="margin-top:6px"></div>
-  </div>
-
-  <!-- STREAK -->
-  <div class="scr" id="s-streak">
-    <div class="ptitle">Streak 🔥</div>
-    <div class="psub">Stay consistent</div>
-    <div class="streak-bar" id="streak-bar">
-      <div class="streak-box">
-        <div class="streak-num fire" id="streak-current">0</div>
-        <div class="streak-lbl">Current Streak</div>
-      </div>
-      <div class="streak-box">
-        <div class="streak-num" id="streak-best">0</div>
-        <div class="streak-lbl">Best Streak</div>
-      </div>
-      <div class="streak-box">
-        <div class="streak-num" id="streak-total">0</div>
-        <div class="streak-lbl">Total Days</div>
-      </div>
-    </div>
-    <div class="rest-setting">
-      <div class="rest-lbl">Rest days allowed between sessions<br><span style="font-size:.55rem;color:var(--m1)">Streak stays alive through this many rest days</span></div>
-      <div class="rest-controls">
-        <button class="rest-btn" onclick="changeRestDays(-1)">−</button>
-        <div class="rest-val" id="rest-val">1</div>
-        <button class="rest-btn" onclick="changeRestDays(1)">+</button>
-      </div>
-    </div>
-    <div class="cal-wrap">
-      <div class="cal-header">
-        <button class="cal-nav" onclick="calPrev()">◀</button>
-        <div class="cal-title" id="cal-title"></div>
-        <button class="cal-nav" onclick="calNext()">▶</button>
-      </div>
-      <div class="cal-grid" id="cal-grid"></div>
-    </div>
   </div>
 
   <!-- PROFILE -->
@@ -549,11 +537,11 @@
 
 <!-- BOTTOM TAB BAR -->
 <div class="tabbar" id="tabbar">
-  <button class="tbtn" data-tab="profile" onclick="go('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Profile</button>
+  <button class="tbtn on" data-tab="home" onclick="go('home')"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>Home</button>
   <button class="tbtn" data-tab="manage" onclick="go('manage')"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Manage</button>
-  <button class="lbtn on" data-tab="start" onclick="go('start')"><span class="lcirc"><svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg></span><span class="llbl">Start</span></button>
+  <button class="lbtn" data-tab="start" onclick="go('start')"><span class="lcirc"><svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg></span><span class="llbl">Start</span></button>
   <button class="tbtn" data-tab="progress" onclick="go('progress')"><svg viewBox="0 0 24 24"><path d="M6 20V11M12 20V4M18 20v-6"/></svg>Progress</button>
-  <button class="tbtn" data-tab="streak" onclick="go('streak')"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Streak</button>
+  <button class="tbtn" data-tab="profile" onclick="go('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Profile</button>
 </div>
 
 <!-- REST TIMER BAR -->

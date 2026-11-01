@@ -2091,7 +2091,7 @@ function go(id){
   }
   if(id==='history')renderHistory();
   if(id==='progress'){buildProgSel();renderProgress();renderMuscleSets();}
-  if(id==='streak')renderStreak();
+  if(id==='home'){renderStreak();renderHome();}
   if(id==='manage')renderManage();
   if(id==='profile')renderProfile();
   if(id==='start')renderStart();
@@ -3042,9 +3042,9 @@ function p1MergePending(uid){
 }
 function p1Boot(){
   if(ACTIVE_WORKOUT){gid('logdate').value=ACTIVE_WORKOUT.date;wkStartTicker();}else wkStopTicker();
-  wkRenderBanner();renderStart();renderPlan();
+  wkRenderBanner();renderStreak();renderHome();renderStart();renderPlan();
 }
-function p1Refresh(){const cur=document.querySelector('.scr.on');if(cur&&cur.id==='s-start')renderStart();wkTick();}
+function p1Refresh(){const cur=document.querySelector('.scr.on');if(cur&&cur.id==='s-home'){renderStreak();renderHome();}else if(cur&&cur.id==='s-start')renderStart();wkTick();}
 
 // ── active workout persistence ───────────────────────
 function wkPersist(){
@@ -3093,6 +3093,34 @@ function wkLogFor(a,name,cat){   // the logged entry that belongs to this (exerc
 }
 const wkSetCount=a=>Object.keys(a.logged||{}).reduce((n,k)=>n+(((a.logged[k]||{}).sets)||[]).length,0);
 const wkExCount=a=>Object.keys(a.logged||{}).filter(k=>(((a.logged[k]||{}).sets)||[]).length).length;
+
+// ── HOME tab: today's scheduled workout only ──────────
+function renderHome(){
+  const body=gid('home-body');if(!body)return;
+  body.innerHTML='';
+  const day=todayDay(),now=new Date();
+  gid('home-sub').textContent=day.l+' · '+fmtDate(localISO(now));
+  if(ACTIVE_WORKOUT){
+    const a=ACTIVE_WORKOUT,card=mk('div','st-card active');
+    card.append(mk('div','st-lbl','Workout in progress'),mk('div','st-name',a.routineName),mk('div','st-clock wk-clock',fmtClock(wkElapsedMs())),mk('div','st-meta',plural(a.exercises.length,'exercise')+' · '+plural(wkSetCount(a),'set')+' logged'));
+    const b=mk('button','btn bacc st-big','Continue Workout');b.onclick=()=>go('workout');
+    card.appendChild(b);body.appendChild(card);return;
+  }
+  const todays=(SCHEDULE[day.k]||[]).map(resolveSched).filter(Boolean);
+  if(!todays.length){
+    const rest=mk('div','st-hint','No workout scheduled for today. Your streak and training calendar are below.');
+    body.appendChild(rest);
+    const browse=mk('button','btn bgh st-sec','Choose a workout from Start');browse.onclick=()=>go('start');body.appendChild(browse);return;
+  }
+  todays.forEach((r,i)=>{
+    const card=mk('div','st-card');
+    card.appendChild(mk('div','st-lbl',i===0?(todays.length>1?"Today's Workout · "+todays.length+' scheduled':"Today's Workout"):'Also scheduled today'));
+    card.appendChild(mk('div','st-name',r.name));
+    card.appendChild(mk('div','st-meta',plural(r.exercises.length,'exercise')));
+    if(r.exercises.length)card.appendChild(mk('div','st-prev',r.exercises.map(e=>e.name).join(' · ')));
+    const start=mk('button','btn bacc st-big','Start Workout');start.onclick=()=>wkStart(r.ref);card.appendChild(start);body.appendChild(card);
+  });
+}
 
 // ── START tab ────────────────────────────────────────
 const DUMBBELL='<svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg>';

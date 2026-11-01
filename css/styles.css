@@ -670,3 +670,11 @@ button{-webkit-tap-highlight-color:transparent;cursor:pointer}
 .st-free{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:none;border:none;color:var(--ac);font-size:.74rem;letter-spacing:.04em;padding:18px 8px 8px}
 .st-free svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .st-free:active{opacity:.6}
+
+/* Home keeps today's scheduled session separate from the full Start launcher. */
+.home-streak{margin-top:24px;padding-top:16px;border-top:1px solid var(--b1)}
+.home-streak-title{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:.06em;margin-bottom:3px}
+.home-streak .psub{margin-bottom:14px}
+.home-streak .streak-bar{margin-bottom:14px}
+.home-streak .cal-wrap{margin-top:2px}
+.home-streak .rest-setting{margin-bottom:12px}
