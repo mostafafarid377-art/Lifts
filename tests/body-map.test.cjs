@@ -457,3 +457,108 @@ test('editing an exercise updates its muscles, fixes past workout maps, and surv
   const sanitized = plain(api.sanitizeData(run('DATA')));
   assert.deepEqual(sanitized._exMuscles, { 'Seated Cable Puller': ['lats', 'reardelts'] });
 });
+
+// ── Workout logging must never spill into a previous session ────────────
+const previousSession = `
+  CATS=[{id:'push',label:'Push',color:'#f00'}];
+  EX={push:['Incline BP Machine']};
+  DATA={'Incline BP Machine':[{date:'2026-10-16',cat:'push',sets:[{weight:35,reps:8,unit:'kg'},{weight:35,reps:8,unit:'kg'}]}]};
+  currentUser={uid:'u1'}; dataLoadedUid='u1';
+`;
+
+test('a fresh exercise in a workout shows the previous session only as placeholders', () => {
+  const { run, nodes } = app();
+  run(previousSession);
+  run(`
+    wkStart(null);
+    ACTIVE_WORKOUT.exercises.push({name:'Incline BP Machine',cat:'push'});
+    wkOpenEx('Incline BP Machine','push',false);
+  `);
+  assert.equal(nodes.get('logdate').value, run('ACTIVE_WORKOUT.date'), 'the log date follows the workout');
+  const rows = plain(run('sets'));
+  assert.equal(rows.length, 2, 'one empty row per set done last time');
+  assert.ok(rows.every(r => r.w === '' && r.r === ''), 'previous sets are not pre-filled as real sets');
+  assert.deepEqual(rows.map(r => [r.lw, r.lr]), [[35, 8], [35, 8]], 'last time is available as placeholders');
+  assert.match(nodes.get('slist').children[0].textContent, /Last session \(Oct 16\): 35kg × 8 · 35kg × 8/);
+
+  run(`sets[0].w='40';sets[0].r='10';sets[0].u='kg';sets[0].o={w:40,u:'kg',shown:'40'};saveLog();`);
+  const sessions = plain(run('sessionsFor("Incline BP Machine")'));
+  assert.equal(sessions.length, 2);
+  assert.deepEqual(sessions[0], {
+    date: '2026-10-16', cat: 'push',
+    sets: [{ weight: 35, reps: 8, unit: 'kg' }, { weight: 35, reps: 8, unit: 'kg' }]
+  }, 'the previous session is untouched');
+  assert.equal(sessions[1].date, plain(run('ACTIVE_WORKOUT.date')));
+  assert.deepEqual(sessions[1].sets, [{ weight: 40, reps: 10, unit: 'kg' }], 'only the set done in this workout is saved');
+  assert.equal(sessions[1].wid, plain(run('ACTIVE_WORKOUT.id')), 'the session is keyed to this workout');
+});
+
+test('two workouts on the same day keep separate exercise-history sessions', () => {
+  const { run } = app();
+  run(previousSession);
+  run(`
+    wkStart(null); ACTIVE_WORKOUT.exercises.push({name:'Incline BP Machine',cat:'push'});
+    wkOpenEx('Incline BP Machine','push',false);
+    sets[0].w='40';sets[0].r='10';sets[0].u='kg';sets[0].o={w:40,u:'kg',shown:'40'};
+    saveLog(); wkFinish();
+    wkStart(null); ACTIVE_WORKOUT.exercises.push({name:'Incline BP Machine',cat:'push'});
+    wkOpenEx('Incline BP Machine','push',false);
+    sets[0].w='45';sets[0].r='8';sets[0].u='kg';sets[0].o={w:45,u:'kg',shown:'45'};
+    saveLog(); wkFinish();
+  `);
+  const sessions = plain(run('sessionsFor("Incline BP Machine")'));
+  assert.equal(sessions.length, 3, 'previous day + one entry per workout');
+  assert.deepEqual(sessions.slice(1).map(s => s.sets),
+    [[{ weight: 40, reps: 10, unit: 'kg' }], [{ weight: 45, reps: 8, unit: 'kg' }]],
+    'the second workout did not append to the first workout’s session');
+  assert.equal(sessions[1].date, sessions[2].date);
+  assert.notEqual(sessions[1].wid, sessions[2].wid);
+});
+
+test('ensureSessions adds a workout’s sets once and keeps different workouts apart', () => {
+  const { run } = app();
+  run(`DATA={};`);
+  run(`ensureSessions('2026-10-18',[{name:'Incline BP Machine',cat:'push',sets:[{weight:40,reps:10,unit:'kg'}]}],'w_a')`);
+  run(`ensureSessions('2026-10-18',[{name:'Incline BP Machine',cat:'push',sets:[{weight:40,reps:10,unit:'kg'}]}],'w_a')`);
+  assert.equal(run('sessionsFor("Incline BP Machine").length'), 1, 'restoring/finishing twice never duplicates the entry');
+  run(`ensureSessions('2026-10-18',[{name:'Incline BP Machine',cat:'push',sets:[{weight:45,reps:8,unit:'kg'}]}],'w_b')`);
+  const sessions = plain(run('sessionsFor("Incline BP Machine")'));
+  assert.deepEqual(sessions.map(s => [s.wid, s.sets.length]), [['w_a', 1], ['w_b', 1]]);
+});
+
+test('quick logging outside a workout still keeps one session per date and category', () => {
+  const { run } = app();
+  run(`
+    CATS=[{id:'push',label:'Push',color:'#f00'}];
+    EX={push:['Incline BP Machine']};
+    DATA={};
+    document.getElementById('logdate').value='2026-10-18';
+    selectEx('Incline BP Machine','push');
+    sets=[{w:'40',r:'10',u:'kg',o:{w:40,u:'kg',shown:'40'}}]; saveLog();
+    selectEx('Incline BP Machine','push');
+    sets=[{w:'42.5',r:'8',u:'kg',o:{w:42.5,u:'kg',shown:'42.5'}}]; saveLog();
+  `);
+  const sessions = plain(run('sessionsFor("Incline BP Machine")'));
+  assert.equal(sessions.length, 1);
+  assert.deepEqual(sessions[0].sets, [{ weight: 42.5, reps: 8, unit: 'kg' }]);
+  assert.equal(sessions[0].wid, undefined);
+});
+
+test('last-session placeholders follow the selected unit and never become sets', () => {
+  const { run } = app();
+  run(`
+    CATS=[{id:'push',label:'Push',color:'#f00'}];
+    EX={push:['Incline BP Machine']};
+    DATA={'Incline BP Machine':[{date:'2026-10-16',cat:'push',sets:[{weight:35,reps:8,unit:'lb'}]}]};
+    currentUser={uid:'u1'}; dataLoadedUid='u1';
+    wkStart(null);
+    ACTIVE_WORKOUT.exercises.push({name:'Incline BP Machine',cat:'push'});
+    wkOpenEx('Incline BP Machine','push',false);
+  `);
+  assert.equal(plain(run('sets'))[0].lu, 'lb');
+  run(`setUnit('kg')`);
+  const row = plain(run('sets'))[0];
+  assert.equal(row.w, '');
+  assert.equal(row.lu, 'kg');
+  assert.ok(Math.abs(row.lw - 15.88) < 0.005, 'the placeholder is converted, not relabelled');
+});
