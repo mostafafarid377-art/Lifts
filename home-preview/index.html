@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b0d0b"><title>LIFTS — Home preview</title><link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="sample-banner"><span class="pulse"></span> HOME TAB PREVIEW <b>·</b> SAMPLE DATA <small>Standalone visual demo — no account, workouts, or settings are saved</small></div>
+<div class="shell">
+<header class="top"><a class="brand" href="#"><span class="brand-mark">L</span><span>LIFTS<small>TRAINING LOG</small></span></a><span class="welcome">SUNDAY, NOVEMBER 1 <i>·</i> SAMPLE MEMBER</span><button class="avatar" aria-label="Sample profile">M</button></header>
+<main class="page">
+<section class="greeting"><div><div class="kicker">YOUR TRAINING, AT A GLANCE</div><h1>Good morning,<br><span>let’s get stronger.</span></h1><p>A little progress adds up. Keep showing up for yourself.</p></div><span class="greeting-mark">01 <small>HOME</small></span></section>
+<section class="streak-hero"><div class="streak-copy"><div class="kicker lime">✦ &nbsp; YOUR STREAK</div><div class="streak-count"><strong id="current">12</strong><span>days<br>in a row</span></div><p class="encourage"><i></i> Your consistency is building momentum.</p><div class="hero-line"></div><div class="mini-stats"><div><small>PERSONAL BEST</small><b>18 <em>days</em></b></div><div><small>TOTAL WORKOUT DAYS</small><b>84 <em>days</em></b></div><div><small>THIS WEEK</small><b>3 <em>sessions</em></b></div></div></div><div class="ring-wrap"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="ring-label"><span>✦</span><b>12</b><small>DAY STREAK</small></div></div></section>
+<div class="home-grid"><section class="main-column">
+<div class="section-heading"><div><div class="kicker">TODAY</div><h2>Your plan</h2></div><button class="text-button" id="planButton">See week <span>↗</span></button></div>
+<article class="workout-card"><div class="workout-icon">↗</div><div class="workout-info"><div class="workout-tag"><i></i> SCHEDULED SESSION</div><h3>Upper body</h3><p>5 exercises <span>·</span> About 45 min</p></div><button class="start-button" id="startButton">Start workout <span>→</span></button></article>
+<section class="activity-card"><div class="section-heading inside"><div><div class="kicker">YOUR ACTIVITY</div><h2>Training calendar</h2></div><div class="legend"><span><i class="work-key"></i> Workout</span><span><i class="rest-key"></i> Streak-safe rest</span></div></div><div class="cal-toolbar"><button id="prev" aria-label="Previous month">‹</button><h3 id="monthTitle"></h3><button id="next" aria-label="Next month">›</button></div><div class="calendar" id="calendar"></div><div class="calendar-note"><span>◉</span><span><b>Small steps count.</b><small>Rest days shown here stay within your streak allowance.</small></span></div></section>
+</section><aside class="side-column">
+<article class="next-card"><div class="kicker lime">KEEP YOUR STREAK GOING</div><h2>Your next step</h2><div class="next-row"><span class="next-icon">↗</span><span><b>Train by Thursday</b><small>One session keeps your run alive.</small></span></div><div class="timeline"><small>LAST SESSION · MON</small><i></i><b>THU</b></div><p class="safe-days"><span>✓</span> Tuesday and Wednesday are streak-safe rest days.</p></article>
+<article class="rest-card"><div class="kicker">YOUR STREAK RULE</div><h2>Recovery is part of training.</h2><p>Choose how many rest days you allow between workouts.</p><div class="rest-control"><button id="minus" aria-label="Decrease allowed rest days">−</button><div><b id="restValue">2</b><small>REST DAYS</small></div><button id="plus" aria-label="Increase allowed rest days">+</button></div><div class="rest-foot">Your sample setting updates here only; it is not saved.</div></article>
+<article class="milestone-card"><div class="medal">✧</div><div class="kicker">NEXT MILESTONE</div><h3>Two weeks strong</h3><div class="progress"><i></i></div><div class="progress-label"><span>12 / 14 days</span><b>2 to go</b></div><p>Two days from your next milestone. Your best is 18 days.</p></article>
+</aside></div>
+<footer><span>LIFTS · SAMPLE HOME</span><span>STANDALONE PREVIEW · NOT CONNECTED TO YOUR ACCOUNT</span></footer>
+</main></div>
+<nav class="bottom-nav"><button class="active"><span>⌂</span>Home</button><button data-demo="Manage"><span>☷</span>Manage</button><button data-demo="Progress"><span>↗</span>Progress</button><button data-demo="Profile"><span>◉</span>Profile</button></nav><div class="toast" id="toast" role="status"></div>
+<script src="preview.js"></script>
+</body></html>

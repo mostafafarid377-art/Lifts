@@ -1786,6 +1786,7 @@ function changeRestDays(dir){
   DATA._restDays = restDays;
   scheduleSave();
   renderStreak();
+  if(document.getElementById('s-start')?.classList.contains('on'))renderStart();
 }
 
 // Get all unique workout dates sorted ascending
@@ -2163,10 +2164,9 @@ function go(id){
   }
   if(id==='history')renderHistory();
   if(id==='progress'){buildProgSel();renderProgress();renderMuscleSets();}
-  if(id==='streak')renderStreak();
   if(id==='manage')renderManage();
   if(id==='profile')renderProfile();
-  if(id==='start')renderStart();
+  if(id==='start'){renderStreak();renderStart();}
   if(id==='plan')renderPlan();
   if(id==='workout')renderWorkout();
   wkRenderBanner();
@@ -3125,9 +3125,9 @@ function p1MergePending(uid){
 }
 function p1Boot(){
   if(ACTIVE_WORKOUT){gid('logdate').value=ACTIVE_WORKOUT.date;wkStartTicker();}else wkStopTicker();
-  wkRenderBanner();renderStart();renderPlan();
+  wkRenderBanner();renderStreak();renderStart();renderPlan();
 }
-function p1Refresh(){const cur=document.querySelector('.scr.on');if(cur&&cur.id==='s-start')renderStart();wkTick();}
+function p1Refresh(){const cur=document.querySelector('.scr.on');if(cur&&cur.id==='s-start'){renderStreak();renderStart();}wkTick();}
 
 // ── active workout persistence ───────────────────────
 function wkPersist(){
@@ -3184,6 +3184,17 @@ function renderStart(){
   body.innerHTML='';
   const now=new Date(),day=todayDay();
   gid('st-sub').textContent=day.l+' · '+fmtDate(localISO(now));
+  const workoutDates=getWorkoutDates();
+  if(workoutDates.length&&calcStreak().current>0){
+    const last=new Date(workoutDates[workoutDates.length-1]+'T12:00:00');
+    const deadline=new Date(last);deadline.setDate(deadline.getDate()+restDays+1);
+    const todayDate=new Date(localISO(now)+'T12:00:00');
+    const remaining=Math.round((Date.UTC(deadline.getFullYear(),deadline.getMonth(),deadline.getDate())-Date.UTC(todayDate.getFullYear(),todayDate.getMonth(),todayDate.getDate()))/86400000);
+    const card=mk('div','home-nextstep');
+    card.append(mk('div','home-kicker','KEEP YOUR STREAK GOING'),mk('div','home-next-title',remaining<=0?'Train today to keep your streak active.':'Next session by '+fmtDate(localISO(deadline))));
+    card.appendChild(mk('div','home-next-copy',remaining<=0?'Today is the last streak-safe day.':`You have ${plural(remaining,'day')} left in your rest allowance.`));
+    body.appendChild(card);
+  }
   if(ACTIVE_WORKOUT){
     const a=ACTIVE_WORKOUT,card=mk('div','st-card active');
     card.append(mk('div','st-lbl','Workout in progress'),mk('div','st-name',a.routineName),mk('div','st-clock wk-clock',fmtClock(wkElapsedMs())),
